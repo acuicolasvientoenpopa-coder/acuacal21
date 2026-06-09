@@ -1,3 +1,3 @@
-# acucal2.1
+# acuacal21
 
-Repositorio inicializado localmente para el proyecto acucal2.1.
+Repositorio para el proyecto acucal2.1.
