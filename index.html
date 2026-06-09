@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/acuacal21/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AquaCalc</title>
+    <script>
+      (function() {
+        var redirect = sessionStorage.getItem("redirect");
+        if (redirect) {
+          sessionStorage.removeItem("redirect");
+          var base = "/acuacal21";
+          var path = redirect.replace(base, "");
+          if (path && path !== "/" && !window.location.pathname.includes(path)) {
+            history.replaceState(null, "", base + path);
+          }
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/acuacal21/assets/index-CJFg-XaB.js"></script>
+    <link rel="stylesheet" crossorigin href="/acuacal21/assets/index-CYSWrHfS.css">
+  <link rel="manifest" href="/acuacal21/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/acuacal21/registerSW.js"></script></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

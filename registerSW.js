@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/acuacal21/sw.js', { scope: '/acuacal21/' })})}
