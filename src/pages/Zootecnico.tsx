@@ -1,0 +1,125 @@
+import { useState, useEffect } from "react";
+import { useTranslation } from "@/store/language";
+
+const RECORDS_KEY = "aquacalc_bitacora";
+
+function loadRecords(): any[] {
+  try { return JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]"); } catch { return []; }
+}
+
+export default function Zootecnico() {
+  const { t } = useTranslation();
+  const [records] = useState<any[]>(loadRecords);
+  const [filtro, setFiltro] = useState("");
+  const [param, setParam] = useState("oxigeno");
+
+  useEffect(() => {
+    const h = (e: StorageEvent) => { if (e.key === RECORDS_KEY) window.location.reload(); };
+    window.addEventListener("storage", h);
+    return () => window.removeEventListener("storage", h);
+  }, []);
+
+  const filtered = records
+    .filter((r) => !filtro || r.estanque?.toLowerCase().includes(filtro.toLowerCase()))
+    .reverse();
+
+  const paramLabel = (p: string) =>
+    ({ oxigeno: t("oxigeno"), temperatura: t("temperatura"), ph: t("ph"), amonio: t("amonio"), nitrito: t("nitrito"), salinidad: t("salinidad"), biomasa: t("biomasaEstanque"), sgr: t("sgrLabel"), fcrAcum: t("fcrAcum") }[p] || p);
+
+  const chartValues = filtered.map((r) => ({
+    fecha: r.fecha,
+    val: parseFloat(r[param]) || 0,
+  }));
+
+  const maxVal = Math.max(...chartValues.map((c) => c.val), 1);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">{t("zootecnicoTitle")}</h2>
+          <p className="page-subtitle">{t("zootecnicoSub")}</p>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">🔍 {t("filtrar")}</div>
+        <div className="form-grid">
+          <label>{t("estanque")}<input value={filtro} onChange={(e) => setFiltro(e.target.value)} placeholder="Todos" /></label>
+          <label>{t("parametroGraficar")}
+            <select value={param} onChange={(e) => setParam(e.target.value)}>
+              <option value="oxigeno">{t("oxigeno")}</option>
+              <option value="temperatura">{t("temperatura")}</option>
+              <option value="ph">{t("ph")}</option>
+              <option value="amonio">{t("amonio")}</option>
+              <option value="nitrito">{t("nitrito")}</option>
+              <option value="salinidad">{t("salinidad")}</option>
+              <option value="biomasa">{t("biomasaEstanque")}</option>
+              <option value="sgr">{t("sgrLabel")}</option>
+              <option value="fcrAcum">{t("fcrAcum")}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {chartValues.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">📊</div>
+          <p>{t("sinDatos")}</p>
+        </div>
+      ) : (
+        <>
+          <div className="card">
+            <div className="card-title">📊 {paramLabel(param)}</div>
+            <div className="chart-container">
+              {chartValues.slice(-15).map((c, i) => (
+                <div key={i} className="chart-bar-row">
+                  <span className="chart-label">{c.fecha}</span>
+                  <div className="chart-bar-wrap">
+                    <div className="chart-bar" style={{ width: `${(c.val / maxVal) * 100}%`, background: "var(--accent)" }}>
+                      {c.val.toFixed(1)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-title">{t("tablaTitle")}</div>
+            <div style={{ overflowX: "auto" }}>
+              <table className="zoo-table">
+                <thead>
+                  <tr>
+                    <th>{t("fecha")}</th>
+                    <th>{t("estanque")}</th>
+                    <th>{t("oxigeno")}</th>
+                    <th>{t("temperatura")}</th>
+                    <th>{t("ph")}</th>
+                    <th>{t("amonio")}</th>
+                    <th>{t("nitrito")}</th>
+                    <th>{t("salinidad")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.slice(-30).map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.fecha}</td>
+                      <td>{r.estanque}</td>
+                      <td>{r.oxigeno || "—"}</td>
+                      <td>{r.temperatura || "—"}</td>
+                      <td>{r.ph || "—"}</td>
+                      <td>{r.amonio || "—"}</td>
+                      <td>{r.nitrito || "—"}</td>
+                      <td>{r.salinidad || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
