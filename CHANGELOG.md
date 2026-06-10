@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-06-10 — Auditoría de documentación y actualización masiva
+
+### Objetivo
+Sincronizar toda la documentación del proyecto con el estado real del código después de backend + auth + migración de páginas + deploy.
+
+### Archivos modificados
+- `CONTEXT.md` — Nuevo: contexto completo para IA
+- `README.md` — Rewrite completo: agregado backend, auth, deploy, 15 páginas
+- `AI_CONTEXT.md` — Rewrite: estado actual con backend, auth, deploy
+- `PROJECT_STATUS.md` — Actualizado: 65% hacia SaaS, páginas migradas, riesgos actuales
+- `CHANGELOG.md` — Este registro
+- `ROADMAP.md` — Actualizado: Phase 1 items marcados como completados
+- `TECHNICAL_DECISIONS.md` — Agregadas decisiones recientes
+- `BUSINESS_PLAN.md` — Stripe → Lemon Squeezy, actualizado estado
+- `TERMS.md` — Stripe → Lemon Squeezy, email corregido
+
+### Cambios realizados
+1. Creado CONTEXT.md con estructura completa: qué es, estado, arquitectura, funcionalidades, API endpoints, DB schema, flujo auth, pendientes, convenciones, comandos
+2. Documentación alineada con el código real: 10 tablas DB, 8 routers, 26 endpoints, 15 páginas frontend, 8 con API, 4 solo localStorage
+3. Documentadas decisiones recientes: Supabase, Express+Prisma, Netlify+Railway, Lemon Squeezy vs Stripe
+
+---
+
 ## 2026-06-09 — Backend Express + Supabase + Auth + Migración Fincas
 
 ### Objetivo
@@ -116,7 +139,7 @@ Auditar el proyecto completo, crear módulo de inventario, jerarquía finca→es
 3. **Fincas → Estanques**: tipo extendido con `estanques: string[]`, migración automática, CRUD inline.
 4. **Lookups**: `useLookups().estanques` ahora devuelve estanques reales con ID compuesto `fincaId||nombre`.
 5. **Mapa**: página oculta (solo desde Master Panel) con grid de 4 capas (Core, Store, Pages, Infra) y estado visual.
-6. **Documentación**: creados 7 documentos formales de proyecto siguiendo el Sistema Operativo definido.
+6. **Documentación**: creados 7 documentos formales de proyecto.
 
 ### Errores corregidos
 - `GlobalSearch.tsx`: `Object.entries(localStorage)` no funciona en todos los navegadores

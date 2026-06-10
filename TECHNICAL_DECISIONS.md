@@ -1,7 +1,77 @@
 # TECHNICAL DECISIONS — AcuiCal
 
 > Registro de decisiones técnicas importantes.
-> Actualizado: 2026-06-09.
+> Actualizado: 2026-06-10.
+
+---
+
+## 2026-06-10 — Syncing documentación con estado real del proyecto
+
+**Decisión**: Actualizar los 9 documentos de proyecto para reflejar el estado actual con backend, auth, migración de páginas y deploys.
+
+**Motivo**: La documentación decía "no tiene backend ni autenticación" cuando ya tiene Express + Prisma + Supabase Auth + Railway + Netlify.
+
+**Consecuencias futuras**: La documentación queda como fuente de verdad para IA y humanos.
+
+---
+
+## 2026-06-09 — Lemon Squeezy vs Stripe para pagos
+
+**Decisión**: Usar Lemon Squeezy en lugar de Stripe para procesamiento de pagos.
+
+**Motivo**: Stripe no está disponible en Costa Rica (país del dueño). Lemon Squeezy funciona globalmente, maneja impuestos automáticamente, y tiene API para suscripciones.
+
+**Alternativas evaluadas**: Stripe, PayPal, Paddle, Credomatic.
+
+**Consecuencias futuras**: Comisión ~5% (vs 2.9% de Stripe), pero es la única opción viable desde CR.
+
+---
+
+## 2026-06-09 — Confirm sign up OFF en Supabase
+
+**Decisión**: Mantener "Confirm sign up" desactivado en Supabase Auth.
+
+**Motivo**: No tenemos dominio verificado para enviar emails de confirmación vía Resend. El registro debe ser instantáneo para no bloquear usuarios.
+
+**Alternativas evaluadas**: Activar confirmación con magic link, emails de verificación con Resend.
+
+**Consecuencias futuras**: Cualquiera puede registrarse con cualquier email (incluso no propio). Riesgo de cuentas spam. Se activará cuando tengamos dominio.
+
+---
+
+## 2026-06-09 — Backend Express + Prisma + Supabase en Railway
+
+**Decisión**: Backend en Express + Prisma + TypeScript, desplegado en Railway.
+
+**Motivo**: Express es el estándar Node.js, Prisma para ORM, Supabase para PostgreSQL gratuito. Railway ofrece hosting Node simple con deploy desde GitHub.
+
+**Alternativas**: Fastify, NestJS, Koa; PlanetScale, Neon; Heroku, Fly.io.
+
+**Consecuencias futuras**: Fácil de escalar horizontalmente. Railway tiene límite de proyectos gratuitos.
+
+---
+
+## 2026-06-09 — Frontend en Netlify con _redirects para SPA
+
+**Decisión**: Desplegar frontend en Netlify con `_redirects` para SPA fallback.
+
+**Motivo**: Netlify es hosting gratuito, soporta deploy automático, y el _redirects resuelve React Router en producción.
+
+**Alternativas**: Vercel, Cloudflare Pages, GitHub Pages.
+
+**Consecuencias futuras**: Cero costo operativo de frontend. Fácil de agregar dominio personalizado.
+
+---
+
+## 2026-06-09 — API primaria + localStorage fallback
+
+**Decisión**: Cada página primero intenta escribir en API; si falla, escribe solo en localStorage. En carga, prioriza API pero cae a localStorage si API no responde.
+
+**Motivo**: Offline-first progresivo. No podemos requerir conexión para operar, pero queremos datos en la nube cuanto antes.
+
+**Alternativas**: localStorage-only (sin nube), API-only (sin offline), cola de sincronización diferida.
+
+**Consecuencias futuras**: Datos pueden divergir entre localStorage y API. Necesitamos reconciliación.
 
 ---
 
@@ -9,11 +79,11 @@
 
 **Decisión**: Crear 7 documentos obligatorios (PROJECT_STATUS, CHANGELOG, ROADMAP, BUSINESS_PLAN, AI_CONTEXT, TECHNICAL_DECISIONS, VISION) más actualización de README.
 
-**Motivo**: Estandarizar la documentación para garantizar continuidad entre sesiones de IA y humanos. Sin documentos formales, cada IA parte de cero.
+**Motivo**: Estandarizar la documentación para garantizar continuidad entre sesiones de IA y humanos.
 
 **Alternativas evaluadas**: Documentación dispersa (estilo anterior), wiki externa, Notion.
 
-**Consecuencias futuras**: Cada tarea ahora requiere actualizar documentación antes de darse por terminada. Mayor overhead inicial, pero continuidad asegurada.
+**Consecuencias futuras**: Cada tarea ahora requiere actualizar documentación antes de darse por terminada.
 
 ---
 
@@ -21,23 +91,21 @@
 
 **Decisión**: La página Mapa solo se accede desde el Master Panel, no desde el sidebar.
 
-**Motivo**: Es una herramienta de desarrollo/auditoría, no una función de producto para el usuario final. Evita confusión en la navegación principal.
+**Motivo**: Es una herramienta de desarrollo/auditoría, no una función de producto para el usuario final.
 
 **Alternativas evaluadas**: Sidebar, dashboard, ruta pública.
 
-**Consecuencias futuras**: Fácil de mover a público cuando tenga valor para el cliente (ej: "estado de mi granja").
-
 ---
 
-## 2026-06-09 — Estanques como string[] dentro de Finca
+## 2026-06-09 — Estanques como tabla separada en DB
 
-**Decisión**: Almacenar estanques como array de strings dentro del objeto Finca en localStorage.
+**Decisión**: En PostgreSQL, Estanque es una tabla separada con FK → Finca. En localStorage se mantiene como string[] dentro de Finca.
 
-**Motivo**: Simplicidad máxima. Una sola clave de localStorage por finca. Migración automática para datos existentes. Sin tablas separadas.
+**Motivo**: En DB relacional, los estanques necesitan ser entidades propias para relaciones (Bitacora → Estanque, etc.).
 
-**Alternativas evaluadas**: Clave separada `aquacalc_estanques`, array de objetos con metadatos.
+**Alternativas evaluadas**: Array JSON en columna Finca, ENUM fijo.
 
-**Consecuencias futuras**: Al migrar a PostgreSQL, los estanques serán una tabla separada con FK a fincas. El ID compuesto `fincaId||nombre` facilitará la migración.
+**Consecuencias futuras**: El ID compuesto `fincaId||nombre` en localStorage facilita migración a DB.
 
 ---
 
@@ -49,48 +117,24 @@
 
 **Alternativas evaluadas**: Clase singleton, store global única, Redux.
 
-**Consecuencias futuras**: Fácil migración a backend. Cada módulo es independiente y testeable.
-
 ---
 
 ## Anteriores (reconstruido de memoria del proyecto)
 
 ### Elección de React 19 + Vite 8
-
-**Decisión**: React 19 + Vite 8 + TypeScript 6.0.
-
-**Motivo**: Ecosistema maduro, HMR rápido, TypeScript nativo. Migración desde HTML+Firebase monolítico.
-
+**Decisión**: React 19 + Vite 8 + TypeScript 6.0.  
 **Alternativas**: Svelte, Angular, Vue, HTML+JS vanilla.
 
-**Consecuencias**: Bundle de ~1.5 MB. Posible code splitting futuro.
-
 ### Reemplazo de Firebase por localStorage
-
-**Decisión**: Eliminar Firebase (Auth + Firestore) y usar localStorage para persistencia.
-
-**Motivo**: Offline-first, cero costos de infraestructura, simplicidad durante desarrollo inicial.
-
-**Alternativas**: Firebase (mantener), Supabase, Appwrite, backend propio desde el día 1.
-
-**Consecuencias**: Ahora necesitamos construir backend propio. localStorage no escala más allá de 1 usuario/dispositivo.
+**Decisión**: Eliminar Firebase (Auth + Firestore) y usar localStorage para persistencia.  
+**Motivo**: Offline-first, cero costos de infraestructura, simplicidad durante desarrollo inicial.  
+**Alternativas**: Firebase (mantener), Supabase, Appwrite, backend propio desde el día 1.  
+**Consecuencias**: Ahora necesitamos construir backend propio.
 
 ### i18n con Context + objeto plano
-
-**Decisión**: No usar react-i18next ni ninguna librería de i18n. Objeto plano con claves + React Context.
-
-**Motivo**: Cero dependencias externas, control total, rendimiento predecible.
-
+**Decisión**: No usar react-i18next. Objeto plano con claves + React Context.  
 **Alternativas**: react-i18next, FormatJS, Lingui.
 
-**Consecuencias**: Sin detección automática de plurales, sin interpolación avanzada. Fácil de migrar si se necesita.
-
 ### CSS plano sin frameworks
-
-**Decisión**: Una sola hoja CSS (`index.css`) con variables. Sin Tailwind, styled-components, CSS modules, etc.
-
-**Motivo**: Sin runtime adicional, sin build step extra, control total. Suficiente para el tamaño del proyecto.
-
-**Alternativas**: Tailwind, styled-components, Material UI, Chakra.
-
-**Consecuencias**: A medida que el proyecto crezca, considerar CSS modules o Tailwind para evitar hoja monolítica.
+**Decisión**: Una sola hoja CSS (`index.css`) con variables. Sin Tailwind, styled-components.  
+**Alternativas**: Tailwind, Material UI, Chakra.
