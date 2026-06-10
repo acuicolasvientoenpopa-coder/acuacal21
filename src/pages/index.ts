@@ -5,3 +5,5 @@ export { default as Especies } from "./Especies";
 export { default as Fincas } from "./Fincas";
 export { default as Parametros } from "./Parametros";
 export { default as Formulas } from "./Formulas";
+export { VeterinaryReportWizard } from "./veterinary";
+export { default as MasterPage } from "./MasterPage";

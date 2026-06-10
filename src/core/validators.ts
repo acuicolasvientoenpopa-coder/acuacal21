@@ -23,6 +23,10 @@ export interface ValidationResult {
 }
 
 // --- Validación de calidad de agua ---
+// Rangos de referencia basados en:
+// Boyd, C.E. (2015). Water Quality: An Introduction. Springer. ISBN 978-3319174457.
+// Timmons, M.B. & Ebeling, J.M. (2010). Recirculating Aquaculture. 3rd ed. NRAC Publication.
+// Hargreaves, J.A. & Tucker, C.S. (2004). Managing Ammonia in Fish Ponds. SRAC Publication No. 4603.
 
 export function validateWaterQuality(values: WaterQualityValues): ValidationResult {
   const errors: Record<string, string> = {};

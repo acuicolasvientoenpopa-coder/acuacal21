@@ -1,4 +1,8 @@
-export { calcular, calcRacion, REFERENCE_FORMULAS } from "./formulas";
+export {
+  calcular,
+  calcRacion,
+  REFERENCE_FORMULAS,
+} from "./formulas";
 export type {
   CalculationInputs,
   CalculationResults,
@@ -7,7 +11,7 @@ export type {
   ReferenceFormula,
 } from "./formulas";
 
-export { ESPECIES_DEFAULT, getAllSpecies } from "./species-defaults";
+export { ESPECIES_DEFAULT, getAllSpecies, ENERGY_DEFAULTS } from "./species-defaults";
 export type { SpeciesParams, Species } from "./species-defaults";
 
 export { MONEDAS } from "./currencies";

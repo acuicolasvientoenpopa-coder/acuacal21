@@ -4,6 +4,7 @@ import {
   calcRacion,
   ESPECIES_DEFAULT,
   MONEDAS,
+  ENERGY_DEFAULTS,
 } from "@/core";
 import type {
   CalculationInputs,
@@ -32,6 +33,45 @@ export default function Calculator() {
   const [currency, setCurrency] = useState("CRC");
   const [tooltip, setTooltip] = useState("");
 
+  // Energía
+  const [energiaOn, setEnergiaOn] = useState(false);
+  const [energyTab, setEnergyTab] = useState<"elect" | "comb" | "recibo">("elect");
+  const [bombaHP, setBombaHP] = useState("");
+  const [bombaCount, setBombaCount] = useState("");
+  const [bombaHours, setBombaHours] = useState("");
+  const [aireadorHP, setAireadorHP] = useState("");
+  const [aireadorCount, setAireadorCount] = useState("");
+  const [aireadorHours, setAireadorHours] = useState("");
+  const [precioKWh, setPrecioKWh] = useState("");
+  const [motorBombaConsumo, setMotorBombaConsumo] = useState("");
+  const [motorBombaHours, setMotorBombaHours] = useState("");
+  const [motorAireadorConsumo, setMotorAireadorConsumo] = useState("");
+  const [motorAireadorHours, setMotorAireadorHours] = useState("");
+  const [precioCombustible, setPrecioCombustible] = useState("");
+  const [diasCiclo, setDiasCiclo] = useState("");
+  const [gastoPeriodoElect, setGastoPeriodoElect] = useState("");
+  const [diasPeriodoElect, setDiasPeriodoElect] = useState("30");
+  const [gastoPeriodoComb, setGastoPeriodoComb] = useState("");
+  const [diasPeriodoComb, setDiasPeriodoComb] = useState("30");
+
+  const fillEnergyDefaults = useCallback((id: string) => {
+    const ed = ENERGY_DEFAULTS[id];
+    if (!ed) return;
+    setBombaHP(String(ed.bombaHP));
+    setBombaCount(String(ed.bombaCount));
+    setBombaHours(String(ed.bombaHoursDay));
+    setAireadorHP(String(ed.aireadorHP));
+    setAireadorCount(String(ed.aireadorCount));
+    setAireadorHours(String(ed.aireadorHoursDay));
+    setPrecioKWh(String(ed.precioKWh));
+    setMotorBombaConsumo(String(ed.motorBombaConsumo));
+    setMotorBombaHours(String(ed.motorBombaHoursDay));
+    setMotorAireadorConsumo(String(ed.motorAireadorConsumo));
+    setMotorAireadorHours(String(ed.motorAireadorHoursDay));
+    setPrecioCombustible(String(ed.precioCombustible));
+    setDiasCiclo(String(ed.diasCiclo));
+  }, []);
+
   const handleSpeciesChange = useCallback((id: string) => {
     const sp = ESPECIES_DEFAULT.find((s) => s.id === id) ?? ESPECIES_DEFAULT[0];
     setSelectedSpecies(sp);
@@ -42,7 +82,8 @@ export default function Calculator() {
     setPrecioVenta(String(sp.params.precioVenta));
     setPesoInicial(String(sp.params.pesoInicial));
     setPesoCosecha(String(sp.params.pesoCosecha));
-  }, []);
+    fillEnergyDefaults(id);
+  }, [fillEnergyDefaults]);
 
   const handleCalcular = useCallback(() => {
     const inputs: CalculationInputs = {
@@ -56,8 +97,27 @@ export default function Calculator() {
       precioVenta: parseFloat(precioVenta) || 0,
       gpd: selectedSpecies.params.gpd,
     };
+    if (energiaOn) {
+      inputs.bombaHP = parseFloat(bombaHP) || 0;
+      inputs.bombaCount = parseFloat(bombaCount) || 0;
+      inputs.bombaHoursDay = parseFloat(bombaHours) || 0;
+      inputs.aireadorHP = parseFloat(aireadorHP) || 0;
+      inputs.aireadorCount = parseFloat(aireadorCount) || 0;
+      inputs.aireadorHoursDay = parseFloat(aireadorHours) || 0;
+      inputs.precioKWh = parseFloat(precioKWh) || 0;
+      inputs.motorBombaConsumo = parseFloat(motorBombaConsumo) || 0;
+      inputs.motorBombaHoursDay = parseFloat(motorBombaHours) || 0;
+      inputs.motorAireadorConsumo = parseFloat(motorAireadorConsumo) || 0;
+      inputs.motorAireadorHoursDay = parseFloat(motorAireadorHours) || 0;
+      inputs.precioCombustible = parseFloat(precioCombustible) || 0;
+      inputs.gastoPeriodoElect = parseFloat(gastoPeriodoElect) || 0;
+      inputs.diasPeriodoElect = parseFloat(diasPeriodoElect) || 0;
+      inputs.gastoPeriodoComb = parseFloat(gastoPeriodoComb) || 0;
+      inputs.diasPeriodoComb = parseFloat(diasPeriodoComb) || 0;
+      inputs.diasCiclo = parseFloat(diasCiclo) || 0;
+    }
     setResults(calcular(inputs));
-  }, [volumen, densidad, pesoInicial, pesoCosecha, supervivencia, fcr, precioAlimento, precioVenta, selectedSpecies]);
+  }, [volumen, densidad, pesoInicial, pesoCosecha, supervivencia, fcr, precioAlimento, precioVenta, selectedSpecies, energiaOn, bombaHP, bombaCount, bombaHours, aireadorHP, aireadorCount, aireadorHours, precioKWh, motorBombaConsumo, motorBombaHours, motorAireadorConsumo, motorAireadorHours, precioCombustible, gastoPeriodoElect, diasPeriodoElect, gastoPeriodoComb, diasPeriodoComb, diasCiclo]);
 
   const handleCalcRacion = useCallback(() => {
     const ba = parseFloat(biomasaActual);
@@ -142,6 +202,118 @@ export default function Calculator() {
         </div>
       </section>
 
+      {/* Energía */}
+      <section className="calc-section">
+        <label className="toggle-row">
+          <input type="checkbox" checked={energiaOn} onChange={(e) => setEnergiaOn(e.target.checked)} />
+          <span>{t("incluirEnergia")}</span>
+        </label>
+        {energiaOn && (
+          <div className="energy-panel">
+            <div className="mini-tabs">
+              <button
+                className={`mini-tab${energyTab === "elect" ? " active" : ""}`}
+                onClick={() => setEnergyTab("elect")}
+              >⚡ {t("electBombeo")}</button>
+              <button
+                className={`mini-tab${energyTab === "comb" ? " active" : ""}`}
+                onClick={() => setEnergyTab("comb")}
+              >⛽ {t("combBombeo")}</button>
+              <button
+                className={`mini-tab${energyTab === "recibo" ? " active" : ""}`}
+                onClick={() => setEnergyTab("recibo")}
+              >{t("reciboTab")}</button>
+            </div>
+
+            {energyTab === "elect" ? (
+              <div className="calc-grid">
+                <h3 className="energia-sec-title">⚡ {t("electBombeo")}</h3>
+                <label>
+                  {t("electBombaHP")}
+                  <input type="number" value={bombaHP} onChange={(e) => setBombaHP(e.target.value)} placeholder="0" step="0.1" />
+                </label>
+                <label>
+                  {t("electBombaCount")}
+                  <input type="number" value={bombaCount} onChange={(e) => setBombaCount(e.target.value)} placeholder="0" />
+                </label>
+                <label>
+                  {t("electBombaHours")}
+                  <input type="number" value={bombaHours} onChange={(e) => setBombaHours(e.target.value)} placeholder="0" />
+                </label>
+                <h3 className="energia-sec-title">⚡ {t("electAireacion")}</h3>
+                <label>
+                  {t("electAireadorHP")}
+                  <input type="number" value={aireadorHP} onChange={(e) => setAireadorHP(e.target.value)} placeholder="0" step="0.1" />
+                </label>
+                <label>
+                  {t("electAireadorCount")}
+                  <input type="number" value={aireadorCount} onChange={(e) => setAireadorCount(e.target.value)} placeholder="0" />
+                </label>
+                <label>
+                  {t("electAireadorHours")}
+                  <input type="number" value={aireadorHours} onChange={(e) => setAireadorHours(e.target.value)} placeholder="0" />
+                </label>
+                <label>
+                  {t("precioKWh")}
+                  <input type="number" value={precioKWh} onChange={(e) => setPrecioKWh(e.target.value)} placeholder="0.15" step="0.01" />
+                </label>
+              </div>
+            ) : energyTab === "comb" ? (
+              <div className="calc-grid">
+                <h3 className="energia-sec-title">⛽ {t("combBombeo")}</h3>
+                <label>
+                  {t("combBombaConsumo")}
+                  <input type="number" value={motorBombaConsumo} onChange={(e) => setMotorBombaConsumo(e.target.value)} placeholder="0" step="0.1" />
+                </label>
+                <label>
+                  {t("combBombaHours")}
+                  <input type="number" value={motorBombaHours} onChange={(e) => setMotorBombaHours(e.target.value)} placeholder="0" />
+                </label>
+                <h3 className="energia-sec-title">⛽ {t("combAireacion")}</h3>
+                <label>
+                  {t("combAireadorConsumo")}
+                  <input type="number" value={motorAireadorConsumo} onChange={(e) => setMotorAireadorConsumo(e.target.value)} placeholder="0" step="0.1" />
+                </label>
+                <label>
+                  {t("combAireadorHours")}
+                  <input type="number" value={motorAireadorHours} onChange={(e) => setMotorAireadorHours(e.target.value)} placeholder="0" />
+                </label>
+                <label>
+                  {t("precioCombustible")}
+                  <input type="number" value={precioCombustible} onChange={(e) => setPrecioCombustible(e.target.value)} placeholder="0.00" step="0.01" />
+                </label>
+              </div>
+            ) : (
+              <div className="calc-grid">
+                <p className="energia-sub" style={{ gridColumn: "1 / -1" }}>{t("reciboSub")}</p>
+                <label>
+                  ⚡ {t("reciboElectLabel")}
+                  <input type="number" value={gastoPeriodoElect} onChange={(e) => setGastoPeriodoElect(e.target.value)} placeholder="0" />
+                </label>
+                <label>
+                  {t("reciboElectDias")}
+                  <input type="number" value={diasPeriodoElect} onChange={(e) => setDiasPeriodoElect(e.target.value)} placeholder="30" />
+                </label>
+                <label>
+                  ⛽ {t("reciboCombLabel")}
+                  <input type="number" value={gastoPeriodoComb} onChange={(e) => setGastoPeriodoComb(e.target.value)} placeholder="0" />
+                </label>
+                <label>
+                  {t("reciboCombDias")}
+                  <input type="number" value={diasPeriodoComb} onChange={(e) => setDiasPeriodoComb(e.target.value)} placeholder="30" />
+                </label>
+              </div>
+            )}
+            {energyTab !== "recibo" && (
+              <label style={{ marginTop: 12, display: "block" }}>
+                {t("diasCiclo")}
+                <input type="number" value={diasCiclo} onChange={(e) => setDiasCiclo(e.target.value)} placeholder="0" />
+              </label>
+            )}
+          </div>
+        )}
+      </section>
+
       <button className="calc-btn" onClick={handleCalcular}>
         {t("calc")}
       </button>
@@ -161,6 +333,32 @@ export default function Calculator() {
             <ResultCard label={t("utilidad")} value={`${MONEDAS[currency].simbolo}${results.utilidad.toLocaleString()}`} highlight />
             <ResultCard label={t("diasEstimados")} value={results.dias > 0 ? `${results.dias.toFixed(0)} d` : "—"} />
             <ResultCard label={t("costoAlimKg")} value={`${MONEDAS[currency].simbolo}${results.costoKg.toLocaleString()}`} />
+            {results.costoEnergiaTotal !== undefined && (
+              <>
+                <div className="result-card-divider" style={{ gridColumn: "1 / -1" }} />
+                {results.costoBombeoElect !== undefined && (
+                  <ResultCard label={t("costoBombeoElect")} value={`${MONEDAS[currency].simbolo}${results.costoBombeoElect.toLocaleString()}`} />
+                )}
+                {results.costoAireacionElect !== undefined && (
+                  <ResultCard label={t("costoAireacionElect")} value={`${MONEDAS[currency].simbolo}${results.costoAireacionElect.toLocaleString()}`} />
+                )}
+                {results.costoElectTotal !== undefined && (
+                  <ResultCard label={t("costoElectTotal")} value={`${MONEDAS[currency].simbolo}${results.costoElectTotal.toLocaleString()}`} />
+                )}
+                {results.costoBombeoComb !== undefined && (
+                  <ResultCard label={t("costoBombeoComb")} value={`${MONEDAS[currency].simbolo}${results.costoBombeoComb.toLocaleString()}`} />
+                )}
+                {results.costoAireacionComb !== undefined && (
+                  <ResultCard label={t("costoAireacionComb")} value={`${MONEDAS[currency].simbolo}${results.costoAireacionComb.toLocaleString()}`} />
+                )}
+                {results.costoCombTotal !== undefined && (
+                  <ResultCard label={t("costoCombTotal")} value={`${MONEDAS[currency].simbolo}${results.costoCombTotal.toLocaleString()}`} />
+                )}
+                <ResultCard label={t("costoEnergiaTotal")} value={`${MONEDAS[currency].simbolo}${results.costoEnergiaTotal.toLocaleString()}`} highlight />
+                <ResultCard label={t("costoEnergiaPorKg")} value={`${MONEDAS[currency].simbolo}${results.costoEnergiaPorKg?.toLocaleString()}`} />
+                <ResultCard label={t("costoTotalFinal")} value={`${MONEDAS[currency].simbolo}${results.costoTotalFinal?.toLocaleString()}`} highlight />
+              </>
+            )}
           </div>
         </section>
       )}

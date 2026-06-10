@@ -4,6 +4,7 @@ import Layout from "@/components/Layout";
 import ToastContainer from "@/components/Toast";
 import {
   Calculator, Bitacora, Especies, Fincas, Parametros, Formulas, Zootecnico,
+  VeterinaryReportWizard, MasterPage,
 } from "@/pages";
 
 export default function App() {
@@ -19,6 +20,8 @@ export default function App() {
             <Route path="fincas" element={<Fincas />} />
             <Route path="parametros" element={<Parametros />} />
             <Route path="formulas" element={<Formulas />} />
+            <Route path="vet" element={<VeterinaryReportWizard />} />
+            <Route path="master" element={<MasterPage />} />
           </Route>
         </Routes>
         <ToastContainer />
