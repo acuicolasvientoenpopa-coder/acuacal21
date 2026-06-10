@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# AquaCalc 🐟
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Calculadora acuícola con bitácora, seguimiento zootécnico y soporte multilingüe (ES/EN/PT).
 
-Currently, two official plugins are available:
+Migración completa de una app monolítica HTML+Firebase a React+Vite+TypeScript.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- **React 19** + **TypeScript 6.0**
+- **Vite 8** con HMR
+- **React Router** (7 rutas)
+- **localStorage** para persistencia offline (sin Firebase)
+- **PWA** (`vite-plugin-pwa`) con service worker + manifest
+- **jsPDF** para exportar bitácora a PDF
+- Traducción de toda la UI vía `IDIOMAS` + React Context
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Páginas
 
-## Expanding the ESLint configuration
+| Ruta | Página |
+|------|--------|
+| `/` | Calculadora (cálculos de biomasa, FCR, rentabilidad) |
+| `/bitacora` | Biometría (registro diario con validación de calidad de agua) |
+| `/zootecnico` | Seguimiento zootécnico (gráficos + tabla filtrable) |
+| `/parametros` | Parámetros por especie (agrupados por sección) |
+| `/especies` | Mis Especies (referencia + especies personalizadas CRUD) |
+| `/formulas` | Fórmulas de referencia (con traducciones ES/EN/PT) |
+| `/fincas` | Mis Fincas (CRUD de unidades productivas) |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Scripts
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev      # Servidor de desarrollo
+npm run build    # Compilar para producción
+npm run preview  # Previsualizar build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Despliegue (servidor propio)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+npm run build
+# Copiar el contenido de dist/ a la raíz del servidor web
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+La app es estática (HTML+JS+CSS). Funciona con cualquier servidor web (Nginx, Apache, etc.). Configurarlo para que sirva `index.html` en todas las rutas para soportar React Router (ej: `try_files $uri /index.html` en Nginx).
+
+## Estructura
+
+```
+src/
+├── core/           # Lógica pura TS (sin React, sin DOM)
+│   ├── formulas.ts
+│   ├── validators.ts
+│   ├── i18n.ts
+│   ├── species-defaults.ts
+│   ├── currencies.ts
+│   └── observations.ts
+├── store/          # Estado global (LanguageProvider)
+├── components/     # Layout, Toast, Profile, etc.
+├── pages/          # 7 páginas de la app
+└── utils/          # Utilidades (PDF export)
 ```

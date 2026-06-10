@@ -1,12 +1,8 @@
-import { REFERENCE_FORMULAS } from "@/core";
 import { useTranslation } from "@/store/language";
+import { REF_SECTIONS } from "@/data/referencias";
 
 export default function Formulas() {
   const { t } = useTranslation();
-  const tt = (key: string, fallback: string) => {
-    const translated = t(key as any);
-    return translated !== key ? translated : fallback;
-  };
   return (
     <div>
       <div className="page-header">
@@ -15,17 +11,26 @@ export default function Formulas() {
           <p className="page-subtitle">{t("formulasSub")}</p>
         </div>
       </div>
-      <div className="species-list" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        {REFERENCE_FORMULAS.map((f, i) => (
-          <div key={i} className="card">
-            <div className="card-title">{tt("formulaTitle_" + f.id, f.title)}</div>
-            <div style={{ fontFamily: "monospace", fontSize: 14, color: "var(--accent)", marginBottom: 8 }}>
-              {f.formula}
-            </div>
-            <p style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.6 }}>{tt("formulaDesc_" + f.id, f.description)}</p>
+      {REF_SECTIONS.map((sec) => (
+        <div key={sec.id} style={{ marginBottom: 32 }}>
+          <h3 className="card-subtitle" style={{ marginBottom: 12, fontSize: 16 }}>
+            {sec.emoji} {sec.title}
+          </h3>
+          <div className="species-list" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            {sec.items.map((item, i) => (
+              <div key={i} className="card">
+                <div className="card-title">{item.titulo}</div>
+                <p style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.6, marginBottom: 10 }}>
+                  {item.cuerpo}
+                </p>
+                <p style={{ fontSize: 10, color: "var(--text3)", fontStyle: "italic", borderTop: "1px solid var(--border)", paddingTop: 8, opacity: 0.75 }}>
+                  📖 {item.fuente}
+                </p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

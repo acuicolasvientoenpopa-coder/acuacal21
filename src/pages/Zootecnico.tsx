@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/store/language";
+import { exportZootecnicoPDF, exportZootecnicoExcel } from "@/utils/pdf";
 
 const RECORDS_KEY = "aquacalc_bitacora";
 
 function loadRecords(): any[] {
   try { return JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]"); } catch { return []; }
+}
+
+function toStr(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  return String(v);
 }
 
 export default function Zootecnico() {
@@ -61,6 +67,37 @@ export default function Zootecnico() {
           </label>
         </div>
       </div>
+
+      {records.length > 0 && (
+        <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+          <button className="btn-secondary btn-sm" onClick={() => {
+            const rows = filtered.map((r) => ({
+              fecha: toStr(r.fecha),
+              estanque: toStr(r.estanque),
+              oxigeno: toStr(r.oxigeno),
+              temperatura: toStr(r.temperatura),
+              ph: toStr(r.ph),
+              amonio: toStr(r.amonio),
+              nitrito: toStr(r.nitrito),
+              salinidad: toStr(r.salinidad),
+            }));
+            exportZootecnicoPDF(rows, filtro, paramLabel(param));
+          }}>{t("exportPDF")}</button>
+          <button className="btn-secondary btn-sm" onClick={() => {
+            const rows = filtered.map((r) => ({
+              fecha: toStr(r.fecha),
+              estanque: toStr(r.estanque),
+              oxigeno: toStr(r.oxigeno),
+              temperatura: toStr(r.temperatura),
+              ph: toStr(r.ph),
+              amonio: toStr(r.amonio),
+              nitrito: toStr(r.nitrito),
+              salinidad: toStr(r.salinidad),
+            }));
+            exportZootecnicoExcel(rows);
+          }}>📊 Excel</button>
+        </div>
+      )}
 
       {chartValues.length === 0 ? (
         <div className="empty-state">

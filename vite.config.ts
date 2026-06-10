@@ -4,6 +4,7 @@ import path from 'node:path'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: "/",
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
     includeAssets: ['favicon.svg'],
@@ -15,7 +16,7 @@ export default defineConfig({
       background_color: '#0a1628',
       display: 'standalone',
       icons: [
-        { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+        { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
       ],
     },
   })],
@@ -25,6 +26,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate",
       "Pragma": "no-cache",
