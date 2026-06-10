@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/store/auth";
 import Layout from "@/components/Layout";
 import ToastContainer from "@/components/Toast";
 import Login from "@/pages/Login";
+import Terminos from "@/pages/Terminos";
 import {
   Calculator, Bitacora, Especies, Fincas, Parametros, Formulas, Zootecnico,
   VeterinaryReportWizard, MasterPage, Microbiologia, Finanzas, Dashboard, Inventario, Mapa,
@@ -27,6 +28,7 @@ export default function App() {
             <ThemeProvider>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/terminos" element={<Terminos />} />
                 <Route element={<Layout />}>
                   <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="calc" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
