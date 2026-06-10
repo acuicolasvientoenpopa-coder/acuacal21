@@ -1,6 +1,11 @@
 export {
   calcular,
   calcRacion,
+  calcVolumen,
+  calcVolumenRectangular,
+  calcVolumenCircular,
+  calcVolumenTrapezoidal,
+  calcVolumenTanqueCilindrico,
   REFERENCE_FORMULAS,
 } from "./formulas";
 export type {
@@ -9,6 +14,9 @@ export type {
   RacionInputs,
   RacionResults,
   ReferenceFormula,
+  DimensionesEstanque,
+  FormaEstanque,
+  VolumenResult,
 } from "./formulas";
 
 export { ESPECIES_DEFAULT, getAllSpecies, ENERGY_DEFAULTS } from "./species-defaults";
