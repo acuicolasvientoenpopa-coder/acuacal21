@@ -64,6 +64,75 @@ export interface RacionResults {
   racionComida: number;
 }
 
+// --- Cálculos de Volumen de Estanques ---
+
+export interface VolumenResult {
+  volumenM3: number;
+  litros: number;
+}
+
+export function calcVolumenRectangular(largo: number, ancho: number, profundidad: number): VolumenResult {
+  const m3 = largo * ancho * profundidad;
+  return { volumenM3: m3, litros: m3 * 1000 };
+}
+
+export function calcVolumenCircular(diametro: number, profundidad: number): VolumenResult {
+  const radio = diametro / 2;
+  const m3 = Math.PI * radio * radio * profundidad;
+  return { volumenM3: m3, litros: m3 * 1000 };
+}
+
+export function calcVolumenTrapezoidal(
+  largoSup: number, anchoSup: number,
+  largoInf: number, anchoInf: number,
+  profundidad: number
+): VolumenResult {
+  const areaSup = largoSup * anchoSup;
+  const areaInf = largoInf * anchoInf;
+  const m3 = (profundidad / 3) * (areaSup + areaInf + Math.sqrt(areaSup * areaInf));
+  return { volumenM3: m3, litros: m3 * 1000 };
+}
+
+export function calcVolumenTanqueCilindrico(diametro: number, altura: number): VolumenResult {
+  const radio = diametro / 2;
+  const m3 = Math.PI * radio * radio * altura;
+  return { volumenM3: m3, litros: m3 * 1000 };
+}
+
+export type FormaEstanque = "manual" | "rectangular" | "circular" | "trapezoidal" | "tanque";
+
+export interface DimensionesEstanque {
+  forma: FormaEstanque;
+  largo?: number;
+  ancho?: number;
+  largoSup?: number;
+  anchoSup?: number;
+  largoInf?: number;
+  anchoInf?: number;
+  diametro?: number;
+  profundidad?: number;
+  altura?: number;
+}
+
+export function calcVolumen(dim: DimensionesEstanque): VolumenResult {
+  switch (dim.forma) {
+    case "rectangular":
+      return calcVolumenRectangular(dim.largo || 0, dim.ancho || 0, dim.profundidad || 0);
+    case "circular":
+      return calcVolumenCircular(dim.diametro || 0, dim.profundidad || 0);
+    case "trapezoidal":
+      return calcVolumenTrapezoidal(
+        dim.largoSup || 0, dim.anchoSup || 0,
+        dim.largoInf || 0, dim.anchoInf || 0,
+        dim.profundidad || 0
+      );
+    case "tanque":
+      return calcVolumenTanqueCilindrico(dim.diametro || 0, dim.altura || 0);
+    default:
+      return { volumenM3: 0, litros: 0 };
+  }
+}
+
 // --- Cálculos ---
 
 export function calcular(inputs: CalculationInputs): CalculationResults {

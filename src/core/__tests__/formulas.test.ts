@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcular, calcRacion } from "../formulas";
+import { calcular, calcRacion, calcVolumenRectangular, calcVolumenCircular, calcVolumenTrapezoidal, calcVolumenTanqueCilindrico, calcVolumen } from "../formulas";
 
 describe("calcular", () => {
   const base = {
@@ -171,6 +171,58 @@ describe("calcular — costoTotalFinal", () => {
       bombaHP: 2, bombaCount: 2, bombaHoursDay: 12, precioKWh: 0.15,
     });
     expect(r.costoEnergiaPorKg).toBeCloseTo(1052.7552 / 12750, 6);
+  });
+});
+
+describe("calcVolumenRectangular", () => {
+  it("10×5×1.5 = 75 m³", () => {
+    const r = calcVolumenRectangular(10, 5, 1.5);
+    expect(r.volumenM3).toBe(75);
+    expect(r.litros).toBe(75000);
+  });
+
+  it("0 dimensiones dan 0", () => {
+    const r = calcVolumenRectangular(0, 5, 1.5);
+    expect(r.volumenM3).toBe(0);
+  });
+});
+
+describe("calcVolumenCircular", () => {
+  it("d=10, prof=1.5 ≈ 117.81 m³", () => {
+    const r = calcVolumenCircular(10, 1.5);
+    expect(r.volumenM3).toBeCloseTo(117.8097, 4);
+    expect(r.litros).toBeCloseTo(117809.7, 1);
+  });
+});
+
+describe("calcVolumenTrapezoidal", () => {
+  it("10×5 sup, 8×4 inf, 1.5 prof", () => {
+    const r = calcVolumenTrapezoidal(10, 5, 8, 4, 1.5);
+    expect(r.volumenM3).toBe(61);
+  });
+});
+
+describe("calcVolumenTanqueCilindrico", () => {
+  it("d=2, h=3 ≈ 9.42 m³", () => {
+    const r = calcVolumenTanqueCilindrico(2, 3);
+    expect(r.volumenM3).toBeCloseTo(9.4248, 4);
+  });
+});
+
+describe("calcVolumen", () => {
+  it("delega a rectangular correctamente", () => {
+    const r = calcVolumen({ forma: "rectangular", largo: 10, ancho: 5, profundidad: 1.5 });
+    expect(r.volumenM3).toBe(75);
+  });
+
+  it("delega a circular correctamente", () => {
+    const r = calcVolumen({ forma: "circular", diametro: 10, profundidad: 1.5 });
+    expect(r.volumenM3).toBeCloseTo(117.8097, 4);
+  });
+
+  it("manual da 0", () => {
+    const r = calcVolumen({ forma: "manual" });
+    expect(r.volumenM3).toBe(0);
   });
 });
 

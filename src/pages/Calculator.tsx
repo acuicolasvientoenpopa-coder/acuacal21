@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   calcular,
   calcRacion,
+  calcVolumen,
   ESPECIES_DEFAULT,
   MONEDAS,
   ENERGY_DEFAULTS,
@@ -11,6 +12,7 @@ import type {
   CalculationResults,
   RacionResults,
   Species,
+  FormaEstanque,
 } from "@/core";
 import { useTranslation } from "@/store/language";
 import { useCurrency } from "@/store/currency";
@@ -25,7 +27,34 @@ export default function Calculator() {
   const [selectedSpecies, setSelectedSpecies] = useState<Species>(
     () => ESPECIES_DEFAULT[0]
   );
+  const [forma, setForma] = useState<FormaEstanque>("manual");
   const [volumen, setVolumen] = useState("");
+  const [dimLargo, setDimLargo] = useState("");
+  const [dimAncho, setDimAncho] = useState("");
+  const [dimProfundidad, setDimProfundidad] = useState("");
+  const [dimDiametro, setDimDiametro] = useState("");
+  const [dimAltura, setDimAltura] = useState("");
+  const [dimLargoSup, setDimLargoSup] = useState("");
+  const [dimAnchoSup, setDimAnchoSup] = useState("");
+  const [dimLargoInf, setDimLargoInf] = useState("");
+  const [dimAnchoInf, setDimAnchoInf] = useState("");
+
+  const volumenDesdeForma = useMemo(() => {
+    if (forma === "manual") return null;
+    const res = calcVolumen({
+      forma,
+      largo: parseFloat(dimLargo) || 0,
+      ancho: parseFloat(dimAncho) || 0,
+      profundidad: parseFloat(dimProfundidad) || 0,
+      diametro: parseFloat(dimDiametro) || 0,
+      altura: parseFloat(dimAltura) || 0,
+      largoSup: parseFloat(dimLargoSup) || 0,
+      anchoSup: parseFloat(dimAnchoSup) || 0,
+      largoInf: parseFloat(dimLargoInf) || 0,
+      anchoInf: parseFloat(dimAnchoInf) || 0,
+    });
+    return res.volumenM3 > 0 ? res : null;
+  }, [forma, dimLargo, dimAncho, dimProfundidad, dimDiametro, dimAltura, dimLargoSup, dimAnchoSup, dimLargoInf, dimAnchoInf]);
   const [densidad, setDensidad] = useState("");
   const [pesoInicial, setPesoInicial] = useState("");
   const [pesoCosecha, setPesoCosecha] = useState("");
@@ -92,8 +121,9 @@ export default function Calculator() {
   }, [fillEnergyDefaults]);
 
   const handleCalcular = useCallback(() => {
+    const vol = volumenDesdeForma?.volumenM3 ?? (parseFloat(volumen) || 0);
     const inputs: CalculationInputs = {
-      volumen: parseFloat(volumen) || 0,
+      volumen: vol,
       densidad: parseFloat(densidad) || 0,
       pesoInicial: parseFloat(pesoInicial) || 0,
       pesoCosecha: parseFloat(pesoCosecha) || 0,
@@ -123,7 +153,7 @@ export default function Calculator() {
       inputs.diasCiclo = parseFloat(diasCiclo) || 0;
     }
     setResults(calcular(inputs));
-  }, [volumen, densidad, pesoInicial, pesoCosecha, supervivencia, fcr, precioAlimento, precioVenta, selectedSpecies, energiaOn, bombaHP, bombaCount, bombaHours, aireadorHP, aireadorCount, aireadorHours, precioKWh, motorBombaConsumo, motorBombaHours, motorAireadorConsumo, motorAireadorHours, precioCombustible, gastoPeriodoElect, diasPeriodoElect, gastoPeriodoComb, diasPeriodoComb, diasCiclo]);
+  }, [volumen, volumenDesdeForma, densidad, pesoInicial, pesoCosecha, supervivencia, fcr, precioAlimento, precioVenta, selectedSpecies, energiaOn, bombaHP, bombaCount, bombaHours, aireadorHP, aireadorCount, aireadorHours, precioKWh, motorBombaConsumo, motorBombaHours, motorAireadorConsumo, motorAireadorHours, precioCombustible, gastoPeriodoElect, diasPeriodoElect, gastoPeriodoComb, diasPeriodoComb, diasCiclo]);
 
   const handleCalcRacion = useCallback(() => {
     const ba = parseFloat(biomasaActual);
@@ -161,10 +191,54 @@ export default function Calculator() {
       <section className="calc-section">
         <h2>{t("datosEstanque")}</h2>
         <div className="calc-grid">
-          <label>
-            {t("volumenArea")} ({selectedSpecies.params.volumenUnit})
-            <input type="number" value={volumen} onChange={(e) => setVolumen(e.target.value)} placeholder="0" />
+          <label style={{ gridColumn: "1 / -1" }}>
+            {t("formaEstanque")}
+            <select value={forma} onChange={(e) => setForma(e.target.value as FormaEstanque)}>
+              <option value="manual">{t("formaManual")}</option>
+              <option value="rectangular">{t("formaRectangular")}</option>
+              <option value="circular">{t("formaCircular")}</option>
+              <option value="trapezoidal">{t("formaTrapezoidal")}</option>
+              <option value="tanque">{t("formaTanque")}</option>
+            </select>
           </label>
+
+          {forma === "manual" ? (
+            <label>
+              {t("volumenArea")} ({selectedSpecies.params.volumenUnit})
+              <input type="number" value={volumen} onChange={(e) => setVolumen(e.target.value)} placeholder="0" />
+            </label>
+          ) : forma === "rectangular" ? (
+            <>
+              <label>{t("largo")}<input type="number" value={dimLargo} onChange={(e) => setDimLargo(e.target.value)} placeholder="0" /></label>
+              <label>{t("ancho")}<input type="number" value={dimAncho} onChange={(e) => setDimAncho(e.target.value)} placeholder="0" /></label>
+              <label>{t("profundidad")}<input type="number" value={dimProfundidad} onChange={(e) => setDimProfundidad(e.target.value)} placeholder="0" /></label>
+            </>
+          ) : forma === "circular" ? (
+            <>
+              <label>{t("diametro")}<input type="number" value={dimDiametro} onChange={(e) => setDimDiametro(e.target.value)} placeholder="0" /></label>
+              <label>{t("profundidad")}<input type="number" value={dimProfundidad} onChange={(e) => setDimProfundidad(e.target.value)} placeholder="0" /></label>
+            </>
+          ) : forma === "trapezoidal" ? (
+            <>
+              <label>{t("largoSup")}<input type="number" value={dimLargoSup} onChange={(e) => setDimLargoSup(e.target.value)} placeholder="0" /></label>
+              <label>{t("anchoSup")}<input type="number" value={dimAnchoSup} onChange={(e) => setDimAnchoSup(e.target.value)} placeholder="0" /></label>
+              <label>{t("largoInf")}<input type="number" value={dimLargoInf} onChange={(e) => setDimLargoInf(e.target.value)} placeholder="0" /></label>
+              <label>{t("anchoInf")}<input type="number" value={dimAnchoInf} onChange={(e) => setDimAnchoInf(e.target.value)} placeholder="0" /></label>
+              <label>{t("profundidad")}<input type="number" value={dimProfundidad} onChange={(e) => setDimProfundidad(e.target.value)} placeholder="0" /></label>
+            </>
+          ) : (
+            <>
+              <label>{t("diametro")}<input type="number" value={dimDiametro} onChange={(e) => setDimDiametro(e.target.value)} placeholder="0" /></label>
+              <label>{t("altura")}<input type="number" value={dimAltura} onChange={(e) => setDimAltura(e.target.value)} placeholder="0" /></label>
+            </>
+          )}
+
+          {volumenDesdeForma && (
+            <div style={{ gridColumn: "1 / -1", fontSize: 13, color: "var(--accent)", background: "rgba(0,200,150,0.08)", padding: "8px 12px", borderRadius: 8 }}>
+              {t("volumenCalculado")}: <strong>{volumenDesdeForma.volumenM3.toFixed(1)} m³</strong> ({volumenDesdeForma.litros.toLocaleString()} {t("litros")})
+            </div>
+          )}
+
           <label>
             {t("densidadSiembra")} ({selectedSpecies.params.densidadUnit})
             <input type="number" value={densidad} onChange={(e) => setDensidad(e.target.value)} placeholder="0" />
