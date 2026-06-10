@@ -119,7 +119,7 @@ export default function GeoPond() {
           <h3 style={{ fontSize: 14, fontWeight: 700 }}>📐 {t("geoResultados") || "Resultados"}</h3>
 
           {!bounds ? (
-            <p style={{ fontSize: 12, color: "var(--text3)" }}>{t("geoInstrucciones" as any) || "Hacé clic en 'Medir estanque' y luego dos clics en el mapa para definir el rectángulo."}</p>
+            <p style={{ fontSize: 12, color: "var(--text3)" }}>{t("geoInstrucciones") || "Hacé clic en 'Medir estanque' y luego dos clics en el mapa para definir el rectángulo."}</p>
           ) : (
             <>
               <div className="log-field">
