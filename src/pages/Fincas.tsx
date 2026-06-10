@@ -1,42 +1,109 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 
-const KEY = "aquacalc_fincas";
+const LS_KEY = "aquacalc_fincas";
 
-type Finca = { id: string; nombre: string; ubicacion: string; descripcion: string };
+type Finca = { id: string; nombre: string; ubicacion: string; descripcion: string; estanques: string[] };
 
-function load(): Finca[] {
-  try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+function migrar(f: any): Finca {
+  return Array.isArray(f.estanques) ? f : { ...f, estanques: f.nombre ? [f.nombre] : [] };
+}
+
+function loadLocal(): Finca[] {
+  try { return (JSON.parse(localStorage.getItem(LS_KEY) || "[]")).map(migrar); } catch { return []; }
+}
+
+function saveLocal(fs: Finca[]) {
+  localStorage.setItem(LS_KEY, JSON.stringify(fs));
 }
 
 export default function Fincas() {
   const { t } = useTranslation();
-  const [list, setList] = useState<Finca[]>(load);
+  const { token, apiUrl } = useAuth();
+  const [list, setList] = useState<Finca[]>(loadLocal);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Finca | null>(null);
   const [form, setForm] = useState({ nombre: "", ubicacion: "", descripcion: "" });
+  const [editEst, setEditEst] = useState<{ fincaId: string; index: number; value: string } | null>(null);
+  const [newEst, setNewEst] = useState<{ fincaId: string; value: string } | null>(null);
 
-  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(list)); }, [list]);
+  const api = useCallback(async (path: string, opts?: RequestInit) => {
+    const res = await fetch(apiUrl + path, {
+      ...opts,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }, [apiUrl, token]);
 
   useEffect(() => {
-    const h = (e: StorageEvent) => { if (e.key === KEY) setList(load()); };
-    window.addEventListener("storage", h);
-    return () => window.removeEventListener("storage", h);
-  }, []);
+    api("/fincas").then((data: any[]) => {
+      const mapped = data.map((f: any) => ({
+        id: f.id,
+        nombre: f.nombre,
+        ubicacion: f.ubicacion ?? "",
+        descripcion: "",
+        estanques: (f.Estanque ?? []).map((e: any) => e.nombre),
+      }));
+      setList(mapped);
+      saveLocal(mapped);
+    }).catch(() => setList(loadLocal()));
+  }, [api]);
+
+  useEffect(() => { saveLocal(list); }, [list]);
 
   const openNew = () => { setEdit(null); setForm({ nombre: "", ubicacion: "", descripcion: "" }); setShow(true); };
   const openEdit = (f: Finca) => { setEdit(f); setForm({ nombre: f.nombre, ubicacion: f.ubicacion, descripcion: f.descripcion }); setShow(true); };
 
-  const save = () => {
+  const saveFinca = async () => {
     if (!form.nombre.trim()) return;
-    const f: Finca = edit
-      ? { ...edit, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim() }
-      : { id: `f_${Date.now()}`, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim() };
-    setList(edit ? list.map((x) => (x.id === edit.id ? f : x)) : [...list, f]);
+    const payload = { nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim() };
+    try {
+      if (edit) {
+        const updated = await api(`/fincas/${edit.id}`, { method: "PUT", body: JSON.stringify(payload) });
+        setList(list.map((x) => x.id === edit.id ? { ...edit, nombre: updated.nombre, ubicacion: updated.ubicacion ?? "" } : x));
+      } else {
+        const created = await api("/fincas", { method: "POST", body: JSON.stringify(payload) });
+        const newF: Finca = {
+          id: created.id, nombre: created.nombre, ubicacion: created.ubicacion ?? "",
+          descripcion: "", estanques: [created.nombre],
+        };
+        await api(`/fincas/${created.id}/estanques`, { method: "POST", body: JSON.stringify({ nombre: created.nombre }) });
+        setList([...list, newF]);
+      }
+    } catch {
+      const f: Finca = edit
+        ? { ...edit, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim() }
+        : { id: `f_${Date.now()}`, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim(), estanques: [form.nombre.trim()] };
+      setList(edit ? list.map((x) => (x.id === edit.id ? f : x)) : [...list, f]);
+    }
     setShow(false);
   };
 
-  const remove = (id: string) => setList(list.filter((x) => x.id !== id));
+  const remove = async (id: string) => {
+    try { await api(`/fincas/${id}`, { method: "DELETE" }); } catch { /* ignore */ }
+    setList(list.filter((x) => x.id !== id));
+  };
+
+  const addEstanque = async (fincaId: string) => {
+    const v = newEst?.fincaId === fincaId ? newEst.value.trim() : "";
+    if (!v) return;
+    try { await api(`/fincas/${fincaId}/estanques`, { method: "POST", body: JSON.stringify({ nombre: v }) }); } catch { /* ignore */ }
+    setList(list.map((f) => f.id === fincaId ? { ...f, estanques: [...f.estanques, v] } : f));
+    setNewEst(null);
+  };
+
+  const renameEstanque = async (fincaId: string, index: number) => {
+    const v = editEst?.fincaId === fincaId ? editEst.value.trim() : "";
+    if (!v) return;
+    setList(list.map((f) => f.id === fincaId ? { ...f, estanques: f.estanques.map((e, i) => i === index ? v : e) } : f));
+    setEditEst(null);
+  };
+
+  const removeEstanque = (fincaId: string, index: number) => {
+    setList(list.map((f) => f.id === fincaId ? { ...f, estanques: f.estanques.filter((_, i) => i !== index) } : f));
+  };
 
   return (
     <div>
@@ -57,12 +124,52 @@ export default function Fincas() {
         <div className="species-list">
           {list.map((f) => (
             <div key={f.id} className="card">
-              <div className="card-title">🏠 {f.nombre}</div>
-              {f.ubicacion && <div className="log-field" style={{ marginBottom: 8 }}><div className="log-field-label">{t("ubicacion")}</div><div className="log-field-value">{f.ubicacion}</div></div>}
-              {f.descripcion && <div className="log-field"><div className="log-field-label">{t("descripcionFinca")}</div><div className="log-field-value">{f.descripcion}</div></div>}
-              <div className="card-actions">
-                <button className="btn-secondary" onClick={() => openEdit(f)}>{t("editar")}</button>
-                <button className="btn-danger" onClick={() => remove(f.id)}>{t("eliminar")}</button>
+              <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>🏠 {f.nombre}</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="btn-sm" onClick={() => openEdit(f)}>✏️</button>
+                  <button className="btn-sm" style={{ color: "var(--danger)" }} onClick={() => remove(f.id)}>🗑️</button>
+                </div>
+              </div>
+              {f.ubicacion && <div className="log-field" style={{ marginBottom: 6 }}><div className="log-field-label">{t("ubicacion")}</div><div className="log-field-value">{f.ubicacion}</div></div>}
+              {f.descripcion && <div className="log-field" style={{ marginBottom: 8 }}><div className="log-field-label">{t("descripcionFinca")}</div><div className="log-field-value">{f.descripcion}</div></div>}
+
+              <div style={{ marginTop: 8 }}>
+                <div className="card-subtitle" style={{ fontSize: 13, marginBottom: 6 }}>🌊 {t("estanques")}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {f.estanques.map((e, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                      {editEst?.fincaId === f.id && editEst.index === i ? (
+                        <>
+                          <input value={editEst.value} onChange={(e2) => setEditEst({ ...editEst, value: e2.target.value })}
+                            onKeyDown={(e2) => { if (e2.key === "Enter") renameEstanque(f.id, i); }}
+                            autoFocus style={{ flex: 1, fontSize: 13 }} />
+                          <button className="btn-sm" onClick={() => renameEstanque(f.id, i)}>💾</button>
+                          <button className="btn-sm" onClick={() => setEditEst(null)}>✕</button>
+                        </>
+                      ) : (
+                        <>
+                          <span>🌊 {e}</span>
+                          <button className="btn-sm" style={{ fontSize: 11 }} onClick={() => setEditEst({ fincaId: f.id, index: i, value: e })}>✏️</button>
+                          <button className="btn-sm" style={{ fontSize: 11, color: "var(--danger)" }} onClick={() => removeEstanque(f.id, i)}>🗑️</button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {newEst?.fincaId === f.id ? (
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <input value={newEst.value} onChange={(e) => setNewEst({ ...newEst, value: e.target.value })}
+                      onKeyDown={(e) => { if (e.key === "Enter") addEstanque(f.id); }}
+                      placeholder="Nombre del estanque" autoFocus style={{ flex: 1, fontSize: 13 }} />
+                    <button className="btn-sm" onClick={() => addEstanque(f.id)}>➕</button>
+                    <button className="btn-sm" onClick={() => setNewEst(null)}>✕</button>
+                  </div>
+                ) : (
+                  <button className="btn-sm" style={{ marginTop: 6, fontSize: 12 }} onClick={() => setNewEst({ fincaId: f.id, value: "" })}>
+                    ➕ {t("nuevoEstanque")}
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -80,7 +187,7 @@ export default function Fincas() {
             </div>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShow(false)}>{t("cancelar")}</button>
-              <button className="btn-primary" onClick={save}>{t("guardar")}</button>
+              <button className="btn-primary" onClick={saveFinca}>{t("guardar")}</button>
             </div>
           </div>
         </div>

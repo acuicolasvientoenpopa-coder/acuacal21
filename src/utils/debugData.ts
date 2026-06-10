@@ -80,7 +80,46 @@ export function generateAll() {
   generateBitacora(25);
   generateFincas(6);
   generateParams();
+  generateFinanzas();
   toast("Todos los datos de prueba generados", "success");
+}
+
+export function generateFinanzas() {
+  // Create fincas if none exist
+  const existing = JSON.parse(localStorage.getItem("aquacalc_fincas") || "[]");
+  let fincas = existing;
+  if (fincas.length === 0) {
+    fincas = [];
+    for (let i = 0; i < 6; i++) {
+      fincas.push({
+        id: "f_" + Date.now() + "_" + i,
+        nombre: FINCAS[i % FINCAS.length],
+        ubicacion: ["Norte", "Sur", "Centro", "Este", "Oeste"][rand(0, 4)],
+        descripcion: "",
+      });
+    }
+  }
+
+  const records: any[] = fincas.map((f: any, i: number) => ({
+    id: "fin_" + Date.now() + "_" + i,
+    fincaId: f.id,
+    fincaNombre: f.nombre,
+    semilla: rand(50000, 500000),
+    alimento: rand(200000, 1500000),
+    medicacion: rand(0, 100000),
+    electricidad: rand(30000, 200000),
+    combustible: rand(0, 150000),
+    manoObra: rand(100000, 500000),
+    mantenimiento: rand(10000, 80000),
+    transporte: rand(20000, 120000),
+    otros: rand(0, 50000),
+    biomasaCosechada: rand(500, 5000),
+    precioVenta: rand(1800, 5500),
+    diasCiclo: [120, 150, 180, 210, 240][rand(0, 4)],
+  }));
+
+  localStorage.setItem("aquacalc_finanzas", JSON.stringify(records));
+  toast(`Finanzas: ${records.length} registros generados`, "info");
 }
 
 export function clearAll() {
@@ -89,5 +128,6 @@ export function clearAll() {
   localStorage.removeItem("aquacalc_params_overrides");
   localStorage.removeItem("aquacalc_custom_species");
   localStorage.removeItem("aquacalc_profile");
+  localStorage.removeItem("aquacalc_finanzas");
   toast("Todos los datos de prueba eliminados", "success");
 }

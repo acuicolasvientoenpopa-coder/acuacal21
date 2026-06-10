@@ -1,31 +1,54 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/store/language";
+import { CurrencyProvider } from "@/store/currency";
+import { ThemeProvider } from "@/store/theme";
+import { AuthProvider, useAuth } from "@/store/auth";
 import Layout from "@/components/Layout";
 import ToastContainer from "@/components/Toast";
+import Login from "@/pages/Login";
 import {
   Calculator, Bitacora, Especies, Fincas, Parametros, Formulas, Zootecnico,
-  VeterinaryReportWizard, MasterPage,
+  VeterinaryReportWizard, MasterPage, Microbiologia, Finanzas, Dashboard, Inventario, Mapa,
 } from "@/pages";
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="loading-overlay"><div className="loading-spinner" /></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <LanguageProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<Calculator />} />
-            <Route path="bitacora" element={<Bitacora />} />
-            <Route path="zootecnico" element={<Zootecnico />} />
-            <Route path="especies" element={<Especies />} />
-            <Route path="fincas" element={<Fincas />} />
-            <Route path="parametros" element={<Parametros />} />
-            <Route path="formulas" element={<Formulas />} />
-            <Route path="vet" element={<VeterinaryReportWizard />} />
-            <Route path="master" element={<MasterPage />} />
-          </Route>
-        </Routes>
-        <ToastContainer />
-      </LanguageProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <CurrencyProvider>
+            <ThemeProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route element={<Layout />}>
+                  <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="calc" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
+                  <Route path="bitacora" element={<ProtectedRoute><Bitacora /></ProtectedRoute>} />
+                  <Route path="zootecnico" element={<ProtectedRoute><Zootecnico /></ProtectedRoute>} />
+                  <Route path="especies" element={<ProtectedRoute><Especies /></ProtectedRoute>} />
+                  <Route path="fincas" element={<ProtectedRoute><Fincas /></ProtectedRoute>} />
+                  <Route path="parametros" element={<ProtectedRoute><Parametros /></ProtectedRoute>} />
+                  <Route path="formulas" element={<ProtectedRoute><Formulas /></ProtectedRoute>} />
+                  <Route path="micro" element={<ProtectedRoute><Microbiologia /></ProtectedRoute>} />
+                  <Route path="finanzas" element={<ProtectedRoute><Finanzas /></ProtectedRoute>} />
+                  <Route path="vet" element={<ProtectedRoute><VeterinaryReportWizard /></ProtectedRoute>} />
+                  <Route path="inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
+                  <Route path="master" element={<ProtectedRoute><MasterPage /></ProtectedRoute>} />
+                  <Route path="mapa" element={<ProtectedRoute><Mapa /></ProtectedRoute>} />
+                </Route>
+              </Routes>
+              <ToastContainer />
+            </ThemeProvider>
+          </CurrencyProvider>
+        </LanguageProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

@@ -1,6 +1,7 @@
-import { generateBitacora, generateFincas, generateParams, generateAll, clearAll } from "@/utils/debugData";
+import { generateBitacora, generateFincas, generateParams, generateFinanzas, generateAll, clearAll } from "@/utils/debugData";
 import { toast } from "@/components/Toast";
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const MASTER_PIN = "211203";
 
@@ -27,6 +28,7 @@ function getAllAquacalcData(): Record<string, unknown> {
 }
 
 export default function MasterPage() {
+  const navigate = useNavigate();
   const [count, setCount] = useState(20);
   const [showKeys, setShowKeys] = useState(false);
   const [pin, setPin] = useState("");
@@ -216,6 +218,7 @@ export default function MasterPage() {
               <button className="btn-primary btn-sm" onClick={() => generateBitacora(count)}>Generar Bitácora</button>
               <button className="btn-primary btn-sm" onClick={() => generateFincas()}>Generar Fincas</button>
               <button className="btn-primary btn-sm" onClick={() => generateParams()}>Generar Parámetros</button>
+              <button className="btn-primary btn-sm" onClick={() => generateFinanzas()}>Generar Finanzas</button>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -308,6 +311,7 @@ export default function MasterPage() {
         <div className="card-title">🔧 Utilidades</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn-primary btn-sm" onClick={resetTutorial}>🔄 Reiniciar Tutorial</button>
+          <button className="btn-primary btn-sm" onClick={() => navigate("/mapa")}>🗺️ Mapa del Sistema</button>
         </div>
       </div>
 

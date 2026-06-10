@@ -1,0 +1,84 @@
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createClient, type User } from "@supabase/supabase-js";
+
+const SUPABASE_URL = "https://smvjffbeshxcfltjoolm.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_EQRvreJDv4d-wYZmaMY3Bg_x2D3kM_v";
+const API_URL = "http://localhost:3001/api";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true },
+});
+
+type AuthContext = {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<string | null>;
+  register: (email: string, password: string, nombre: string) => Promise<string | null>;
+  logout: () => Promise<void>;
+  supabase: typeof supabase;
+  apiUrl: string;
+};
+
+const Ctx = createContext<AuthContext | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const session = supabase.auth.getSession();
+    session.then(({ data: { session } }) => {
+      if (session) {
+        setUser(session.user);
+        setToken(session.access_token);
+      }
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setToken(session?.access_token ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<string | null> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error?.message ?? null;
+  }, []);
+
+  const register = useCallback(async (email: string, password: string, nombre: string): Promise<string | null> => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return error.message;
+    if (!data.session) return "Revisá tu email para confirmar la cuenta";
+
+    const res = await fetch(API_URL + "/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, nombre }),
+    });
+    if (!res.ok) return "Error al crear perfil";
+    return null;
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setToken(null);
+  }, []);
+
+  return (
+    <Ctx.Provider value={{ user, token, loading, login, register, logout, supabase, apiUrl: API_URL }}>
+      {children}
+    </Ctx.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useAuth debe usarse dentro de AuthProvider");
+  return ctx;
+}
