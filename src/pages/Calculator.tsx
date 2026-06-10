@@ -13,12 +13,18 @@ import type {
   Species,
 } from "@/core";
 import { useTranslation } from "@/store/language";
+import { useCurrency } from "@/store/currency";
+import { useLookups } from "@/store/lookups";
 
 const MONEDA_KEYS = Object.keys(MONEDAS);
 
 export default function Calculator() {
   const { t } = useTranslation();
-  const [selectedSpecies, setSelectedSpecies] = useState<Species>(ESPECIES_DEFAULT[0]);
+  const { code: currCode, setCode: setCurrCode, currency: currObj } = useCurrency();
+  const { species: allSpecies } = useLookups();
+  const [selectedSpecies, setSelectedSpecies] = useState<Species>(
+    () => ESPECIES_DEFAULT[0]
+  );
   const [volumen, setVolumen] = useState("");
   const [densidad, setDensidad] = useState("");
   const [pesoInicial, setPesoInicial] = useState("");
@@ -30,7 +36,6 @@ export default function Calculator() {
   const [biomasaActual, setBiomasaActual] = useState("");
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [racion, setRacion] = useState<RacionResults | null>(null);
-  const [currency, setCurrency] = useState("CRC");
   const [tooltip, setTooltip] = useState("");
 
   // Energía
@@ -73,7 +78,8 @@ export default function Calculator() {
   }, []);
 
   const handleSpeciesChange = useCallback((id: string) => {
-    const sp = ESPECIES_DEFAULT.find((s) => s.id === id) ?? ESPECIES_DEFAULT[0];
+    const found = allSpecies.find((s) => s.id === id);
+    const sp = found?.raw as Species | undefined ?? ESPECIES_DEFAULT.find((s) => s.id === id) ?? ESPECIES_DEFAULT[0];
     setSelectedSpecies(sp);
     setDensidad(String(sp.params.densidad));
     setSupervivencia(String(sp.params.supervivencia));
@@ -144,10 +150,10 @@ export default function Calculator() {
           value={selectedSpecies.id}
           onChange={(e) => handleSpeciesChange(e.target.value)}
         >
-          {ESPECIES_DEFAULT.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.emoji} {t(`sp_${s.id}` as any)} — {s.sci}
-            </option>
+    {allSpecies.map((s) => (
+      <option key={s.id} value={s.id}>
+        {s.raw?.emoji ?? "🐟"} {s.label} — {s.raw?.sci ?? ""}
+      </option>
           ))}
         </select>
       </section>
@@ -185,18 +191,18 @@ export default function Calculator() {
           </label>
           <label>
             {t("moneda")}
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <select value={currCode} onChange={(e) => setCurrCode(e.target.value)}>
               {MONEDA_KEYS.map((k) => (
                 <option key={k} value={k}>{k} — {MONEDAS[k].simbolo}</option>
               ))}
             </select>
           </label>
           <label>
-            {t("precioAlim")} ({MONEDAS[currency].simbolo}/kg)
+            {t("precioAlim")} ({currObj.simbolo}/kg)
             <input type="number" value={precioAlimento} onChange={(e) => setPrecioAlimento(e.target.value)} placeholder="0" />
           </label>
           <label>
-            {t("precioVenta")} ({MONEDAS[currency].simbolo}/kg)
+            {t("precioVenta")} ({currObj.simbolo}/kg)
             <input type="number" value={precioVenta} onChange={(e) => setPrecioVenta(e.target.value)} placeholder="0" />
           </label>
         </div>
@@ -314,7 +320,7 @@ export default function Calculator() {
         )}
       </section>
 
-      <button className="calc-btn" onClick={handleCalcular}>
+      <button className="calc-btn" onClick={handleCalcular} onKeyDown={(e) => e.key === 'Enter' && handleCalcular()}>
         {t("calc")}
       </button>
 
@@ -328,35 +334,35 @@ export default function Calculator() {
             <ResultCard label={t("biomasaCosecha")} value={`${results.biomasaCosecha.toFixed(1)} kg`} highlight />
             <ResultCard label={t("gananciaPeso")} value={`${results.gananciaPeso.toFixed(1)} kg`} />
             <ResultCard label={t("alimentoTotal")} value={`${results.alimentoTotal.toFixed(1)} kg`} />
-            <ResultCard label={t("costoAlimento")} value={`${MONEDAS[currency].simbolo}${results.costoAlimento.toLocaleString()}`} />
-            <ResultCard label={t("ingresoBruto")} value={`${MONEDAS[currency].simbolo}${results.ingreso.toLocaleString()}`} highlight />
-            <ResultCard label={t("utilidad")} value={`${MONEDAS[currency].simbolo}${results.utilidad.toLocaleString()}`} highlight />
+            <ResultCard label={t("costoAlimento")} value={`${currObj.simbolo}${results.costoAlimento.toLocaleString()}`} />
+            <ResultCard label={t("ingresoBruto")} value={`${currObj.simbolo}${results.ingreso.toLocaleString()}`} highlight />
+            <ResultCard label={t("utilidad")} value={`${currObj.simbolo}${results.utilidad.toLocaleString()}`} highlight />
             <ResultCard label={t("diasEstimados")} value={results.dias > 0 ? `${results.dias.toFixed(0)} d` : "—"} />
-            <ResultCard label={t("costoAlimKg")} value={`${MONEDAS[currency].simbolo}${results.costoKg.toLocaleString()}`} />
+            <ResultCard label={t("costoAlimKg")} value={`${currObj.simbolo}${results.costoKg.toLocaleString()}`} />
             {results.costoEnergiaTotal !== undefined && (
               <>
                 <div className="result-card-divider" style={{ gridColumn: "1 / -1" }} />
                 {results.costoBombeoElect !== undefined && (
-                  <ResultCard label={t("costoBombeoElect")} value={`${MONEDAS[currency].simbolo}${results.costoBombeoElect.toLocaleString()}`} />
+                  <ResultCard label={t("costoBombeoElect")} value={`${currObj.simbolo}${results.costoBombeoElect.toLocaleString()}`} />
                 )}
                 {results.costoAireacionElect !== undefined && (
-                  <ResultCard label={t("costoAireacionElect")} value={`${MONEDAS[currency].simbolo}${results.costoAireacionElect.toLocaleString()}`} />
+                  <ResultCard label={t("costoAireacionElect")} value={`${currObj.simbolo}${results.costoAireacionElect.toLocaleString()}`} />
                 )}
                 {results.costoElectTotal !== undefined && (
-                  <ResultCard label={t("costoElectTotal")} value={`${MONEDAS[currency].simbolo}${results.costoElectTotal.toLocaleString()}`} />
+                  <ResultCard label={t("costoElectTotal")} value={`${currObj.simbolo}${results.costoElectTotal.toLocaleString()}`} />
                 )}
                 {results.costoBombeoComb !== undefined && (
-                  <ResultCard label={t("costoBombeoComb")} value={`${MONEDAS[currency].simbolo}${results.costoBombeoComb.toLocaleString()}`} />
+                  <ResultCard label={t("costoBombeoComb")} value={`${currObj.simbolo}${results.costoBombeoComb.toLocaleString()}`} />
                 )}
                 {results.costoAireacionComb !== undefined && (
-                  <ResultCard label={t("costoAireacionComb")} value={`${MONEDAS[currency].simbolo}${results.costoAireacionComb.toLocaleString()}`} />
+                  <ResultCard label={t("costoAireacionComb")} value={`${currObj.simbolo}${results.costoAireacionComb.toLocaleString()}`} />
                 )}
                 {results.costoCombTotal !== undefined && (
-                  <ResultCard label={t("costoCombTotal")} value={`${MONEDAS[currency].simbolo}${results.costoCombTotal.toLocaleString()}`} />
+                  <ResultCard label={t("costoCombTotal")} value={`${currObj.simbolo}${results.costoCombTotal.toLocaleString()}`} />
                 )}
-                <ResultCard label={t("costoEnergiaTotal")} value={`${MONEDAS[currency].simbolo}${results.costoEnergiaTotal.toLocaleString()}`} highlight />
-                <ResultCard label={t("costoEnergiaPorKg")} value={`${MONEDAS[currency].simbolo}${results.costoEnergiaPorKg?.toLocaleString()}`} />
-                <ResultCard label={t("costoTotalFinal")} value={`${MONEDAS[currency].simbolo}${results.costoTotalFinal?.toLocaleString()}`} highlight />
+                <ResultCard label={t("costoEnergiaTotal")} value={`${currObj.simbolo}${results.costoEnergiaTotal.toLocaleString()}`} highlight />
+                <ResultCard label={t("costoEnergiaPorKg")} value={`${currObj.simbolo}${results.costoEnergiaPorKg?.toLocaleString()}`} />
+                <ResultCard label={t("costoTotalFinal")} value={`${currObj.simbolo}${results.costoTotalFinal?.toLocaleString()}`} highlight />
               </>
             )}
           </div>

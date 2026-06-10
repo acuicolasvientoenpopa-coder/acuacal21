@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Idioma {
+  es
+  en
+  pt
+}
+
+enum Rol {
+  admin
+  productor
+  tecnico
+}
+
+enum TipoMovimiento {
+  entrada
+  salida
+}
+
+enum CategoriaProducto {
+  alimento
+  medicamento
+  equipo
+  insumo
+  otro
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  nombre    String
+  idioma    Idioma   @default(es)
+  rol       Rol      @default(productor)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fincas    Finca[]
+  bitacoras Bitacora[]
+}
+
+model Finca {
+  id        String   @id @default(cuid())
+  nombre    String
+  ubicacion String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  estanques  Estanque[]
+  bitacoras  Bitacora[]
+  finanzas   Finanza[]
+  inventario Inventario[]
+}
+
+model Estanque {
+  id     String @id @default(cuid())
+  nombre String
+  fincaId String
+  finca  Finca  @relation(fields: [fincaId], references: [id], onDelete: Cascade)
+
+  bitacoras Bitacora[]
+}
+
+model Especie {
+  id        String   @id @default(cuid())
+  nombre    String
+  nombreCientifico String?
+  userId    String?
+  esPersonal Boolean @default(true)
+  parametros Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bitacoras Bitacora[]
+}
+
+model Bitacora {
+  id        String   @id @default(cuid())
+  fecha     DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  fincaId   String
+  finca     Finca    @relation(fields: [fincaId], references: [id])
+  estanqueId String?
+  estanque  Estanque? @relation(fields: [estanqueId], references: [id])
+  especieId String?
+  especie   Especie? @relation(fields: [especieId], references: [id])
+  peso      Float?
+  cantidad  Int?
+  temperatura Float?
+  oxigeno   Float?
+  ph        Float?
+  salinidad Float?
+  amonio    Float?
+  observaciones String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Finanza {
+  id        String   @id @default(cuid())
+  tipo      String
+  monto     Float
+  descripcion String?
+  fecha     DateTime
+  fincaId   String
+  finca     Finca    @relation(fields: [fincaId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Inventario {
+  id        String   @id @default(cuid())
+  nombre    String
+  categoria CategoriaProducto @default(otro)
+  cantidad  Int      @default(0)
+  minimo    Int      @default(0)
+  precio    Float?
+  fincaId   String
+  finca     Finca    @relation(fields: [fincaId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movimientos MovimientoInventario[]
+}
+
+model MovimientoInventario {
+  id        String   @id @default(cuid())
+  tipo      TipoMovimiento
+  cantidad  Int
+  motivo    String?
+  fecha     DateTime @default(now())
+  productoId String
+  producto  Inventario @relation(fields: [productoId], references: [id], onDelete: Cascade)
+}
+
+model Microbiologia {
+  id        String   @id @default(cuid())
+  fecha     DateTime
+  resultado String
+  notas     String?
+  fincaId   String
+  userId    String
+  createdAt DateTime @default(now())
+}
+
+model Veterinaria {
+  id        String   @id @default(cuid())
+  fecha     DateTime
+  diagnostico String
+  riesgo    String
+  notas     String?
+  fincaId   String
+  userId    String
+  createdAt DateTime @default(now())
+}

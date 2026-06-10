@@ -1,35 +1,46 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "@/store/language";
+import { useCurrency } from "@/store/currency";
+import { useTheme } from "@/store/theme";
+import { useAuth } from "@/store/auth";
 import type { Idioma } from "@/core";
+import { MONEDAS } from "@/core";
 import { useState, useEffect, useRef } from "react";
 import ProfileModal, { useProfile } from "./Profile";
 import Tutorial from "./Tutorial";
+import GlobalSearch from "./GlobalSearch";
+import { NAV_LINKS } from "@/data/navLinks";
 
-const links = [
-  { to: "/", key: "calc", emoji: "🧮" },
-  { to: "/bitacora", key: "bitacora", emoji: "📋" },
-  { to: "/zootecnico", key: "zootecnico", emoji: "🔬" },
-  { to: "/parametros", key: "params", emoji: "⚙️" },
-  { to: "/especies", key: "especies", emoji: "🐠" },
-  { to: "/formulas", key: "formulas", emoji: "📐" },
-  { to: "/fincas", key: "fincas", emoji: "🏠" },
-  { to: "/vet", key: "vet", emoji: "🏥" },
-] as const;
+const links = NAV_LINKS;
 
 const IDIOMA_OPTS: { value: Idioma; label: string }[] = [
-  { value: "es", label: "ES" },
-  { value: "en", label: "EN" },
-  { value: "pt", label: "PT" },
+  { value: "es", label: "Español" },
+  { value: "en", label: "English" },
+  { value: "pt", label: "Português" },
 ];
 
 export default function Layout() {
   const { t, lang, setLang } = useTranslation();
+  const { code, setCode } = useCurrency();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const [currSearch, setCurrSearch] = useState("");
+  const [currOpen, setCurrOpen] = useState(false);
+  const currRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (currRef.current && !currRef.current.contains(e.target as Node)) setCurrOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
   const navigate = useNavigate();
   const [online, setOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
   const { profile, saveProfile } = useProfile();
   const logoClickCount = useRef(0);
 
@@ -74,7 +85,15 @@ export default function Layout() {
           </div>
         </div>
         <div className="header-right">
+          <GlobalSearch />
+          <button className="theme-toggle" onClick={toggleTheme}>{theme === "dark" ? "☀️" : "🌙"}</button>
           <button className="help-btn" onClick={() => setHelpOpen(true)} title={t("help")}>?</button>
+          {user && (
+            <span style={{ fontSize: 12, color: "var(--text2)", marginRight: 4 }}>
+              {user.email?.split("@")[0]}
+            </span>
+          )}
+          <button className="theme-toggle" style={{ border: "none", fontSize: 11 }} onClick={logout} title="Cerrar sesión">🚪</button>
           <button className="profile-btn" onClick={() => setProfileOpen(true)}>
             {profile.nombre ? profile.nombre.charAt(0).toUpperCase() : "👤"}
           </button>
@@ -99,21 +118,51 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
             >
               <span className="sidebar-link-icon">{l.emoji}</span>
-              <span className="sidebar-link-label">{t(l.key)}</span>
+              <span className="sidebar-link-label">{t(l.key as any)}</span>
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-footer">
-          <div className="sidebar-lang">
-            {IDIOMA_OPTS.map((o) => (
-              <button
-                key={o.value}
-                className={`lang-btn${lang === o.value ? " active" : ""}`}
-                onClick={() => setLang(o.value)}
-              >
-                {o.label}
-              </button>
-            ))}
+          <div className="sidebar-lang-group">
+            <span className="sidebar-footer-label">{t("idioma")}</span>
+            <select className="sidebar-lang-select" value={lang} onChange={(e) => setLang(e.target.value as Idioma)}>
+              {IDIOMA_OPTS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="sidebar-curr-group" ref={currRef}>
+            <span className="sidebar-footer-label">{t("moneda")}</span>
+            <button className="sidebar-curr-toggle" onClick={() => { setCurrOpen(!currOpen); setCurrSearch(""); }}>
+              {MONEDAS[code]?.simbolo} {code}
+            </button>
+            {currOpen && (
+              <div className="sidebar-curr-dropdown">
+                <input
+                  type="text"
+                  className="currency-search"
+                  placeholder={t("buscarMoneda")}
+                  value={currSearch}
+                  onChange={(e) => setCurrSearch(e.target.value)}
+                  autoFocus
+                />
+                <div className="currency-options">
+                  {Object.entries(MONEDAS).filter(([k, v]) =>
+                    !currSearch || k.toLowerCase().includes(currSearch.toLowerCase()) ||
+                    v.nombre.toLowerCase().includes(currSearch.toLowerCase()) ||
+                    v.simbolo.toLowerCase().includes(currSearch.toLowerCase())
+                  ).map(([k, v]) => (
+                    <button
+                      key={k}
+                      className={`currency-opt${code === k ? " active" : ""}`}
+                      onClick={() => { setCode(k); setCurrOpen(false); }}
+                    >
+                      {v.simbolo} {k} — {v.nombre}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </aside>

@@ -34,3 +34,6 @@ export type {
   BitacoraFormValues,
   ValidationResult,
 } from "./validators";
+
+export { PRODUCTO_DEFAULT, CATEGORIAS } from "./inventario-types";
+export type { Producto, MovimientoInventario, CategoriaProducto } from "./inventario-types";

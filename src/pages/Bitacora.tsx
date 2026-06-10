@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/store/language";
-import { ESPECIES_DEFAULT, OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/core";
+import { OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/core";
 import { toast } from "@/components/Toast";
 import { exportBitacoraPDF } from "@/utils/pdf";
+import { useLookups } from "@/store/lookups";
 
 const RECORDS_KEY = "aquacalc_bitacora";
 
@@ -40,6 +41,7 @@ function loadRecords(): RecordData[] {
 
 export default function Bitacora() {
   const { t } = useTranslation();
+  const { species: allSpecies, estanques } = useLookups();
   const [records, setRecords] = useState<RecordData[]>(loadRecords);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<RecordData>(emptyRecord);
@@ -120,12 +122,19 @@ export default function Bitacora() {
           <div className="card-title">📝 {t("nuevoRegistroTitle")}</div>
           <div className="form-grid">
             <label>{t("fecha")}<input type="date" value={form.fecha} onChange={(e) => setF("fecha", e.target.value)} /></label>
-            <label>{t("estanque")}<input type="text" value={form.estanque} onChange={(e) => setF("estanque", e.target.value)} placeholder={`Ej: ${t("estanque")} 1`} /></label>
+            <label>{t("estanque")}
+              <select value={form.estanque} onChange={(e) => setF("estanque", e.target.value)}>
+                <option value="">{t("seleccionar")}</option>
+                {estanques.map((e) => (
+                  <option key={e.id} value={e.id}>{e.label}</option>
+                ))}
+              </select>
+            </label>
             <label>{t("especie")}
               <select value={form.especie} onChange={(e) => setF("especie", e.target.value)}>
                 <option value="">{t("seleccionar")}</option>
-                {ESPECIES_DEFAULT.map((s) => (
-                  <option key={s.id} value={s.id}>{t(`sp_${s.id}` as any)}</option>
+                {allSpecies.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
                 ))}
               </select>
             </label>
