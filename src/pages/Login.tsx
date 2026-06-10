@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/store/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+
 export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -8,11 +9,13 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
+  const [acepto, setAcepto] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isRegister && !acepto) { setError("Debés aceptar los Términos y Condiciones"); return; }
     setError("");
     setLoading(true);
 
@@ -20,12 +23,8 @@ export default function Login() {
       ? await register(email, password, nombre)
       : await login(email, password);
 
-    if (err) {
-      setError(err);
-      setLoading(false);
-    } else {
-      navigate("/");
-    }
+    if (err) { setError(err); setLoading(false); }
+    else { navigate("/"); }
   };
 
   return (
@@ -60,6 +59,12 @@ export default function Login() {
             Contraseña
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
           </label>
+          {isRegister && (
+            <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} style={{ accentColor: "var(--accent)" }} />
+              <span>Acepto los <Link to="/terminos" style={{ color: "var(--accent)" }} target="_blank">Términos y Condiciones</Link></span>
+            </label>
+          )}
           <button className="btn-primary" disabled={loading} style={{ width: "100%", marginTop: 8 }}>
             {loading ? "Cargando..." : isRegister ? "Crear Cuenta" : "Ingresar"}
           </button>
@@ -67,10 +72,8 @@ export default function Login() {
 
         <p style={{ fontSize: 12, color: "var(--text2)", textAlign: "center", marginTop: 16 }}>
           {isRegister ? "¿Ya tenés cuenta?" : "¿No tenés cuenta?"}{" "}
-          <button
-            onClick={() => { setIsRegister(!isRegister); setError(""); }}
-            style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontWeight: 600, fontSize: 12 }}
-          >
+          <button onClick={() => { setIsRegister(!isRegister); setError(""); }}
+            style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontWeight: 600, fontSize: 12 }}>
             {isRegister ? "Iniciar Sesión" : "Registrarse"}
           </button>
         </p>

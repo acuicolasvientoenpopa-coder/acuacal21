@@ -13,3 +13,4 @@ export { default as Dashboard } from "./Dashboard";
 export { default as Inventario } from "./Inventario";
 export { default as Mapa } from "./Mapa";
 export { default as Login } from "./Login";
+export { default as Terminos } from "./Terminos";
