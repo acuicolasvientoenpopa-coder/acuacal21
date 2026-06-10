@@ -1,49 +1,24 @@
 import { useState, useCallback, useEffect } from "react";
+import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import {
-  ALIMENTACION_RULES,
-  COMPORTAMIENTO_RULES,
-  SINTOMAS_RULES,
-  AGUA_RULES,
-  generateResumen,
+  ALIMENTACION_RULES, COMPORTAMIENTO_RULES, SINTOMAS_RULES, AGUA_RULES, generateResumen,
 } from "./symptomRules";
 import { calcularRiesgo } from "./riskCalculator";
 import type { RiskResult } from "./riskCalculator";
 import { exportVetPDF } from "@/utils/pdf";
 
-type FormData = {
-  estanque: string;
-  alimentacion: string[];
-  comportamiento: string[];
-  sintomas: string[];
-  agua: string[];
-  imagenes: string[];
-};
-
+type FormData = { estanque: string; alimentacion: string[]; comportamiento: string[]; sintomas: string[]; agua: string[]; imagenes: string[]; };
 type ArrKeys = "alimentacion" | "comportamiento" | "sintomas" | "agua" | "imagenes";
 type RiesgoLevel = "rojo" | "amarillo" | "verde";
 
 interface SavedReport {
-  id: string;
-  fecha: string;
-  pondName: string;
-  riesgo: RiesgoLevel;
-  puntaje: number;
-  diagnosticos: { diagnosis: string; weight: number }[];
-  resumen: string;
-  acciones: string[];
-  imagenes: string[];
-  lang: string;
+  id: string; fecha: string; pondName: string; riesgo: RiesgoLevel;
+  puntaje: number; diagnosticos: { diagnosis: string; weight: number }[];
+  resumen: string; acciones: string[]; imagenes: string[]; lang: string;
 }
 
-const EMPTY_FORM: FormData = {
-  estanque: "",
-  alimentacion: [],
-  comportamiento: [],
-  sintomas: [],
-  agua: [],
-  imagenes: [],
-};
+const EMPTY_FORM: FormData = { estanque: "", alimentacion: [], comportamiento: [], sintomas: [], agua: [], imagenes: [] };
 
 const STEPS = [
   { key: "estanque" as const, titleKey: "vetEstanque" as const, icon: "🏞️" },
@@ -54,21 +29,12 @@ const STEPS = [
   { key: "resumen" as const, titleKey: "vetResumen" as const, icon: "📋" },
 ];
 
-const STEP_EMOJIS: Record<string, string> = {
-  estanque: "🏞️", alimentacion: "🍽️", comportamiento: "🐟", sintomas: "🔍", agua: "💧", resumen: "📋",
-};
+const STEP_EMOJIS: Record<string, string> = { estanque: "🏞️", alimentacion: "🍽️", comportamiento: "🐟", sintomas: "🔍", agua: "💧", resumen: "📋" };
 
 const STORAGE_KEY = "aquacalc_vet_reports";
 
-function loadReports(): SavedReport[] {
-  try {
-    const d = localStorage.getItem(STORAGE_KEY);
-    return d ? JSON.parse(d) : [];
-  } catch { return []; }
-}
-
-function saveReports(reports: SavedReport[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(reports)); } catch { /* ignore */ }
+function loadLocal(): SavedReport[] {
+  try { const d = localStorage.getItem(STORAGE_KEY); return d ? JSON.parse(d) : []; } catch { return []; }
 }
 
 function getPondos(): { id: string; label: string }[] {
@@ -77,18 +43,16 @@ function getPondos(): { id: string; label: string }[] {
     if (saved) {
       const fincas = JSON.parse(saved);
       if (Array.isArray(fincas) && fincas.length > 0) {
-        return [
-          ...fincas.map((f: { id: string; nombre: string }) => ({ id: f.id, label: f.nombre })),
-          { id: "general", label: "General / toda la finca" },
-        ];
+        return [...fincas.map((f: { id: string; nombre: string }) => ({ id: f.id, label: f.nombre })), { id: "general", label: "General / toda la finca" }];
       }
     }
-  } catch { /* ignore */ }
+  } catch {}
   return [{ id: "general", label: "General / toda la finca" }];
 }
 
 export default function VeterinaryReportWizard() {
   const { t, lang } = useTranslation();
+  const { token, apiUrl } = useAuth();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [result, setResult] = useState<{ diagnosticos: { diagnosis: string; weight: number }[]; riesgo: RiskResult } | null>(null);
@@ -96,10 +60,30 @@ export default function VeterinaryReportWizard() {
   const [addingPond, setAddingPond] = useState(false);
   const [newPondName, setNewPondName] = useState("");
   const [mode, setMode] = useState<"wizard" | "history">("wizard");
-  const [reports, setReports] = useState<SavedReport[]>([]);
+  const [reports, setReports] = useState<SavedReport[]>(loadLocal);
   const [viewingReport, setViewingReport] = useState<SavedReport | null>(null);
 
-  useEffect(() => { setReports(loadReports()); }, []);
+  const api = useCallback(async (path: string, opts?: RequestInit) => {
+    const res = await fetch(apiUrl + path, {
+      ...opts,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }, [apiUrl, token]);
+
+  useEffect(() => {
+    api("/veterinaria").then((data: any[]) => {
+      const mapped = data.map((r: any) => {
+        let base: any = { id: r.id, fecha: r.fecha?.slice(0, 10) || "", riesgo: r.riesgo || "verde" };
+        try { const p = JSON.parse(r.notas || "{}"); return { ...base, ...p }; } catch { return base; }
+      }).filter((r: any) => r.pondName);
+      if (mapped.length > 0) {
+        setReports(mapped);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+      }
+    }).catch(() => setReports(loadLocal()));
+  }, [api]);
 
   const createPond = () => {
     const name = newPondName.trim();
@@ -110,7 +94,7 @@ export default function VeterinaryReportWizard() {
       const fincas = saved ? JSON.parse(saved) : [];
       fincas.push(newFinca);
       localStorage.setItem("aquacalc_fincas", JSON.stringify(fincas));
-    } catch { /* ignore */ }
+    } catch {}
     setPondos(getPondos());
     setForm((prev) => ({ ...prev, estanque: newFinca.id }));
     setNewPondName("");
@@ -127,10 +111,7 @@ export default function VeterinaryReportWizard() {
 
   const canAdvance = useCallback(() => {
     if (step === 0) return form.estanque !== "";
-    if (step <= 4) {
-      const arr = form[STEPS[step].key as ArrKeys];
-      return arr.length > 0;
-    }
+    if (step <= 4) { const arr = form[STEPS[step].key as ArrKeys]; return arr.length > 0; }
     return true;
   }, [step, form]);
 
@@ -149,7 +130,7 @@ export default function VeterinaryReportWizard() {
 
   const prev = useCallback(() => setStep((s) => Math.max(s - 1, 0)), []);
 
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
     if (result) {
       const pondName = pondos.find((p) => p.id === form.estanque)?.label || form.estanque;
       const acciones: string[] = [];
@@ -158,29 +139,31 @@ export default function VeterinaryReportWizard() {
       else if (r === "amarillo") acciones.push(t("vetAccion4"), t("vetAccion5"));
       else acciones.push(t("vetAccion6"));
       const report: SavedReport = {
-        id: "vr_" + Date.now(),
-        fecha: new Date().toLocaleDateString(),
-        pondName,
-        riesgo: r,
-        puntaje: result.riesgo.puntaje,
-        diagnosticos: result.diagnosticos,
+        id: "vr_" + Date.now(), fecha: new Date().toLocaleDateString(), pondName,
+        riesgo: r, puntaje: result.riesgo.puntaje, diagnosticos: result.diagnosticos,
         resumen: generateResumen(result.diagnosticos.map((d) => d.diagnosis), r, lang),
-        acciones,
-        imagenes: form.imagenes,
-        lang,
+        acciones, imagenes: form.imagenes, lang,
       };
-      const updated = [report, ...loadReports()];
-      saveReports(updated);
+      const updated = [report, ...reports];
       setReports(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        await api("/veterinaria", {
+          method: "POST",
+          body: JSON.stringify({
+            diagnostico: report.resumen.slice(0, 200),
+            riesgo: report.riesgo,
+            notas: JSON.stringify(report),
+            fecha: new Date().toISOString(),
+          }),
+        });
+      } catch {}
     }
-    setForm(EMPTY_FORM);
-    setStep(0);
-    setResult(null);
-  }, [result, form, pondos, t, lang]);
+    setForm(EMPTY_FORM); setStep(0); setResult(null);
+  }, [result, form, pondos, t, lang, reports, api]);
 
   const isSummaryStep = step === 5;
   const pct = ((step + 1) / STEPS.length) * 100;
-
   const diagnosticos = result?.diagnosticos ?? [];
   const riesgo = result?.riesgo;
 
@@ -188,23 +171,13 @@ export default function VeterinaryReportWizard() {
     const d = rep || result;
     if (!d) return;
     const pondName = rep ? rep.pondName : pondos.find((p) => p.id === form.estanque)?.label || form.estanque;
-    const acciones = rep ? rep.acciones : [];
-    const imagenes = rep ? rep.imagenes : form.imagenes;
+    const accionesR = rep ? rep.acciones : [];
+    const imagenesR = rep ? rep.imagenes : form.imagenes;
     const diag = rep ? rep.diagnosticos : (result?.diagnosticos ?? []);
     const puntaje = rep ? rep.puntaje : (result?.riesgo.puntaje ?? 0);
     const riesgoLabel = rep ? rep.riesgo : (result?.riesgo.riesgo ?? "verde");
     const resumen = rep ? rep.resumen : (result ? generateResumen(result.diagnosticos.map((d) => d.diagnosis), result.riesgo.riesgo, lang) : "");
-    exportVetPDF({
-      pondName,
-      fecha: rep?.fecha || new Date().toLocaleDateString(),
-      symptons: { alimentacion: [], comportamiento: [], sintomas: [], agua: [] },
-      diagnosticos: diag,
-      riesgo: { puntaje, riesgo: riesgoLabel },
-      resumen,
-      acciones,
-      imagenes,
-      lang: rep?.lang || lang,
-    }, t as (k: string) => string);
+    exportVetPDF({ pondName, fecha: rep?.fecha || new Date().toLocaleDateString(), symptons: { alimentacion: [], comportamiento: [], sintomas: [], agua: [] }, diagnosticos: diag, riesgo: { puntaje, riesgo: riesgoLabel }, resumen, acciones: accionesR, imagenes: imagenesR, lang: rep?.lang || lang }, t as (k: string) => string);
   };
 
   const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,40 +185,35 @@ export default function VeterinaryReportWizard() {
     if (!files) return;
     Array.from(files).forEach((file) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        setForm((prev) => ({ ...prev, imagenes: [...prev.imagenes, dataUrl] }));
-      };
+      reader.onload = () => { const dataUrl = reader.result as string; setForm((prev) => ({ ...prev, imagenes: [...prev.imagenes, dataUrl] })); };
       reader.readAsDataURL(file);
     });
     e.target.value = "";
   };
 
-  const removeImage = (index: number) => {
-    setForm((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, i) => i !== index) }));
-  };
+  const removeImage = (index: number) => { setForm((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, i) => i !== index) })); };
 
-  const deleteReport = (id: string) => {
+  const deleteReport = async (id: string) => {
+    try { await api(`/veterinaria/${id}`, { method: "DELETE" }); } catch {}
     const updated = reports.filter((r) => r.id !== id);
-    saveReports(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setReports(updated);
     if (viewingReport?.id === id) setViewingReport(null);
   };
 
   const imagenes = form.imagenes;
-
-  const RS = ({ r }: { r: SavedReport }) => (
+  const RS = ({ r: rp }: { r: SavedReport }) => (
     <div className="vet-history-card">
       <div className="vet-history-head">
-        <span className={`vet-risk-dot riesgo-${r.riesgo}`} />
-        <span className="vet-history-date">{r.fecha}</span>
-        <span className="vet-history-pond">{r.pondName}</span>
-        <span className="vet-history-score">{t("vetScore")}: {r.puntaje}</span>
+        <span className={`vet-risk-dot riesgo-${rp.riesgo}`} />
+        <span className="vet-history-date">{rp.fecha}</span>
+        <span className="vet-history-pond">{rp.pondName}</span>
+        <span className="vet-history-score">{t("vetScore")}: {rp.puntaje}</span>
       </div>
       <div className="vet-history-actions">
-        <button className="btn btn-sm" onClick={() => setViewingReport(r)}>{t("ver")}</button>
-        <button className="btn btn-sm btn-primary" onClick={() => handleExportPDF(r)}>📄 PDF</button>
-        <button className="btn btn-sm btn-danger" onClick={() => deleteReport(r.id)}>{t("eliminar")}</button>
+        <button className="btn btn-sm" onClick={() => setViewingReport(rp)}>{t("ver")}</button>
+        <button className="btn btn-sm btn-primary" onClick={() => handleExportPDF(rp)}>📄 PDF</button>
+        <button className="btn btn-sm btn-danger" onClick={() => deleteReport(rp.id)}>{t("eliminar")}</button>
       </div>
     </div>
   );
@@ -254,22 +222,10 @@ export default function VeterinaryReportWizard() {
     return (
       <div>
         <div className="page-header">
-          <div>
-            <h2 className="page-title">{t("vetTitle")}</h2>
-            <p className="page-subtitle">{t("vetSub")}</p>
-          </div>
+          <div><h2 className="page-title">{t("vetTitle")}</h2><p className="page-subtitle">{t("vetSub")}</p></div>
           <button className="btn btn-primary" onClick={() => setMode("wizard")}>+ {t("vetNuevo")}</button>
         </div>
-        {reports.length === 0 ? (
-          <div className="empty-state">
-            <span className="empty-icon">📋</span>
-            <p>{t("vetSinReportes")}</p>
-          </div>
-        ) : (
-          <div className="vet-history-list">
-            {reports.map((r) => <RS key={r.id} r={r} />)}
-          </div>
-        )}
+        {reports.length === 0 ? (<div className="empty-state"><span className="empty-icon">📋</span><p>{t("vetSinReportes")}</p></div>) : (<div className="vet-history-list">{reports.map((r) => <RS key={r.id} r={r} />)}</div>)}
       </div>
     );
   }
@@ -279,21 +235,13 @@ export default function VeterinaryReportWizard() {
     return (
       <div>
         <div className="page-header">
-          <div>
-            <h2 className="page-title">{t("vetTitle")}</h2>
-            <p className="page-subtitle">{r.fecha} — {r.pondName}</p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn btn-secondary" onClick={() => setViewingReport(null)}>← {t("back")}</button>
-          </div>
+          <div><h2 className="page-title">{t("vetTitle")}</h2><p className="page-subtitle">{r.fecha} — {r.pondName}</p></div>
+          <div style={{ display: "flex", gap: 8 }}><button className="btn btn-secondary" onClick={() => setViewingReport(null)}>← {t("back")}</button></div>
         </div>
         <div className="wizard-card-inner">
           <div className={`vet-banner riesgo-${r.riesgo}`}>
             <span className="vet-banner-icon">{r.riesgo === "rojo" ? "🔴" : r.riesgo === "amarillo" ? "🟡" : "🟢"}</span>
-            <div className="vet-banner-body">
-              <span className="vet-banner-level">{r.riesgo === "rojo" ? t("vetAlto") : r.riesgo === "amarillo" ? t("vetModerado") : t("vetBajo")}</span>
-              <span className="vet-banner-score">{t("vetScore")}: {r.puntaje}</span>
-            </div>
+            <div className="vet-banner-body"><span className="vet-banner-level">{r.riesgo === "rojo" ? t("vetAlto") : r.riesgo === "amarillo" ? t("vetModerado") : t("vetBajo")}</span><span className="vet-banner-score">{t("vetScore")}: {r.puntaje}</span></div>
           </div>
           {r.diagnosticos.length > 0 && (
             <div className="vet-summary-section">
@@ -301,40 +249,20 @@ export default function VeterinaryReportWizard() {
               <div className="vet-diagnosticos-grid">
                 {r.diagnosticos.map((d, i) => (
                   <div key={i} className={`vet-diagnostico-card severity-${d.weight >= 4 ? "alta" : d.weight >= 2 ? "media" : "baja"}`}>
-                    <span className="vet-diagnostico-name">{d.diagnosis}</span>
-                    <span className="vet-diagnostico-weight">+{d.weight}</span>
+                    <span className="vet-diagnostico-name">{d.diagnosis}</span><span className="vet-diagnostico-weight">+{d.weight}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          <div className="vet-summary-section">
-            <div className="vet-summary-label">{t("vetResumen")}</div>
-            <p className="vet-summary-text">{r.resumen}</p>
-          </div>
+          <div className="vet-summary-section"><div className="vet-summary-label">{t("vetResumen")}</div><p className="vet-summary-text">{r.resumen}</p></div>
           {r.acciones.length > 0 && (
-            <div className="vet-summary-section">
-              <div className="vet-summary-label">{t("vetAcciones")}</div>
-              <ul className="vet-actions-list">
-                {r.acciones.map((a, i) => <li key={i}>{a}</li>)}
-              </ul>
-            </div>
+            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetAcciones")}</div><ul className="vet-actions-list">{r.acciones.map((a, i) => <li key={i}>{a}</li>)}</ul></div>
           )}
           {r.imagenes.length > 0 && (
-            <div className="vet-summary-section">
-              <div className="vet-summary-label">{t("vetFotos")}</div>
-              <div className="vet-fotos-grid">
-                {r.imagenes.map((img, i) => (
-                  <div key={i} className="vet-foto-item">
-                    <img src={img} alt="" className="vet-foto-thumb" />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetFotos")}</div><div className="vet-fotos-grid">{r.imagenes.map((img, i) => (<div key={i} className="vet-foto-item"><img src={img} alt="" className="vet-foto-thumb" /></div>))}</div></div>
           )}
-          <div className="vet-pdf-section">
-            <button className="btn btn-primary" onClick={() => handleExportPDF(r)}>📄 {t("vetExportPDF")}</button>
-          </div>
+          <div className="vet-pdf-section"><button className="btn btn-primary" onClick={() => handleExportPDF(r)}>📄 {t("vetExportPDF")}</button></div>
         </div>
       </div>
     );
@@ -343,19 +271,12 @@ export default function VeterinaryReportWizard() {
   return (
     <div>
       <div className="page-header">
-        <div>
-          <h2 className="page-title">{t("vetTitle")}</h2>
-          <p className="page-subtitle">{t("vetSub")}</p>
-        </div>
-        <button className="btn btn-secondary" onClick={() => setMode("history")}>
-          📋 {t("vetHistorial")} ({reports.length})
-        </button>
+        <div><h2 className="page-title">{t("vetTitle")}</h2><p className="page-subtitle">{t("vetSub")}</p></div>
+        <button className="btn btn-secondary" onClick={() => setMode("history")}>📋 {t("vetHistorial")} ({reports.length})</button>
       </div>
 
       <div className="wizard-progress-wrap">
-        <div className="wizard-progress-bar">
-          <div className="wizard-progress-fill" style={{ width: `${pct}%` }} />
-        </div>
+        <div className="wizard-progress-bar"><div className="wizard-progress-fill" style={{ width: `${pct}%` }} /></div>
         <div className="wizard-step-indicators">
           {STEPS.map((s, i) => (
             <div key={s.key} className={`wizard-step-dot${i <= step ? " done" : ""}${i === step ? " active" : ""}`}>
@@ -381,8 +302,7 @@ export default function VeterinaryReportWizard() {
               ))}
               {pondos.length <= 1 && !addingPond && (
                 <button className="wizard-option-card wizard-add-pond" onClick={() => setAddingPond(true)}>
-                  <span className="wizard-option-mark">+</span>
-                  <span className="wizard-option-label">{t("vetCrearEstanque")}</span>
+                  <span className="wizard-option-mark">+</span><span className="wizard-option-label">{t("vetCrearEstanque")}</span>
                 </button>
               )}
               {addingPond && (
@@ -403,14 +323,7 @@ export default function VeterinaryReportWizard() {
             <div className="wizard-card-icon">🍽️</div>
             <h3 className="wizard-card-title">{t("vetAlimentacion")}</h3>
             <p className="wizard-card-desc">{t("vetAlimentacionDesc")}</p>
-            <div className="wizard-option-grid">
-              {ALIMENTACION_RULES.map((r) => (
-                <button key={r.id} className={`wizard-option-card${form.alimentacion.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("alimentacion", r.id)}>
-                  <span className="wizard-option-mark">{form.alimentacion.includes(r.id) ? "✓" : ""}</span>
-                  <span className="wizard-option-label">{r.label}</span>
-                </button>
-              ))}
-            </div>
+            <div className="wizard-option-grid">{ALIMENTACION_RULES.map((r) => (<button key={r.id} className={`wizard-option-card${form.alimentacion.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("alimentacion", r.id)}><span className="wizard-option-mark">{form.alimentacion.includes(r.id) ? "✓" : ""}</span><span className="wizard-option-label">{r.label}</span></button>))}</div>
           </div>
         )}
 
@@ -419,14 +332,7 @@ export default function VeterinaryReportWizard() {
             <div className="wizard-card-icon">🐟</div>
             <h3 className="wizard-card-title">{t("vetComportamiento")}</h3>
             <p className="wizard-card-desc">{t("vetComportamientoDesc")}</p>
-            <div className="wizard-option-grid">
-              {COMPORTAMIENTO_RULES.map((r) => (
-                <button key={r.id} className={`wizard-option-card${form.comportamiento.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("comportamiento", r.id)}>
-                  <span className="wizard-option-mark">{form.comportamiento.includes(r.id) ? "✓" : ""}</span>
-                  <span className="wizard-option-label">{r.label}</span>
-                </button>
-              ))}
-            </div>
+            <div className="wizard-option-grid">{COMPORTAMIENTO_RULES.map((r) => (<button key={r.id} className={`wizard-option-card${form.comportamiento.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("comportamiento", r.id)}><span className="wizard-option-mark">{form.comportamiento.includes(r.id) ? "✓" : ""}</span><span className="wizard-option-label">{r.label}</span></button>))}</div>
           </div>
         )}
 
@@ -435,14 +341,7 @@ export default function VeterinaryReportWizard() {
             <div className="wizard-card-icon">🔍</div>
             <h3 className="wizard-card-title">{t("vetSintomas")}</h3>
             <p className="wizard-card-desc">{t("vetSintomasDesc")}</p>
-            <div className="wizard-option-grid">
-              {SINTOMAS_RULES.map((r) => (
-                <button key={r.id} className={`wizard-option-card${form.sintomas.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("sintomas", r.id)}>
-                  <span className="wizard-option-mark">{form.sintomas.includes(r.id) ? "✓" : ""}</span>
-                  <span className="wizard-option-label">{r.label}</span>
-                </button>
-              ))}
-            </div>
+            <div className="wizard-option-grid">{SINTOMAS_RULES.map((r) => (<button key={r.id} className={`wizard-option-card${form.sintomas.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("sintomas", r.id)}><span className="wizard-option-mark">{form.sintomas.includes(r.id) ? "✓" : ""}</span><span className="wizard-option-label">{r.label}</span></button>))}</div>
           </div>
         )}
 
@@ -451,14 +350,7 @@ export default function VeterinaryReportWizard() {
             <div className="wizard-card-icon">💧</div>
             <h3 className="wizard-card-title">{t("vetAgua")}</h3>
             <p className="wizard-card-desc">{t("vetAguaDesc")}</p>
-            <div className="wizard-option-grid">
-              {AGUA_RULES.map((r) => (
-                <button key={r.id} className={`wizard-option-card${form.agua.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("agua", r.id)}>
-                  <span className="wizard-option-mark">{form.agua.includes(r.id) ? "✓" : ""}</span>
-                  <span className="wizard-option-label">{r.label}</span>
-                </button>
-              ))}
-            </div>
+            <div className="wizard-option-grid">{AGUA_RULES.map((r) => (<button key={r.id} className={`wizard-option-card${form.agua.includes(r.id) ? " selected" : ""}`} onClick={() => toggle("agua", r.id)}><span className="wizard-option-mark">{form.agua.includes(r.id) ? "✓" : ""}</span><span className="wizard-option-label">{r.label}</span></button>))}</div>
           </div>
         )}
 
@@ -466,99 +358,41 @@ export default function VeterinaryReportWizard() {
           <div className="wizard-card-inner">
             <div className="wizard-card-icon">📋</div>
             <h3 className="wizard-card-title">{t("vetResumen")}</h3>
-
             <div className={`vet-banner riesgo-${riesgo?.riesgo || "verde"}`}>
-              <span className="vet-banner-icon">
-                {riesgo?.riesgo === "rojo" ? "🔴" : riesgo?.riesgo === "amarillo" ? "🟡" : "🟢"}
-              </span>
-              <div className="vet-banner-body">
-                <span className="vet-banner-level">
-                  {riesgo?.riesgo === "rojo" ? t("vetAlto") : riesgo?.riesgo === "amarillo" ? t("vetModerado") : t("vetBajo")}
-                </span>
-                <span className="vet-banner-score">{t("vetScore")}: {riesgo?.puntaje}</span>
-              </div>
+              <span className="vet-banner-icon">{riesgo?.riesgo === "rojo" ? "🔴" : riesgo?.riesgo === "amarillo" ? "🟡" : "🟢"}</span>
+              <div className="vet-banner-body"><span className="vet-banner-level">{riesgo?.riesgo === "rojo" ? t("vetAlto") : riesgo?.riesgo === "amarillo" ? t("vetModerado") : t("vetBajo")}</span><span className="vet-banner-score">{t("vetScore")}: {riesgo?.puntaje}</span></div>
             </div>
-
-            <div className="vet-summary-section">
-              <div className="vet-summary-label">{t("vetEstanque")}</div>
-              <div className="vet-summary-value">
-                <span className="vet-tag">{pondos.find((p) => p.id === form.estanque)?.label || form.estanque}</span>
-              </div>
-            </div>
-
+            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetEstanque")}</div><div className="vet-summary-value"><span className="vet-tag">{pondos.find((p) => p.id === form.estanque)?.label || form.estanque}</span></div></div>
             {diagnosticos.length > 0 && (
               <div className="vet-summary-section">
                 <div className="vet-summary-label">{t("vetDiagnosticos")}</div>
-                <div className="vet-diagnosticos-grid">
-                  {diagnosticos.map((d, i) => (
-                    <div key={i} className={`vet-diagnostico-card severity-${d.weight >= 4 ? "alta" : d.weight >= 2 ? "media" : "baja"}`}>
-                      <span className="vet-diagnostico-name">{d.diagnosis}</span>
-                      <span className="vet-diagnostico-weight">+{d.weight}</span>
-                    </div>
-                  ))}
-                </div>
+                <div className="vet-diagnosticos-grid">{diagnosticos.map((d, i) => (<div key={i} className={`vet-diagnostico-card severity-${d.weight >= 4 ? "alta" : d.weight >= 2 ? "media" : "baja"}`}><span className="vet-diagnostico-name">{d.diagnosis}</span><span className="vet-diagnostico-weight">+{d.weight}</span></div>))}</div>
               </div>
             )}
-
-            <div className="vet-summary-section">
-              <div className="vet-summary-label">{t("vetResumen")}</div>
-              <p className="vet-summary-text">
-                {generateResumen(diagnosticos.map((d) => d.diagnosis), riesgo?.riesgo || "verde", lang)}
-              </p>
-            </div>
-
+            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetResumen")}</div><p className="vet-summary-text">{generateResumen(diagnosticos.map((d) => d.diagnosis), riesgo?.riesgo || "verde", lang)}</p></div>
             <div className="vet-summary-section">
               <div className="vet-summary-label">{t("vetAcciones")}</div>
               <ul className="vet-actions-list">
-                {riesgo?.riesgo === "rojo" && (
-                  <><li><span className="vet-action-icon">⚠️</span>{t("vetAccion1")}</li><li><span className="vet-action-icon">⏸️</span>{t("vetAccion2")}</li><li><span className="vet-action-icon">🧪</span>{t("vetAccion3")}</li></>
-                )}
-                {riesgo?.riesgo === "amarillo" && (
-                  <><li><span className="vet-action-icon">📊</span>{t("vetAccion4")}</li><li><span className="vet-action-icon">📝</span>{t("vetAccion5")}</li></>
-                )}
-                {riesgo?.riesgo === "verde" && (
-                  <li><span className="vet-action-icon">✅</span>{t("vetAccion6")}</li>
-                )}
+                {riesgo?.riesgo === "rojo" && <><li><span className="vet-action-icon">⚠️</span>{t("vetAccion1")}</li><li><span className="vet-action-icon">⏸️</span>{t("vetAccion2")}</li><li><span className="vet-action-icon">🧪</span>{t("vetAccion3")}</li></>}
+                {riesgo?.riesgo === "amarillo" && <><li><span className="vet-action-icon">📊</span>{t("vetAccion4")}</li><li><span className="vet-action-icon">📝</span>{t("vetAccion5")}</li></>}
+                {riesgo?.riesgo === "verde" && <li><span className="vet-action-icon">✅</span>{t("vetAccion6")}</li>}
               </ul>
             </div>
-
             <div className="vet-summary-section">
               <div className="vet-summary-label">{t("vetFotos")}</div>
               <div className="vet-fotos-grid">
-                {imagenes.map((img, i) => (
-                  <div key={i} className="vet-foto-item">
-                    <img src={img} alt={`Foto ${i + 1}`} className="vet-foto-thumb" />
-                    <button className="vet-foto-remove" onClick={() => removeImage(i)}>✕</button>
-                  </div>
-                ))}
-                <label className="vet-foto-add">
-                  <input type="file" accept="image/*" capture="environment" onChange={handleAddImages} hidden />
-                  <span className="vet-foto-add-icon">+</span>
-                  <span className="vet-foto-add-text">{t("vetAgregarFoto")}</span>
-                </label>
+                {imagenes.map((img, i) => (<div key={i} className="vet-foto-item"><img src={img} alt={`Foto ${i + 1}`} className="vet-foto-thumb" /><button className="vet-foto-remove" onClick={() => removeImage(i)}>✕</button></div>))}
+                <label className="vet-foto-add"><input type="file" accept="image/*" capture="environment" onChange={handleAddImages} hidden /><span className="vet-foto-add-icon">+</span><span className="vet-foto-add-text">{t("vetAgregarFoto")}</span></label>
               </div>
             </div>
-
-            <div className="vet-pdf-section">
-              <button className="btn btn-primary" onClick={() => handleExportPDF()}>
-                📄 {t("vetExportPDF")}
-              </button>
-            </div>
+            <div className="vet-pdf-section"><button className="btn btn-primary" onClick={() => handleExportPDF()}>📄 {t("vetExportPDF")}</button></div>
           </div>
         )}
       </div>
 
       <div className="wizard-nav">
-        {step > 0 && !isSummaryStep && (
-          <button className="btn btn-secondary" onClick={prev}>
-            ← {t("back")}
-          </button>
-        )}
-        {step > 0 && isSummaryStep && (
-          <button className="btn btn-secondary" onClick={reset}>
-            🔄 {t("vetNuevo")}
-          </button>
-        )}
+        {step > 0 && !isSummaryStep && <button className="btn btn-secondary" onClick={prev}>← {t("back")}</button>}
+        {step > 0 && isSummaryStep && <button className="btn btn-secondary" onClick={reset}>🔄 {t("vetNuevo")}</button>}
         <button className="btn-primary" onClick={isSummaryStep && result ? reset : next} disabled={!canAdvance() && !isSummaryStep} style={{ marginLeft: "auto" }}>
           {isSummaryStep ? `🔄 ${t("vetNuevo")}` : step === 4 ? `📋 ${t("vetGenerar")}` : `→ ${t("next")}`}
         </button>

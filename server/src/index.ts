@@ -5,6 +5,10 @@ import { authRouter } from "./routes/auth.js";
 import { fincasRouter } from "./routes/fincas.js";
 import { bitacoraRouter } from "./routes/bitacora.js";
 import { especiesRouter } from "./routes/especies.js";
+import { finanzasRouter } from "./routes/finanzas.js";
+import { inventarioRouter } from "./routes/inventario.js";
+import { microbiologiaRouter } from "./routes/microbiologia.js";
+import { veterinariaRouter } from "./routes/veterinaria.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -22,6 +26,10 @@ app.use("/api/auth", authRouter);
 app.use("/api/fincas", fincasRouter);
 app.use("/api/bitacora", bitacoraRouter);
 app.use("/api/especies", especiesRouter);
+app.use("/api/finanzas", finanzasRouter);
+app.use("/api/inventario", inventarioRouter);
+app.use("/api/microbiologia", microbiologiaRouter);
+app.use("/api/veterinaria", veterinariaRouter);
 
 app.use(errorHandler);
 

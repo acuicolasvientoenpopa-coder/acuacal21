@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/core";
 import { toast } from "@/components/Toast";
@@ -8,24 +9,10 @@ import { useLookups } from "@/store/lookups";
 const RECORDS_KEY = "aquacalc_bitacora";
 
 type RecordData = {
-  id: string;
-  fecha: string;
-  estanque: string;
-  especie: string;
-  alimento: string;
-  mortalidades: string;
-  pesoMuestreo: string;
-  oxigeno: string;
-  temperatura: string;
-  ph: string;
-  amonio: string;
-  nitrito: string;
-  salinidad: string;
-  biomasa: string;
-  sgr: string;
-  fcrAcum: string;
-  observaciones: string;
-  createdAt: string;
+  id: string; fecha: string; estanque: string; especie: string; alimento: string;
+  mortalidades: string; pesoMuestreo: string; oxigeno: string; temperatura: string;
+  ph: string; amonio: string; nitrito: string; salinidad: string; biomasa: string;
+  sgr: string; fcrAcum: string; observaciones: string; createdAt: string;
 };
 
 const emptyRecord = (): RecordData => ({
@@ -34,18 +21,58 @@ const emptyRecord = (): RecordData => ({
   nitrito: "", salinidad: "", biomasa: "", sgr: "", fcrAcum: "", observaciones: "", createdAt: "",
 });
 
-function loadRecords(): RecordData[] {
-  try { return JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]"); }
-  catch { return []; }
+function loadLocal(): RecordData[] {
+  try { return JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]"); } catch { return []; }
+}
+
+function dbToRecord(r: any): RecordData {
+  let extra: any = {};
+  try { if (r.observaciones) extra = JSON.parse(r.observaciones); } catch {}
+  return {
+    id: r.id, fecha: r.fecha?.slice(0, 10) || "",
+    estanque: extra.estanque || r.estanqueId || "",
+    especie: extra.especie || r.especieId || "",
+    alimento: extra.alimento || "", mortalidades: extra.mortalidades || "",
+    pesoMuestreo: r.peso != null ? String(r.peso) : "",
+    oxigeno: r.oxigeno != null ? String(r.oxigeno) : "",
+    temperatura: r.temperatura != null ? String(r.temperatura) : "",
+    ph: r.ph != null ? String(r.ph) : "",
+    amonio: r.amonio != null ? String(r.amonio) : "",
+    nitrito: extra.nitrito || "",
+    salinidad: r.salinidad != null ? String(r.salinidad) : "",
+    biomasa: extra.biomasa || "",
+    sgr: extra.sgr || "",
+    fcrAcum: extra.fcrAcum || "",
+    observaciones: extra.observaciones || "",
+    createdAt: r.createdAt || "",
+  };
 }
 
 export default function Bitacora() {
   const { t } = useTranslation();
+  const { token, apiUrl } = useAuth();
   const { species: allSpecies, estanques } = useLookups();
-  const [records, setRecords] = useState<RecordData[]>(loadRecords);
+  const [records, setRecords] = useState<RecordData[]>(loadLocal);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<RecordData>(emptyRecord);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const api = useCallback(async (path: string, opts?: RequestInit) => {
+    const res = await fetch(apiUrl + path, {
+      ...opts,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }, [apiUrl, token]);
+
+  useEffect(() => {
+    api("/bitacora").then((data: any[]) => {
+      const mapped = data.map(dbToRecord);
+      setRecords(mapped);
+      localStorage.setItem(RECORDS_KEY, JSON.stringify(mapped));
+    }).catch(() => setRecords(loadLocal()));
+  }, [api]);
 
   useEffect(() => {
     localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
@@ -53,7 +80,9 @@ export default function Bitacora() {
 
   useEffect(() => {
     const h = (e: StorageEvent) => {
-      if (e.key === RECORDS_KEY) setRecords(loadRecords());
+      if (e.key === RECORDS_KEY) {
+        try { setRecords(JSON.parse(e.newValue || "[]")); } catch {}
+      }
     };
     window.addEventListener("storage", h);
     return () => window.removeEventListener("storage", h);
@@ -69,11 +98,8 @@ export default function Bitacora() {
     if (["oxigeno","temperatura","ph","amonio","nitrito","salinidad"].includes(key)) {
       const next = { ...form, [key]: val };
       const wq = validateWaterQuality({
-        oxigeno: Number(next.oxigeno) || null,
-        temperatura: Number(next.temperatura) || null,
-        ph: Number(next.ph) || null,
-        amonio: Number(next.amonio) || null,
-        nitrito: Number(next.nitrito) || null,
+        oxigeno: Number(next.oxigeno) || null, temperatura: Number(next.temperatura) || null,
+        ph: Number(next.ph) || null, amonio: Number(next.amonio) || null, nitrito: Number(next.nitrito) || null,
       });
       setErrors((prev) => {
         const e = { ...prev };
@@ -86,22 +112,45 @@ export default function Bitacora() {
 
   const canSave = form.fecha && form.estanque.trim() && form.especie;
 
-  const save = () => {
+  const save = async () => {
     if (!canSave) return;
     const rec = { ...form, createdAt: new Date().toISOString() };
     const bf = validateBitacoraForm({
-      fecha: rec.fecha,
-      estanque: rec.estanque,
-      alimento: Number(rec.alimento) || null,
-      mortalidad: Number(rec.mortalidades) || null,
-      ph: Number(rec.ph) || null,
+      fecha: rec.fecha, estanque: rec.estanque, alimento: Number(rec.alimento) || null,
+      mortalidad: Number(rec.mortalidades) || null, ph: Number(rec.ph) || null,
     });
     if (!bf.valid) { Object.values(bf.errors).forEach((msg) => toast(msg, "error")); return; }
+
+    const extra: any = {};
+    if (rec.estanque) extra.estanque = rec.estanque;
+    if (rec.especie) extra.especie = rec.especie;
+    if (rec.alimento) extra.alimento = rec.alimento;
+    if (rec.mortalidades) extra.mortalidades = rec.mortalidades;
+    if (rec.nitrito) extra.nitrito = rec.nitrito;
+    if (rec.biomasa) extra.biomasa = rec.biomasa;
+    if (rec.sgr) extra.sgr = rec.sgr;
+    if (rec.fcrAcum) extra.fcrAcum = rec.fcrAcum;
+    if (rec.observaciones) extra.observaciones = rec.observaciones;
+
+    const payload: any = { fecha: rec.fecha, observaciones: Object.keys(extra).length > 0 ? JSON.stringify(extra) : "" };
+    if (rec.oxigeno) payload.oxigeno = parseFloat(rec.oxigeno);
+    if (rec.temperatura) payload.temperatura = parseFloat(rec.temperatura);
+    if (rec.ph) payload.ph = parseFloat(rec.ph);
+    if (rec.amonio) payload.amonio = parseFloat(rec.amonio);
+    if (rec.salinidad) payload.salinidad = parseFloat(rec.salinidad);
+    if (rec.pesoMuestreo) payload.peso = parseFloat(rec.pesoMuestreo);
+    if (rec.estanque) payload.estanqueId = rec.estanque;
+    if (rec.especie) payload.especieId = rec.especie;
+    try {
+      const created = await api("/bitacora", { method: "POST", body: JSON.stringify(payload) });
+      rec.id = created.id;
+    } catch {}
     setRecords([rec, ...records]);
     setShowForm(false);
   };
 
-  const remove = (id: string) => {
+  const remove = async (id: string) => {
+    try { await api(`/bitacora/${id}`, { method: "DELETE" }); } catch { }
     setRecords(records.filter((r) => r.id !== id));
   };
 
@@ -125,17 +174,13 @@ export default function Bitacora() {
             <label>{t("estanque")}
               <select value={form.estanque} onChange={(e) => setF("estanque", e.target.value)}>
                 <option value="">{t("seleccionar")}</option>
-                {estanques.map((e) => (
-                  <option key={e.id} value={e.id}>{e.label}</option>
-                ))}
+                {estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
               </select>
             </label>
             <label>{t("especie")}
               <select value={form.especie} onChange={(e) => setF("especie", e.target.value)}>
                 <option value="">{t("seleccionar")}</option>
-                {allSpecies.map((s) => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
+                {allSpecies.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </label>
             <label>{t("alimento")}<input type="number" step="0.1" value={form.alimento} onChange={(e) => setF("alimento", e.target.value)} placeholder="0.0" /></label>
@@ -161,9 +206,7 @@ export default function Bitacora() {
               {OBSERVACIONES.map((obs) => {
                 const checked = form.observaciones?.split(",").includes(obs);
                 return (
-                  <label
-                    key={obs}
-                    className={`obs-check${checked ? " selected" : ""}`}
+                  <label key={obs} className={`obs-check${checked ? " selected" : ""}`}
                     onClick={() => {
                       const arr = form.observaciones ? form.observaciones.split(",").filter(Boolean) : [];
                       const next = checked ? arr.filter((o) => o !== obs) : [...arr, obs];
@@ -202,16 +245,12 @@ export default function Bitacora() {
           </div>
         </div>
         {records.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">📋</div>
-            <p>{t("sinRegistros")}</p>
-          </div>
+          <div className="empty-state"><div className="empty-icon">📋</div><p>{t("sinRegistros")}</p></div>
         ) : (
           <div>
             {records.map((r) => {
               const wqOk = (v: string, min: number, max: number) => {
-                const n = Number(v);
-                return isNaN(n) || n === 0 ? "" : n >= min && n <= max ? "wq-ok" : "wq-alert";
+                const n = Number(v); return isNaN(n) || n === 0 ? "" : n >= min && n <= max ? "wq-ok" : "wq-alert";
               };
               const obsList = r.observaciones ? r.observaciones.split(",").filter(Boolean) : [];
               return (

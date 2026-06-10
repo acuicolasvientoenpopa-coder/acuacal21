@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useLookups } from "@/store/lookups";
 import { useCurrency } from "@/store/currency";
@@ -10,45 +11,29 @@ import { useSaveIndicator } from "@/store/saveIndicator";
 const STORAGE_KEY = "aquacalc_finanzas";
 
 interface FinRecord {
-  id: string;
-  fincaId: string;
-  fincaNombre: string;
-  semilla: number;
-  alimento: number;
-  medicacion: number;
-  electricidad: number;
-  combustible: number;
-  manoObra: number;
-  mantenimiento: number;
-  transporte: number;
-  otros: number;
-  biomasaCosechada: number;
-  precioVenta: number;
-  diasCiclo: number;
+  id: string; fincaId: string; fincaNombre: string;
+  semilla: number; alimento: number; medicacion: number; electricidad: number;
+  combustible: number; manoObra: number; mantenimiento: number; transporte: number;
+  otros: number; biomasaCosechada: number; precioVenta: number; diasCiclo: number;
 }
 
 const emptyRec = (fincaId = "", fincaNombre = ""): FinRecord => ({
-  id: `fin_${Date.now()}`,
-  fincaId, fincaNombre,
+  id: `fin_${Date.now()}`, fincaId, fincaNombre,
   semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0,
   manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0,
   biomasaCosechada: 0, precioVenta: 0, diasCiclo: 150,
 });
 
-function load(): FinRecord[] {
+function loadLocal(): FinRecord[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    const list: FinRecord[] = raw.map((r: any) => {
-      // Migrate old "energia" field → electricidad + combustible
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]").map((r: any) => {
       if (r.energia && !r.electricidad && !r.combustible) {
         r.electricidad = Math.round(r.energia * 0.6);
         r.combustible = Math.round(r.energia * 0.4);
       }
       return r;
     });
-    return list;
-  }
-  catch { return []; }
+  } catch { return []; }
 }
 
 const CATS = [
@@ -65,18 +50,41 @@ const CATS = [
 
 export default function Finanzas() {
   const { t } = useTranslation();
+  const { token, apiUrl } = useAuth();
   const { estanques, reload: reloadLookups } = useLookups();
   const { fmt, currency, code } = useCurrency();
-  const [records, setRecords] = useState<FinRecord[]>(load);
+  const [records, setRecords] = useState<FinRecord[]>(loadLocal);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [finFilter, setFinFilter] = useState("");
   const saveState = useSaveIndicator([records]);
 
+  const api = useCallback(async (path: string, opts?: RequestInit) => {
+    const res = await fetch(apiUrl + path, {
+      ...opts,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }, [apiUrl, token]);
+
+  useEffect(() => {
+    api("/finanzas").then((data: any[]) => {
+      const parsed = data
+        .filter((r: any) => r.tipo === "fin_record")
+        .map((r: any) => {
+          try { return JSON.parse(r.descripcion || "{}"); } catch { return null; }
+        })
+        .filter(Boolean);
+      setRecords(parsed.length > 0 ? parsed : loadLocal());
+      if (parsed.length > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    }).catch(() => setRecords(loadLocal()));
+  }, [api]);
+
   useEffect(() => {
     const h = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) {
-        setRecords(load());
+        setRecords(loadLocal());
         reloadLookups();
       }
     };
@@ -84,22 +92,30 @@ export default function Finanzas() {
     return () => window.removeEventListener("storage", h);
   }, [reloadLookups]);
 
-  const save = (data: FinRecord[]) => {
+  const bulkSave = async (data: FinRecord[]) => {
     setRecords(data);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    for (const rec of data) {
+      try {
+        await api("/finanzas", {
+          method: "POST",
+          body: JSON.stringify({
+            tipo: "fin_record",
+            descripcion: JSON.stringify(rec),
+            monto: 0,
+            fecha: new Date().toISOString(),
+            fincaId: rec.fincaId || "unknown",
+          }),
+        });
+      } catch { break; }
+    }
   };
 
-  // Sum across all records
-  const agg: FinRecord = {
-    id: "", fincaId: "", fincaNombre: "",
-    semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0,
-    manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0,
-    biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0,
-  };
+  const agg: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0 };
   for (const r of records) {
     for (const c of CATS) (agg[c.key] as number) += (r[c.key] as number) || 0;
     agg.biomasaCosechada += r.biomasaCosechada || 0;
-    agg.precioVenta = r.precioVenta || 0; // usamos el ultimo
+    agg.precioVenta = r.precioVenta || 0;
   }
   const totalGastos = CATS.reduce((s, c) => s + ((agg[c.key] as number) || 0), 0);
   const ingresoTotal = agg.biomasaCosechada * agg.precioVenta;
@@ -110,9 +126,7 @@ export default function Finanzas() {
   const current = editId ? records.find((r) => r.id === editId) : null;
   const [form, setForm] = useState<FinRecord>(current ?? emptyRec());
 
-  useEffect(() => {
-    setForm(current ?? emptyRec());
-  }, [editId]);
+  useEffect(() => { setForm(current ?? emptyRec()); }, [editId]);
 
   const saveRecord = () => {
     const idx = records.findIndex((r) => r.id === form.id);
@@ -122,16 +136,14 @@ export default function Finanzas() {
     } else {
       next = [...records, { ...form, id: `fin_${Date.now()}` }];
     }
-    save(next);
+    bulkSave(next);
     setEditId(null);
     toast(idx >= 0 ? t("finanzasCargado") : t("finanzasGuardar"), "success");
   };
 
-  const deleteRecord = (id: string) => { setDeleteConfirm(id); };
-
   const doDelete = () => {
     if (!deleteConfirm) return;
-    save(records.filter((r) => r.id !== deleteConfirm));
+    bulkSave(records.filter((r) => r.id !== deleteConfirm));
     setDeleteConfirm(null);
   };
 
@@ -143,30 +155,21 @@ export default function Finanzas() {
           <p className="page-subtitle">{t("finanzasSub")}</p>
         </div>
         {records.length > 0 && (
-          <button className="btn-primary btn-sm" onClick={() =>
-            exportFinanzasExcel(records, currency.simbolo, code)
-          }>⬇️ {t("exportExcel")}</button>
+          <button className="btn-primary btn-sm" onClick={() => exportFinanzasExcel(records, currency.simbolo, code)}>⬇️ {t("exportExcel")}</button>
         )}
       </div>
 
       {records.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-icon">💰</div>
-          <p>{t("finanzasSub")}</p>
-          <p style={{ marginTop: 8 }}>{t("seleccionar")}</p>
-        </div>
+        <div className="empty-state"><div className="empty-icon">💰</div><p>{t("finanzasSub")}</p><p style={{ marginTop: 8 }}>{t("seleccionar")}</p></div>
       )}
 
-      {/* Bar chart agregado */}
       {totalGastos > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-title">📊 {t("finanzasDistribucion")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {CATS.filter((c) => (agg[c.key] as number) > 0).map((c) => (
               <div key={c.key} className="chart-bar-row" style={{ gap: 8 }}>
-                <span style={{ width: 100, fontSize: 12, flexShrink: 0 }}>
-                  {c.emoji} {t(c.i18nKey)}
-                </span>
+                <span style={{ width: 100, fontSize: 12, flexShrink: 0 }}>{c.emoji} {t(c.i18nKey)}</span>
                 <div className="chart-bar-wrap">
                   <div className="chart-bar" style={{ width: `${((agg[c.key] as number) / maxCat) * 100}%`, background: c.color }}>
                     {fmt((agg[c.key] as number))}
@@ -178,7 +181,6 @@ export default function Finanzas() {
         </div>
       )}
 
-      {/* Resumen agregado */}
       {records.length > 0 && (
         <div className="card" style={{ borderColor: "var(--accent)", marginBottom: 16 }}>
           <div className="card-title">📋 {t("finanzasResumen")}</div>
@@ -191,26 +193,17 @@ export default function Finanzas() {
         </div>
       )}
 
-      {/* Tabla por estanque */}
       {records.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-title">🗂️ {t("fincas")}</div>
-          <input
-            type="text"
-            placeholder="🔍 Filtrar por estanque..."
-            value={finFilter}
-            onChange={(e) => setFinFilter(e.target.value)}
-            style={{ marginBottom: 10 }}
-          />
+          <input type="text" placeholder="🔍 Filtrar por estanque..." value={finFilter} onChange={(e) => setFinFilter(e.target.value)} style={{ marginBottom: 10 }} />
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>{t("estanque")}</th>
                   {CATS.map((c) => <th key={c.key}>{c.emoji}</th>)}
-                  <th>{currency.simbolo} Total</th>
-                  <th>💰/kg</th>
-                  <th></th>
+                  <th>{currency.simbolo} Total</th><th>💰/kg</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -225,7 +218,7 @@ export default function Finanzas() {
                       <td>{fmt(rowCostoKg)}</td>
                       <td>
                         <button className="btn-sm" onClick={() => setEditId(r.id)}>✏️</button>
-                        <button className="btn-sm" style={{ color: "var(--danger)" }} onClick={() => deleteRecord(r.id)}>🗑️</button>
+                        <button className="btn-sm" style={{ color: "var(--danger)" }} onClick={() => setDeleteConfirm(r.id)}>🗑️</button>
                       </td>
                     </tr>
                   );
@@ -236,7 +229,6 @@ export default function Finanzas() {
         </div>
       )}
 
-      {/* Formulario */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">{editId ? "✏️ Editar" : "➕ Agregar"} registro</div>
         <div className="form-grid">
@@ -246,55 +238,29 @@ export default function Finanzas() {
               setForm({ ...form, fincaId: e.target.value, fincaNombre: f?.label ?? e.target.value });
             }}>
               <option value="">{t("seleccionar")}</option>
-              {estanques.map((e) => (
-                <option key={e.id} value={e.id}>{e.label}</option>
-              ))}
+              {estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
             </select>
           </label>
           {CATS.map((c) => (
-            <label key={c.key}>
-              {c.emoji} {t(c.i18nKey)}
-              <input type="number" value={(form[c.key] as number) || ""}
-                onChange={(e) => setForm({ ...form, [c.key]: Number(e.target.value) })} placeholder="0" />
-            </label>
+            <label key={c.key}>{c.emoji} {t(c.i18nKey)}<input type="number" value={(form[c.key] as number) || ""} onChange={(e) => setForm({ ...form, [c.key]: Number(e.target.value) })} placeholder="0" /></label>
           ))}
-          <label>
-            🐟 {t("finanzasBiomasaCosechada")}
-            <input type="number" value={form.biomasaCosechada || ""}
-              onChange={(e) => setForm({ ...form, biomasaCosechada: Number(e.target.value) })} placeholder="0" />
-          </label>
-          <label>
-            💰 {t("finanzasPrecioVenta")}
-            <input type="number" value={form.precioVenta || ""}
-              onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value) })} placeholder="0" step="0.01" />
-          </label>
-          <label>
-            📅 {t("finanzasCiclo")}
-            <input type="number" value={form.diasCiclo || ""}
-              onChange={(e) => setForm({ ...form, diasCiclo: Number(e.target.value) })} placeholder="150" />
-          </label>
+          <label>🐟 {t("finanzasBiomasaCosechada")}<input type="number" value={form.biomasaCosechada || ""} onChange={(e) => setForm({ ...form, biomasaCosechada: Number(e.target.value) })} placeholder="0" /></label>
+          <label>💰 {t("finanzasPrecioVenta")}<input type="number" value={form.precioVenta || ""} onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value) })} placeholder="0" step="0.01" /></label>
+          <label>📅 {t("finanzasCiclo")}<input type="number" value={form.diasCiclo || ""} onChange={(e) => setForm({ ...form, diasCiclo: Number(e.target.value) })} placeholder="150" /></label>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="calc-btn" style={{ marginTop: 12, flex: 1 }} onClick={saveRecord} onKeyDown={(e) => e.key === 'Enter' && saveRecord()}>
+          <button className="calc-btn" style={{ marginTop: 12, flex: 1 }} onClick={saveRecord}>
             💾 {editId ? t("finanzasCargado") : t("finanzasGuardar")}
           </button>
           {saveState && <span className={`save-indicator ${saveState}`}>{saveState === "saving" ? "⏳" : "✅"}</span>}
         </div>
         {editId && (
-          <button className="calc-btn" style={{ marginTop: 8, background: "var(--bg2)" }} onClick={() => setEditId(null)}>
-            ✖ Cancelar
-          </button>
+          <button className="calc-btn" style={{ marginTop: 8, background: "var(--bg2)" }} onClick={() => setEditId(null)}>✖ Cancelar</button>
         )}
       </div>
 
       {deleteConfirm && (
-        <ConfirmModal
-          title="Eliminar registro"
-          message="¿Estás seguro de eliminar este registro financiero?"
-          danger
-          onConfirm={doDelete}
-          onCancel={() => setDeleteConfirm(null)}
-        />
+        <ConfirmModal title="Eliminar registro" message="¿Estás seguro de eliminar este registro financiero?" danger onConfirm={doDelete} onCancel={() => setDeleteConfirm(null)} />
       )}
     </div>
   );
