@@ -1,6 +1,6 @@
 # Términos y Condiciones de Uso — AcuiCal
 
-> Versión: 1.0 — 9 de junio de 2026
+> Versión: 1.0 — 10 de junio de 2026
 > Responsable: Acuícolas Viento en Popa
 
 ---
@@ -51,7 +51,7 @@ Al acceder, registrarse o utilizar la plataforma AcuiCal (en adelante, "la Plata
 - API pública para integraciones.
 
 ### 4.4. Facturación
-- Los pagos se procesan a través de Stripe u otro procesador de pagos designado.
+- Los pagos se procesan a través de Lemon Squeezy u otro procesador de pagos designado.
 - Las suscripciones se renuevan automáticamente al finalizar el período contratado.
 - El Usuario puede cancelar en cualquier momento desde su panel de control.
 
@@ -77,8 +77,8 @@ Los Datos del Usuario son propiedad exclusiva del Usuario. Acuícolas Viento en 
 
 ## 6. Privacidad y Protección de Datos
 
-6.1. La Plataforma almacena datos localmente en el dispositivo del Usuario (localStorage) y, cuando esté disponible la sincronización en la nube, en servidores designados.
-6.2. Los datos de pago son procesados exclusivamente por Stripe; Acuícolas Viento en Popa no almacena números de tarjeta de crédito ni datos bancarios.
+6.1. La Plataforma almacena datos localmente en el dispositivo del Usuario (localStorage) y en servidores en la nube (Supabase PostgreSQL) cuando el Usuario está autenticado.
+6.2. Los datos de pago son procesados exclusivamente por Lemon Squeezy; Acuícolas Viento en Popa no almacena números de tarjeta de crédito ni datos bancarios.
 6.3. La Plataforma no vende, alquila ni comparte Datos del Usuario con terceros sin consentimiento explícito.
 6.4. La Plataforma utiliza cookies funcionales necesarias para el funcionamiento del servicio.
 
@@ -141,7 +141,7 @@ Para usuarios fuera de LATAM:
 
 Para consultas sobre estos Términos, contactar a:
 
-- Correo: [términos@acucal.com](mailto:términos@acucal.com)
+- Correo: acuicolasvientoenpopa@gmail.com
 - WhatsApp: disponible para usuarios con suscripción activa
 
 ---

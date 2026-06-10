@@ -1,183 +1,136 @@
 # AI_CONTEXT.md — AcuiCal
 
 > Documento crítico para continuidad de IA.
-> Última actualización: 2026-06-09.
+> Última actualización: 2026-06-10.
 
 ---
 
 ## Resumen Ejecutivo
 
-AcuiCal es un SaaS acuícola offline-first, construido con React 19 + TypeScript 6.0 + Vite 8. Actualmente es un prototipo funcional de frontend con 13 páginas, persistencia en localStorage, PWA, i18n ES/EN/PT y ~430 claves de traducción. No tiene backend, autenticación, multiusuario ni facturación. El objetivo inmediato es construir el MVP vendible con backend, auth y suscripciones.
+AcuiCal es un SaaS acuícola con React 19 + TypeScript 6.0 + Vite 8 (frontend), Express + Prisma (backend), PostgreSQL en Supabase, y autenticación JWT. Actualmente es un MVP funcional con 15 páginas, persistencia híbrida (API + localStorage), PWA, i18n ES/EN/PT. 8 páginas ya migradas a API, 4 aún solo localStorage. Sin facturación ni multi-usuario. El objetivo inmediato es agregar pagos con Lemon Squeezy.
 
 ---
 
 ## Estado Actual
 
-- **Nivel**: Prototipo funcional / MVP técnico (~40% del camino a SaaS)
-- **Páginas funcionales**: 13 (Dashboard, Calculator, Bitácora, Zootécnico, Especies, Fincas, Parámetros, Fórmulas, Microbiología, Finanzas, Vet Wizard, Inventario, Master Panel)
-- **Mapa de Arquitectura**: Página oculta en `/mapa`, accesible solo desde Master Panel
-- **Persistencia**: localStorage (claves prefijo `aquacalc_`)
+- **Nivel**: MVP funcional (~65% del camino a SaaS vendible)
+- **Páginas**: 15 (13 protegidas + Login + Términos)
+- **Persistencia**: Híbrida — API primaria, localStorage como caché/fallback
+- **Backend**: Express + Prisma + Supabase PostgreSQL (8 routers, 26 endpoints)
+- **Auth**: Supabase Auth con JWT (confirm sign up OFF)
 - **PWA**: Service worker + manifest + Workbox precaching
-- **Idiomas**: ES (base), EN, PT — ~430 claves cada uno
-- **Exportaciones**: Excel (SheetJS/xlsx), PDF (jsPDF)
-- **Build**: `tsc -b && vite build` — ambos deben pasar
-- **Último build**: 266 modules, ~1496 KiB
+- **i18n**: ES (base), EN, PT — ~430 claves cada uno
+- **Tests**: 25 tests vitest para core (calcular, calcRacion)
+- **Build**: `tsc -b && vite build` — ambos pasan
+- **Deploy**: Frontend en Netlify, Backend en Railway
+- **SMTP**: Resend configurado, no puede enviar sin dominio verificado
 
 ---
 
 ## Arquitectura
 
 ```
-src/
-├── core/           # TypeScript puro (sin React, sin DOM)
-│   ├── formulas.ts         # Cálculos acuícolas (biomasa, FCR, ración)
-│   ├── species.ts          # 7 especies + ENERGY_DEFAULTS
-│   ├── currencies.ts       # 16 monedas con formato locale
-│   ├── i18n.ts             # ~430 claves × 3 idiomas
-│   ├── validators.ts       # WQ, formularios, email (contiene código huérfano Firebase)
-│   ├── observations.ts     # 10 observaciones clínicas
-│   ├── inventario-types.ts # Producto, Movimiento, Categoría
-│   └── index.ts
-├── store/          # React Context + hooks
-│   ├── language.ts         # LanguageProvider + useTranslation
-│   ├── currency.ts         # CurrencyProvider + useCurrency
-│   ├── theme.ts            # ThemeProvider + useTheme
-│   ├── lookups.ts          # useLookups() — fincas, especies, estanques
-│   ├── inventario.ts       # useInventario() — CRUD + alertas
-│   └── saveIndicator.ts    # useSaveIndicator()
-├── components/     # Componentes compartidos
-│   ├── Layout.tsx          # Header + Sidebar + main content
-│   ├── Sidebar.tsx         # Navegación + idioma + moneda + tema
-│   ├── GlobalSearch.tsx    # Búsqueda en localStorage (corregida)
-│   ├── Toast.tsx           # Sistema de notificaciones
-│   └── Tutorial.tsx        # Tutorial interactivo 5 pasos
-├── pages/          # 13 páginas (una por módulo)
-│   ├── Calculator.tsx, Bitacora.tsx, Zootecnico.tsx
-│   ├── Especies.tsx, Fincas.tsx, Parametros.tsx
-│   ├── Formulas.tsx, Microbiologia.tsx, Finanzas.tsx
-│   ├── VeterinaryReportWizard.tsx, Inventario.tsx
-│   ├── Dashboard.tsx, MasterPage.tsx, Mapa.tsx
-│   └── index.ts
-├── data/
-│   └── navLinks.ts         # Definición de navegación
-├── utils/
-│   └── debugData.ts        # Generación de datos de prueba
-├── App.tsx                  # Routes (14 rutas)
-├── main.tsx                 # Entry point + registerSW
-└── index.css                # Estilos globales (~2450 líneas)
+acucal2.1/
+├── src/               Frontend (React + Vite)
+│   ├── core/          TypeScript puro (sin React)
+│   ├── store/         Context + hooks (auth, language, currency, theme, lookups, inventario)
+│   ├── components/    Layout, Sidebar, GlobalSearch, Toast, Tutorial
+│   ├── pages/         15 páginas (ver CONTEXT.md para detalle)
+│   ├── App.tsx        Router + providers
+│   ├── main.tsx       Entry + registerSW
+│   └── index.css      Estilos globales
+├── server/            Backend (Express + Prisma)
+│   ├── src/routes/    8 routers (auth, fincas, bitacora, especies, finanzas, inventario, microbiologia, veterinaria)
+│   ├── prisma/        schema + migration SQL
+│   └── .env           Credenciales
+├── CONTEXT.md         Documento principal de contexto
+└── ...
 ```
 
 ---
 
-## Decisiones Tomadas
+## Decisiones Tomadas (actualizado)
 
-| Decisión | Opción Elegida | Motivo |
-|----------|---------------|--------|
-| Framework | React 19 + Vite 8 | Ecosistema maduro, HMR rápido, TypeScript nativo |
-| Persistencia | localStorage | Offline-first, sin backend, rápido |
-| PWA | vite-plugin-pwa | Instalable en mobile, precaching automático |
-| i18n | Context + objeto plano | Sin dependencias externas, liviano |
-| Monedas | Context + mapa fijo | 16 monedas con locale, sin API externa |
-| CSS | CSS plano (index.css) | Sin runtime, sin dependencias, control total |
-| Rutas | React Router v7 | Estándar de la industria |
-| PDF | jsPDF | Única opción viable sin backend |
-| Excel | SheetJS (xlsx) | Estándar para exportación tabular |
-| IDs | `${prefix}_${Date.now()}` | Simple, único, sin dependencias |
-| Estanques | string[] dentro de Finca | Almacenamiento simple, migración automática |
-| Búsqueda global | indexed loop sobre localStorage | Compatible cross-browser, robusto |
+| Decisión | Opción | Motivo |
+|----------|--------|--------|
+| Framework | React 19 + Vite 8 | Ecosistema maduro, HMR rápido, TS nativo |
+| Backend | Express + Prisma | Simple, maduro, TypeScript nativo |
+| Base de datos | Supabase PostgreSQL | Gratuito, escalable, REST API si conexión directa bloqueada |
+| Autenticación | Supabase Auth (JWT) | Integrado con PostgreSQL, persistSession, autoRefresh |
+| Persistencia offline | localStorage | Offline-first, sin backend requerido |
+| Persistencia cloud | API primaria + localStorage fallback | Sincronización progresiva |
+| Pagos (futuro) | Lemon Squeezy | Stripe no disponible en Costa Rica |
+| PWA | vite-plugin-pwa | Instalable mobile, precaching automático |
+| i18n | Context + objeto plano | Sin dependencias, liviano |
+| CSS | CSS plano (index.css) | Sin runtime, control total |
+| Despliegue frontend | Netlify | SPA hosting gratuito con _redirects |
+| Despliegue backend | Railway | Node hosting gratuito con Dockerfile |
 
 ---
 
 ## Convenciones
 
-### Código
-- **No comentarios** en el código (salvo excepciones justificadas)
-- **No Firebase** — no se usa, no se agrega. localStorage + futuro backend propio
-- **Core puro TS** — `src/core/` no importa React, no toca el DOM
-- **Variables en español** en la UI (finca, estanque, bitácora, etc.)
-- **IDs**: `r_${Date.now()}`, `f_${Date.now()}`, `inv_prod_${Date.now()}`, etc.
-- **Estanques**: ID compuesto `fincaId||estanqueNombre`
-
-### i18n
-- Claves en camelCase (e.g. `mapaTitle`, `inventarioValorTotal`)
-- Archivo plano en `core/i18n.ts` con 3 objetos (es/en/pt)
-- Toda string visible usa `t("clave")` desde `useTranslation()`
-- Agregar claves SIEMPRE en los 3 idiomas
-
-### CSS
-- Una sola hoja: `src/index.css`
-- Variables CSS para tema (--bg, --surface, --accent, etc.)
-- Clases con prefijo semántico (`.card-`, `.btn-`, `.modal-`, `.wizard-`)
-- No usar librerías de CSS (Tailwind, styled-components, etc.)
-
-### Estado
-- `useState` + `useEffect` para estado local
-- `localStorage` para persistencia (getItem/setItem con JSON parse/stringify)
-- try/catch en toda lectura de localStorage
-- Notificaciones vía `toast()` desde `Toast.tsx`
+- **Sin comentarios** en código
+- **Sin Firebase** — localStorage + Supabase
+- **Core puro TS** — sin imports de React/DOM
+- **Variables UI en español**
+- **IDs**: `${prefix}_${Date.now()}`
+- **Toda string visible** usa `t("clave")` desde `useTranslation()`
+- **CSS**: una hoja, variables para tema, prefijos semánticos
+- **Build**: `tsc -b && vite build` debe pasar siempre
 
 ---
 
 ## Pendientes Críticos
 
-1. **Backend API** — Express + Prisma + PostgreSQL
-2. **Autenticación JWT** — registro, login, logout, recuperación
-3. **Migración de datos** — localStorage → PostgreSQL
-4. **Sincronización offline** — cola de cambios + reconciliación
-5. **Tests unitarios** — vitest para core/formulas.ts, core/validators.ts
-6. **CI/CD** — GitHub Actions
-7. **Suscripciones** — Stripe Checkout + Webhooks
-8. **Multi-usuario** — roles, permisos, aislamiento por tenant
+1. **Lemon Squeezy** — reemplazar Stripe, configurar planes Free/Pro/Enterprise
+2. **Dominio propio** — ~$8/yr Cloudflare, para emails y URL marcada
+3. **Migrar Dashboard, Zootécnico, Parametros a API** — hoy solo localStorage
+4. **Multi-usuario** — roles (admin/productor/tecnico), permisos, aislamiento por tenant
+5. **Sincronización offline** — cola de cambios + reconciliación
+6. **CI/CD** — GitHub Actions (typecheck + test + build)
+7. **Code splitting** — reducir chunk size >500 kB
 
 ---
 
 ## Riesgos
 
-- **Sin tests**: regresiones al escalar
-- **Código huérfano Firebase** en `core/validators.ts:traducirError()` — no hay Firebase en package.json
-- **Sin CI/CD**: despliegues manuales frágiles
-- **Tamaño de build**: ~1.5 MB sin code splitting
 - **Sin validación de clientes**: posible product-market fit incorrecto
-
----
-
-## Prioridades
-
-1. **Tests del core** (vitest) — base para refactor seguro
-2. **Backend API** (Express + Prisma) — condición necesaria para SaaS
-3. **Autenticación** — condición necesaria para SaaS
-4. **Suscripciones** (Stripe) — condición suficiente para vender
-5. **Multi-usuario** — condición necesaria para crecimiento
+- **Sin tests backend**: regresiones en API
+- **Sin CI/CD**: deploys manuales frágiles
+- **Stripe no disponible en CR**: Lemon Squeezy como alternativa no probada
+- **Imágenes base64 en localStorage**: puede llenar cuota (~5MB)
 
 ---
 
 ## Próxima Tarea Recomendada
 
-Escribir tests unitarios para `src/core/formulas.ts` usando vitest. Esto:
-- Estabiliza el core antes de tocar backend
-- Detecta regresiones temprano
-- Es requisito para CI/CD
-- Es código 100% TypeScript puro — no necesita DOM ni React
+Configurar Lemon Squeezy para pagos. Se necesita:
+1. Crear cuenta en https://lemonsqueezy.com
+2. Definir productos/planes (Free, Professional $29/mes, Enterprise $99/mes)
+3. Implementar checkout en frontend
+4. Configurar webhooks para actualizar estado de suscripción
+5. Proteger rutas según plan del usuario
 
 ---
 
 ## Comandos Útiles
 
 ```bash
-npm run dev          # Servidor desarrollo (http://10.83.170.182:5173)
-npm run build        # Compilar producción
-tsc -b               # TypeScript build (proyectos references)
-vite build           # Vite build
-cmd /c "tsc --noEmit"  # Type-check sin emitir (funciona en Windows PowerShell)
+npm run dev           # Frontend dev
+npm run build         # Frontend build (tsc -b && vite build)
+npm run test          # 25 tests vitest
+cd server && npm run dev   # Backend dev
+cd server && npm run build # Backend build
 ```
 
 ---
 
-## Notas Adicionales
+## Notas
 
-- El proyecto se desarrolla en Windows. Usar `cmd /c` para comandos npm/tsc.
-- `tsc --noEmit` puede pasar cuando `tsc -b` falla (project references).
-- No hay WSL requerido.
-- Dev server corre en `10.83.170.182:5173`.
-- Tema almacenado en `aquacalc_theme` (dark/light) con `data-theme` en `<html>`.
-- Master Panel PIN: `211203`.
+- `Confirm sign up` en Supabase está OFF — registro instantáneo
+- SMTP Resend configurado pero sin dominio verificado
+- Master Panel PIN: `211203`
+- Tema: `aquacalc_theme` en localStorage
+- Currency: `aquacalc_currency` en localStorage
+- API URL: `https://acuacal21-production.up.railway.app/api`

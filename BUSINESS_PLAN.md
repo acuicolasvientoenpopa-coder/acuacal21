@@ -1,7 +1,7 @@
 # BUSINESS PLAN — AcuiCal
 
 > Plan de negocio para AcuiCal, SaaS acuícola.
-> Actualizado: 2026-06-09.
+> Actualizado: 2026-06-10.
 
 ---
 
@@ -129,6 +129,7 @@ Ninguna herramienta accesible y económica integra:
 | Mercado LATAM no paga SaaS | Muy alto | Media | Ofrecer factura local + transferencia bancaria |
 | Clientes no técnicos abandonan | Alto | Alta | Onboarding guiado + soporte WhatsApp |
 | Estacionalidad del sector | Medio | Alta | Planes anuales con descuento |
+| Stripe no disponible en Costa Rica | Alto | Alta | Usar Lemon Squeezy como procesador |
 
 ---
 
@@ -139,6 +140,9 @@ Ninguna herramienta accesible y económica integra:
 - **Enterprise**: $99/mes o $990/año
 - **Descuento educativo**: 50% para universidades
 - **Descuento early adopter**: $19/mes vitalicio para primeros 50 clientes
+
+Procesador de pagos: **Lemon Squeezy** (Stripe no disponible en Costa Rica).
+Comisión estimada: ~5% por transacción.
 
 ---
 
@@ -152,6 +156,6 @@ Ninguna herramienta accesible y económica integra:
 | 9 | 800 | 40 | 5 | $1,655 |
 | 12 | 1000 | 60 | 8 | $2,532 |
 
-**Costo operativo estimado**: $100-200/mes (servidor + dominio + Stripe fees).
+**Costo operativo estimado**: $100-200/mes (servidor + dominio + Lemon Squeezy fees).
 
 **Break-even**: Mes 3-4 con ~15 clientes pagadores.
