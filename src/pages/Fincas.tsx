@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
+import { excedeLimiteFincas, excedeLimiteEstanques } from "@/core";
 
 const LS_KEY = "aquacalc_fincas";
 
@@ -20,13 +21,14 @@ function saveLocal(fs: Finca[]) {
 
 export default function Fincas() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token, apiUrl, plan } = useAuth();
   const [list, setList] = useState<Finca[]>(loadLocal);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Finca | null>(null);
   const [form, setForm] = useState({ nombre: "", ubicacion: "", descripcion: "" });
   const [editEst, setEditEst] = useState<{ fincaId: string; index: number; value: string } | null>(null);
   const [newEst, setNewEst] = useState<{ fincaId: string; value: string } | null>(null);
+  const [error, setError] = useState("");
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     const res = await fetch(apiUrl + path, {
@@ -53,11 +55,12 @@ export default function Fincas() {
 
   useEffect(() => { saveLocal(list); }, [list]);
 
-  const openNew = () => { setEdit(null); setForm({ nombre: "", ubicacion: "", descripcion: "" }); setShow(true); };
-  const openEdit = (f: Finca) => { setEdit(f); setForm({ nombre: f.nombre, ubicacion: f.ubicacion, descripcion: f.descripcion }); setShow(true); };
+  const openNew = () => { setEdit(null); setForm({ nombre: "", ubicacion: "", descripcion: "" }); setShow(true); setError(""); };
+  const openEdit = (f: Finca) => { setEdit(f); setForm({ nombre: f.nombre, ubicacion: f.ubicacion, descripcion: f.descripcion }); setShow(true); setError(""); };
 
   const saveFinca = async () => {
     if (!form.nombre.trim()) return;
+    if (!edit && excedeLimiteFincas(plan, list.length)) { setError(t("limiteFincas")); return; }
     const payload = { nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim() };
     try {
       if (edit) {
@@ -89,6 +92,8 @@ export default function Fincas() {
   const addEstanque = async (fincaId: string) => {
     const v = newEst?.fincaId === fincaId ? newEst.value.trim() : "";
     if (!v) return;
+    const finca = list.find((f) => f.id === fincaId);
+    if (finca && excedeLimiteEstanques(plan, finca.estanques.length)) { setError(t("limiteEstanques")); setNewEst(null); return; }
     try { await api(`/fincas/${fincaId}/estanques`, { method: "POST", body: JSON.stringify({ nombre: v }) }); } catch { /* ignore */ }
     setList(list.map((f) => f.id === fincaId ? { ...f, estanques: [...f.estanques, v] } : f));
     setNewEst(null);
@@ -114,6 +119,13 @@ export default function Fincas() {
         </div>
         <button className="btn-primary" onClick={openNew}>＋ {t("nuevaFinca")}</button>
       </div>
+
+      {error && (
+        <div style={{ background: "rgba(255,77,109,0.1)", border: "1px solid var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "var(--danger)", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button onClick={() => setError("")} style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}>✕</button>
+        </div>
+      )}
 
       {list.length === 0 ? (
         <div className="empty-state">
