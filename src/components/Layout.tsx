@@ -48,7 +48,7 @@ export default function Layout() {
     logoClickCount.current++;
     if (logoClickCount.current >= 5) {
       logoClickCount.current = 0;
-      navigate("/master");
+      navigate("/admin");
     }
   };
 
@@ -160,8 +160,11 @@ export default function Layout() {
                       {v.simbolo} {k} — {v.nombre}
                     </button>
                   ))}
-                </div>
-              </div>
+          </div>
+          <div style={{ marginTop: 8, textAlign: "center" }}>
+            <a href="/terminos" style={{ fontSize: 11, color: "var(--text3)", textDecoration: "underline" }} target="_blank" rel="noopener noreferrer">📜 {t("terminos") || "Términos y Condiciones"}</a>
+          </div>
+        </div>
             )}
           </div>
         </div>
