@@ -26,12 +26,20 @@ type AuthContext = {
 
 const Ctx = createContext<AuthContext | null>(null);
 
+function getPlanFromUser(u: User | null): Plan {
+  return (u?.user_metadata?.plan as Plan) || "free";
+}
+
+function getRolFromUser(u: User | null): Rol {
+  return (u?.user_metadata?.rol as Rol) || "productor";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [plan, setPlan] = useState<Plan>(() => (localStorage.getItem("aquacalc_plan_override") as Plan) || "free");
-  const [rol, setRol] = useState<Rol>(() => (localStorage.getItem("aquacalc_rol_override") as Rol) || "productor");
+  const [plan, setPlan] = useState<Plan>("free");
+  const [rol, setRol] = useState<Rol>("productor");
 
   useEffect(() => {
     const session = supabase.auth.getSession();
@@ -39,7 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session) {
         setUser(session.user);
         setToken(session.access_token);
-        syncPlanRol(session.user);
+        setPlan(getPlanFromUser(session.user));
+        setRol(getRolFromUser(session.user));
       }
       setLoading(false);
     });
@@ -47,18 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setToken(session?.access_token ?? null);
-      if (session?.user) syncPlanRol(session.user);
+      setPlan(getPlanFromUser(session?.user ?? null));
+      setRol(getRolFromUser(session?.user ?? null));
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  function syncPlanRol(u: User | null) {
-    const overridePlan = localStorage.getItem("aquacalc_plan_override") as Plan | null;
-    const overrideRol = localStorage.getItem("aquacalc_rol_override") as Rol | null;
-    setPlan(overridePlan || (u?.user_metadata?.plan as Plan) || "free");
-    setRol(overrideRol || (u?.user_metadata?.rol as Rol) || "productor");
-  }
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -72,11 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (error) return error.message;
     if (!data.session) return "Revisá tu email para confirmar la cuenta";
+    if (!data.user) return "Error al obtener usuario";
 
+    const token = data.session.access_token;
     const res = await fetch(API_URL + "/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, nombre }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId: data.user.id, email, nombre }),
     });
     if (!res.ok) return "Error al crear perfil";
     return null;

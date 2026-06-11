@@ -35,6 +35,7 @@ export default function Especies() {
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Species | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [saving, setSaving] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     const res = await fetch(apiUrl + path, {
@@ -79,24 +80,25 @@ export default function Especies() {
     if (!edit && custom.length >= 3) { alert(t("maxEspecies")); return; }
     const { nombre, sci, emoji, ...params } = form;
     const payload = { nombre: nombre.trim(), nombreCientifico: sci.trim(), parametros: { ...params, emoji } };
-    if (edit) {
-      try {
+    setSaving(true);
+    try {
+      if (edit) {
         const updated = await api(`/especies/${edit.id}`, { method: "PUT", body: JSON.stringify(payload) });
         setCustom(custom.map((c) => c.id === edit.id ? dbToSpecies(updated) : c));
-      } catch {
-        const s: Species = { ...edit, nombre: nombre.trim(), sci: sci.trim(), emoji, params };
-        setCustom(custom.map((c) => c.id === edit.id ? s : c));
-      }
-    } else {
-      try {
+      } else {
         const created = await api("/especies", { method: "POST", body: JSON.stringify(payload) });
         const s = dbToSpecies(created);
         if (s.id) setCustom([...custom, s]);
-      } catch {
+      }
+    } catch {
+      if (edit) {
+        const s: Species = { ...edit, nombre: nombre.trim(), sci: sci.trim(), emoji, params };
+        setCustom(custom.map((c) => c.id === edit.id ? s : c));
+      } else {
         const s: Species = { id: `custom_${Date.now()}`, nombre: nombre.trim(), sci: sci.trim(), emoji, custom: true, params };
         setCustom([...custom, s]);
       }
-    }
+    } finally { setSaving(false); }
     setShow(false);
   };
 
@@ -211,7 +213,7 @@ export default function Especies() {
             </div>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShow(false)}>{t("cancelar")}</button>
-              <button className="btn-primary" onClick={save}>{t("guardar")}</button>
+              <button className="btn-primary" onClick={save} disabled={saving}>{saving ? t("saving") : t("guardar")}</button>
             </div>
           </div>
         </div>

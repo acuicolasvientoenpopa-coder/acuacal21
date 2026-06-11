@@ -19,4 +19,5 @@ export const NAV_LINKS: NavLinkDef[] = [
   { to: "/inventario", key: "inventario", emoji: "📦", tutorialDesc: "tutorialInventarioDesc" },
   { to: "/geo", key: "geo", emoji: "🗺️", tutorialDesc: "tutorialGeoDesc" },
   { to: "/admin", key: "admin", emoji: "⚙️", tutorialDesc: "tutorialGeoDesc" },
+  { to: "/planes", key: "plan", emoji: "💳", tutorialDesc: "tutorialGeoDesc" },
 ];

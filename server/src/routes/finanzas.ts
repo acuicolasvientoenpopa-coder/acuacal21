@@ -1,10 +1,18 @@
 import { Router, Response } from "express";
+import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 
 export const finanzasRouter = Router();
-const asStr = (v: unknown): string => v as string;
 
 finanzasRouter.use(requireAuth);
+
+const finanzaSchema = z.object({
+  tipo: z.string().min(1).max(50),
+  monto: z.number().min(0),
+  descripcion: z.any().optional(),
+  fecha: z.string().optional(),
+  fincaId: z.string().min(1),
+});
 
 finanzasRouter.get("/", async (req: AuthRequest, res: Response) => {
   const { data, error } = await req.supabase!
@@ -21,13 +29,19 @@ finanzasRouter.get("/", async (req: AuthRequest, res: Response) => {
 });
 
 finanzasRouter.post("/", async (req: AuthRequest, res: Response) => {
-  const body = { ...req.body };
+  const parsed = finanzaSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
+  const body: any = { ...parsed.data, userId: req.userId };
   if (body.descripcion && typeof body.descripcion === "object") {
     body.descripcion = JSON.stringify(body.descripcion);
   }
+
   const { data, error } = await req.supabase!
     .from("Finanza")
-    .insert({ ...body, userId: req.userId })
+    .insert(body)
     .select()
     .single();
 
@@ -36,13 +50,16 @@ finanzasRouter.post("/", async (req: AuthRequest, res: Response) => {
 });
 
 finanzasRouter.put("/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
-  const body = { ...req.body };
+  const id = req.params.id;
+  const parsed = finanzaSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
+  const body: any = { ...parsed.data };
   if (body.descripcion && typeof body.descripcion === "object") {
     body.descripcion = JSON.stringify(body.descripcion);
   }
-  delete body.id;
-  delete body.userId;
 
   const { data, error } = await req.supabase!
     .from("Finanza")
@@ -57,7 +74,7 @@ finanzasRouter.put("/:id", async (req: AuthRequest, res: Response) => {
 });
 
 finanzasRouter.delete("/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
+  const id = req.params.id;
 
   const { error } = await req.supabase!
     .from("Finanza")

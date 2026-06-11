@@ -6,7 +6,7 @@ import type { Idioma } from "@/core";
 
 export default function Login() {
   const { login, register, resetPassword } = useAuth();
-  const { lang, setLang } = useTranslation();
+  const { lang, setLang, t } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [email, setEmail] = useState("");
@@ -30,7 +30,7 @@ export default function Login() {
       return;
     }
 
-    if (mode === "register" && !acepto) { setError("Debés aceptar los Términos y Condiciones"); return; }
+    if (mode === "register" && !acepto) { setError(t("mustAcceptTerms")); return; }
     setLoading(true);
 
     const err = mode === "register"
@@ -41,15 +41,17 @@ export default function Login() {
     else { navigate("/"); }
   };
 
+  const titleKey = mode === "forgot" ? "forgotTitle" : mode === "register" ? "registerTitle" : "loginTitle";
+
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
       <div className="card" style={{ maxWidth: 400, width: "100%" }}>
         <div style={{ fontSize: 48, textAlign: "center", marginBottom: 12 }}>🐟</div>
         <h3 style={{ fontSize: 20, fontWeight: 800, textAlign: "center", marginBottom: 4 }}>
-          {mode === "forgot" ? "Restablecer Contraseña" : mode === "register" ? "Crear Cuenta" : "Iniciar Sesión"}
+          {t(titleKey)}
         </h3>
         <p style={{ fontSize: 12, color: "var(--text2)", textAlign: "center", marginBottom: 20 }}>
-          AcuiCal — Gestión Acuícola
+          {t("loginSubtitle")}
         </p>
 
         <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
@@ -69,34 +71,34 @@ export default function Login() {
 
         {emailSent ? (
           <div style={{ background: "rgba(46,213,115,0.1)", border: "1px solid var(--success)", borderRadius: 8, padding: "12px", fontSize: 13, color: "var(--success)", marginBottom: 16, textAlign: "center" }}>
-            Revisá tu email para restablecer tu contraseña
+            {t("checkEmail")}
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {mode === "register" && (
               <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
-                Nombre
-                <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Tu nombre" required />
+                {t("name")}
+                <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder={t("namePlaceholder")} required />
               </label>
             )}
             <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
-              Email
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" required />
+              {t("emailLabel")}
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required />
             </label>
             {mode !== "forgot" && (
               <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
-                Contraseña
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+                {t("passwordLabel")}
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("passwordPlaceholder")} required minLength={6} />
               </label>
             )}
             {mode === "register" && (
               <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
                 <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} style={{ accentColor: "var(--accent)" }} />
-                <span>Acepto los <Link to="/terminos" style={{ color: "var(--accent)" }} target="_blank">Términos y Condiciones</Link></span>
+                <span>{t("acceptTerms")} <Link to="/terminos" style={{ color: "var(--accent)" }} target="_blank">{t("termsAndConditions")}</Link></span>
               </label>
             )}
             <button className="btn-primary" disabled={loading} style={{ width: "100%", marginTop: 8 }}>
-              {loading ? "Cargando..." : mode === "forgot" ? "Enviar enlace" : mode === "register" ? "Crear Cuenta" : "Ingresar"}
+              {loading ? t("loadingText") : mode === "forgot" ? t("sendLink") : mode === "register" ? t("registerButton") : t("loginButton")}
             </button>
           </form>
         )}
@@ -105,21 +107,21 @@ export default function Login() {
           {mode === "forgot" ? (
             <button onClick={() => { setMode("login"); setError(""); setEmailSent(false); }}
               style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontWeight: 600, fontSize: 12 }}>
-              Volver a iniciar sesión
+              {t("backToLogin")}
             </button>
           ) : (
             <>
-              {mode === "login" ? "¿No tenés cuenta?" : "¿Ya tenés cuenta?"}{" "}
+              {mode === "login" ? t("noAccount") : t("hasAccount")}{" "}
               <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setEmailSent(false); }}
                 style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontWeight: 600, fontSize: 12 }}>
-                {mode === "login" ? "Registrarse" : "Iniciar Sesión"}
+                {mode === "login" ? t("registerLink") : t("loginLink")}
               </button>
               {mode === "login" && (
                 <>
                   {" · "}
                   <button onClick={() => { setMode("forgot"); setError(""); setEmailSent(false); }}
                     style={{ background: "none", border: "none", color: "var(--text2)", cursor: "pointer", fontWeight: 400, fontSize: 12, textDecoration: "underline" }}>
-                    Olvidé mi contraseña
+                    {t("forgotPassword")}
                   </button>
                 </>
               )}

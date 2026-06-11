@@ -56,6 +56,7 @@ export default function Bitacora() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<RecordData>(emptyRecord);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     const res = await fetch(apiUrl + path, {
@@ -141,10 +142,11 @@ export default function Bitacora() {
     if (rec.pesoMuestreo) payload.peso = parseFloat(rec.pesoMuestreo);
     if (rec.estanque) payload.estanqueId = rec.estanque;
     if (rec.especie) payload.especieId = rec.especie;
+    setSaving(true);
     try {
       const created = await api("/bitacora", { method: "POST", body: JSON.stringify(payload) });
       rec.id = created.id;
-    } catch {}
+    } catch {} finally { setSaving(false); }
     setRecords([rec, ...records]);
     setShowForm(false);
   };
@@ -231,7 +233,7 @@ export default function Bitacora() {
 
           <div className="card-actions">
             <button className="btn-secondary" onClick={() => setShowForm(false)}>{t("cancelar")}</button>
-            <button className="btn-primary" onClick={save} disabled={!canSave}>💾 {t("guardarRegistro")}</button>
+            <button className="btn-primary" onClick={save} disabled={!canSave || saving}>{saving ? t("saving") : `💾 ${t("guardarRegistro")}`}</button>
           </div>
         </div>
       )}

@@ -82,6 +82,7 @@ export default function Microbiologia() {
   const [editMed, setEditMed] = useState<Medicacion | null>(null);
   const [mf, setMf] = useState<Medicacion>(medicacionVacia);
   const [filtroEst, setFiltroEst] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     const res = await fetch(apiUrl + path, {
@@ -137,6 +138,7 @@ export default function Microbiologia() {
   const saveCultivo = async () => {
     if (!cf.fecha || !cf.estanqueNombre || !cf.especie) { toast("Completá fecha, estanque y especie", "error"); return; }
     const payload = { ...cf, id: editCultivo ? cf.id : "cult_" + Date.now() };
+    setSaving(true);
     try {
       if (editCultivo) {
         await api(`/microbiologia/${payload.id}`, { method: "PUT", body: JSON.stringify({ resultado: cf.resultado, notas: JSON.stringify(payload), fecha: cf.fecha }) });
@@ -144,7 +146,7 @@ export default function Microbiologia() {
         const created = await api("/microbiologia", { method: "POST", body: JSON.stringify({ resultado: cf.resultado, notas: JSON.stringify(payload), fecha: cf.fecha }) });
         if (created?.id) payload.id = created.id;
       }
-    } catch {}
+    } catch {} finally { setSaving(false); }
     const updated = editCultivo ? cultivos.map((c) => c.id === editCultivo.id ? payload : c) : [...cultivos, payload];
     setCultivos(updated);
     setShowCultivo(false);
@@ -166,6 +168,7 @@ export default function Microbiologia() {
   const saveMed = async () => {
     if (!mf.fechaInicio || !mf.estanqueNombre || !mf.producto) { toast("Completá fecha, estanque y producto", "error"); return; }
     const payload = { ...mf, id: editMed ? mf.id : "med_" + Date.now() };
+    setSaving(true);
     try {
       if (editMed) {
         await api(`/microbiologia/${payload.id}`, { method: "PUT", body: JSON.stringify({ resultado: "medicacion", notas: JSON.stringify(payload), fecha: mf.fechaInicio }) });
@@ -173,7 +176,7 @@ export default function Microbiologia() {
         const created = await api("/microbiologia", { method: "POST", body: JSON.stringify({ resultado: "medicacion", notas: JSON.stringify(payload), fecha: mf.fechaInicio }) });
         if (created?.id) payload.id = created.id;
       }
-    } catch {}
+    } catch {} finally { setSaving(false); }
     const updated = editMed ? medicacion.map((m) => (m.id === editMed.id ? payload : m)) : [...medicacion, payload];
     setMedicacion(updated);
     setShowMed(false);
@@ -340,7 +343,7 @@ export default function Microbiologia() {
               </div>
             </div>
             <label style={{ marginTop: 12, display: "block" }}>{t("microObservaciones")}<textarea value={cf.observaciones} onChange={(e) => setCf({ ...cf, observaciones: e.target.value })} rows={2} /></label>
-            <div className="modal-actions"><button className="btn-primary" onClick={saveCultivo}>{t("save")}</button><button className="btn-secondary" onClick={() => setShowCultivo(false)}>{t("cancel")}</button></div>
+            <div className="modal-actions"><button className="btn-primary" onClick={saveCultivo} disabled={saving}>{saving ? t("saving") : t("save")}</button><button className="btn-secondary" onClick={() => setShowCultivo(false)}>{t("cancel")}</button></div>
           </div>
         </div>
       )}
@@ -361,7 +364,7 @@ export default function Microbiologia() {
               <label>{t("microResponsable")}<input value={mf.responsable} onChange={(e) => setMf({ ...mf, responsable: e.target.value })} placeholder="Nombre" /></label>
               <label>{t("microEstado")}<select value={mf.estado} onChange={(e) => setMf({ ...mf, estado: e.target.value as "en_curso" | "completado" | "suspendido" })}><option value="en_curso">{t("microEnCurso")}</option><option value="completado">{t("microCompletado")}</option><option value="suspendido">{t("microSuspendido")}</option></select></label>
             </div>
-            <div className="modal-actions"><button className="btn-primary" onClick={saveMed}>{t("save")}</button><button className="btn-secondary" onClick={() => setShowMed(false)}>{t("cancel")}</button></div>
+            <div className="modal-actions"><button className="btn-primary" onClick={saveMed} disabled={saving}>{saving ? t("saving") : t("save")}</button><button className="btn-secondary" onClick={() => setShowMed(false)}>{t("cancel")}</button></div>
           </div>
         </div>
       )}

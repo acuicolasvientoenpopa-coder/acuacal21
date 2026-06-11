@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/Toast";
 import { generateBitacora, generateFincas, generateParams, generateFinanzas, generateAll, clearAll } from "@/utils/debugData";
-import type { Plan, Rol } from "@/core";
 
 const ADMIN_PIN = "211203";
 
@@ -35,9 +34,6 @@ export default function Admin() {
   const [count, setCount] = useState(20);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [selectedPlan, setSelectedPlan] = useState<Plan>(() => (localStorage.getItem("aquacalc_plan_override") as Plan) || plan);
-  const [selectedRol, setSelectedRol] = useState<Rol>(() => (localStorage.getItem("aquacalc_rol_override") as Rol) || rol);
-
   const [apiStatus, setApiStatus] = useState<"checking" | "ok" | "error">("checking");
 
   useEffect(() => {
@@ -63,20 +59,6 @@ export default function Admin() {
   const handleLock = () => {
     setUnlocked(false);
     localStorage.removeItem("aquacalc_admin_unlocked");
-  };
-
-  const applyPlanOverride = () => {
-    localStorage.setItem("aquacalc_plan_override", selectedPlan);
-    localStorage.setItem("aquacalc_rol_override", selectedRol);
-    toast("Plan/Rol override guardado. Recargá la página.", "success");
-  };
-
-  const clearOverrides = () => {
-    localStorage.removeItem("aquacalc_plan_override");
-    localStorage.removeItem("aquacalc_rol_override");
-    setSelectedPlan("free");
-    setSelectedRol("productor");
-    toast("Overrides eliminados. Recargá la página.", "info");
   };
 
   const handleExport = () => {
@@ -156,31 +138,6 @@ export default function Admin() {
           <p className="page-subtitle">Plan actual: <strong>{plan}</strong> · Rol: <strong>{rol}</strong></p>
         </div>
         <button className="btn-danger btn-sm" onClick={handleLock}>🔒 Bloquear</button>
-      </div>
-
-      <div className="card" style={{ borderColor: "var(--accent3)", marginBottom: 16 }}>
-        <div className="card-title">🎯 Override de Plan y Rol</div>
-        <p style={{ fontSize: 12, color: "var(--text2)", marginBottom: 8 }}>Simular otro plan/rol para testing. Requiere recargar.</p>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <label style={{ fontSize: 12 }}>
-            Plan
-            <select value={selectedPlan} onChange={(e) => setSelectedPlan(e.target.value as Plan)} className="sidebar-lang-select" style={{ marginLeft: 8 }}>
-              <option value="free">Free</option>
-              <option value="pro">Pro ($10/mes)</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
-          </label>
-          <label style={{ fontSize: 12 }}>
-            Rol
-            <select value={selectedRol} onChange={(e) => setSelectedRol(e.target.value as Rol)} className="sidebar-lang-select" style={{ marginLeft: 8 }}>
-              <option value="productor">Productor</option>
-              <option value="tecnico">Técnico</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
-          <button className="btn-primary btn-sm" onClick={applyPlanOverride}>Aplicar override</button>
-          <button className="btn-secondary btn-sm" onClick={clearOverrides}>Quitar override</button>
-        </div>
       </div>
 
       <div className="card" style={{ borderColor: "var(--accent3)", marginBottom: 16 }}>

@@ -1,0 +1,138 @@
+import { Router, Request, Response } from "express";
+import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
+import { requireAuth, AuthRequest } from "../middleware/auth.js";
+
+export const pagosRouter = Router();
+
+const ONVO_API = "https://api.onvopay.com/v1";
+const ONVO_SECRET_KEY = process.env.ONVO_SECRET_KEY ?? "";
+const ONVO_WEBHOOK_SECRET = process.env.ONVO_WEBHOOK_SECRET ?? "";
+const FRONTEND_URL = process.env.CORS_ORIGIN ?? "https://acuacla2112.netlify.app";
+
+const PRICE_IDS: Record<string, string> = {
+  pro_monthly: process.env.ONVO_PRICE_PRO_MONTHLY ?? "",
+  enterprise_monthly: process.env.ONVO_PRICE_ENTERPRISE_MONTHLY ?? "",
+};
+
+function getAdminClient() {
+  return createClient(
+    process.env.SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
+
+async function onvoPost(path: string, body: unknown) {
+  const res = await fetch(`${ONVO_API}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ONVO_SECRET_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`ONVO API error ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+const checkoutSchema = z.object({
+  priceId: z.enum(["pro_monthly", "enterprise_monthly"]),
+});
+
+pagosRouter.post("/checkout", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const parsed = checkoutSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+      return;
+    }
+
+    const onvoPriceId = PRICE_IDS[parsed.data.priceId];
+    if (!onvoPriceId) {
+      res.status(500).json({ error: "Precio no configurado. Contactá al administrador." });
+      return;
+    }
+
+    const session: any = await onvoPost("/checkout/sessions/one-time-link", {
+      mode: "payment",
+      successUrl: `${FRONTEND_URL}/?checkout=success`,
+      cancelUrl: `${FRONTEND_URL}/planes`,
+      metadata: {
+        userId: req.userId,
+        plan: parsed.data.priceId === "pro_monthly" ? "pro" : "enterprise",
+      },
+      lineItems: [{ priceId: onvoPriceId, quantity: 1 }],
+    });
+
+    res.json({ url: session.url, id: session.id });
+  } catch (err: any) {
+    console.error("Error creando checkout:", err);
+    res.status(500).json({ error: err.message || "Error al crear sesión de pago" });
+  }
+});
+
+pagosRouter.post("/webhook", async (req: Request, res: Response) => {
+  const secret = req.headers["x-webhook-secret"] as string;
+  if (!secret || secret !== ONVO_WEBHOOK_SECRET) {
+    res.status(401).json({ error: "No autorizado" });
+    return;
+  }
+
+  const event: any = req.body;
+  console.log("Webhook recibido:", event.type);
+
+  try {
+    if (event.type === "checkout-session.succeeded") {
+      const { metadata } = event.data;
+      if (metadata?.userId && metadata?.plan) {
+        const admin = getAdminClient();
+        await admin.auth.admin.updateUserById(metadata.userId, {
+          user_metadata: { plan: metadata.plan },
+        });
+        console.log(`Plan actualizado a ${metadata.plan} para usuario ${metadata.userId}`);
+      }
+    }
+
+    if (event.type === "subscription.renewal.succeeded") {
+      const { metadata } = event.data;
+      if (metadata?.userId && metadata?.plan) {
+        const admin = getAdminClient();
+        await admin.auth.admin.updateUserById(metadata.userId, {
+          user_metadata: { plan: metadata.plan },
+        });
+        console.log(`Suscripción renovada: ${metadata.plan} para usuario ${metadata.userId}`);
+      }
+    }
+
+    if (event.type === "subscription.renewal.failed") {
+      const { metadata } = event.data;
+      if (metadata?.userId) {
+        console.log(`Renovación fallida para usuario ${metadata.userId}`);
+        const admin = getAdminClient();
+        await admin.auth.admin.updateUserById(metadata.userId, {
+          user_metadata: { plan: "free" },
+        });
+      }
+    }
+
+    res.json({ received: true });
+  } catch (err: any) {
+    console.error("Error procesando webhook:", err);
+    res.status(500).json({ error: "Error procesando webhook" });
+  }
+});
+
+pagosRouter.get("/subscription", requireAuth, async (req: AuthRequest, res: Response) => {
+  const { data } = await req.supabase!
+    .from("Subscription")
+    .select("*")
+    .eq("userId", req.userId)
+    .order("createdAt", { ascending: false })
+    .limit(1);
+
+  res.json({ subscription: data?.[0] ?? null });
+});

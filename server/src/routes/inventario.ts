@@ -1,12 +1,28 @@
 import { Router, Response } from "express";
+import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 
 export const inventarioRouter = Router();
-const asStr = (v: unknown): string => v as string;
 
 inventarioRouter.use(requireAuth);
 
-// --- Productos ---
+const productoSchema = z.object({
+  nombre: z.string().min(1, "nombre requerido").max(200),
+  categoria: z.string().max(100).optional(),
+  cantidad: z.number().min(0).optional(),
+  minimo: z.number().min(0).optional(),
+  precio: z.number().min(0).optional(),
+  fincaId: z.string().optional(),
+});
+
+const movimientoSchema = z.object({
+  productoId: z.string().min(1, "productoId requerido"),
+  tipo: z.enum(["entrada", "salida"]),
+  cantidad: z.number().positive("cantidad debe ser positiva"),
+  motivo: z.string().max(1000).optional(),
+  fecha: z.string().optional(),
+});
+
 inventarioRouter.get("/productos", async (req: AuthRequest, res: Response) => {
   const { data, error } = await req.supabase!
     .from("Inventario")
@@ -19,12 +35,15 @@ inventarioRouter.get("/productos", async (req: AuthRequest, res: Response) => {
 });
 
 inventarioRouter.post("/productos", async (req: AuthRequest, res: Response) => {
-  const { nombre, categoria, cantidad, minimo, precio, fincaId } = req.body;
-  if (!nombre) { res.status(400).json({ error: "nombre es requerido" }); return; }
+  const parsed = productoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
 
   const { data, error } = await req.supabase!
     .from("Inventario")
-    .insert({ nombre, categoria: categoria ?? "otro", cantidad: cantidad ?? 0, minimo: minimo ?? 0, precio, fincaId, userId: req.userId })
+    .insert({ ...parsed.data, categoria: parsed.data.categoria ?? "otro", cantidad: parsed.data.cantidad ?? 0, minimo: parsed.data.minimo ?? 0, userId: req.userId })
     .select()
     .single();
 
@@ -33,20 +52,16 @@ inventarioRouter.post("/productos", async (req: AuthRequest, res: Response) => {
 });
 
 inventarioRouter.put("/productos/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
-  const { nombre, categoria, cantidad, minimo, precio, fincaId } = req.body;
-
-  const update: any = {};
-  if (nombre !== undefined) update.nombre = nombre;
-  if (categoria !== undefined) update.categoria = categoria;
-  if (cantidad !== undefined) update.cantidad = cantidad;
-  if (minimo !== undefined) update.minimo = minimo;
-  if (precio !== undefined) update.precio = precio;
-  if (fincaId !== undefined) update.fincaId = fincaId;
+  const id = req.params.id;
+  const parsed = productoSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
 
   const { data, error } = await req.supabase!
     .from("Inventario")
-    .update(update)
+    .update(parsed.data)
     .eq("id", id)
     .eq("userId", req.userId)
     .select()
@@ -57,7 +72,7 @@ inventarioRouter.put("/productos/:id", async (req: AuthRequest, res: Response) =
 });
 
 inventarioRouter.delete("/productos/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
+  const id = req.params.id;
 
   const { error } = await req.supabase!
     .from("Inventario")
@@ -69,7 +84,6 @@ inventarioRouter.delete("/productos/:id", async (req: AuthRequest, res: Response
   res.json({ message: "Producto eliminado" });
 });
 
-// --- Movimientos ---
 inventarioRouter.get("/movimientos", async (req: AuthRequest, res: Response) => {
   const { data, error } = await req.supabase!
     .from("MovimientoInventario")
@@ -81,12 +95,15 @@ inventarioRouter.get("/movimientos", async (req: AuthRequest, res: Response) => 
 });
 
 inventarioRouter.post("/movimientos", async (req: AuthRequest, res: Response) => {
-  const { tipo, cantidad, motivo, productoId, fecha } = req.body;
-  if (!tipo || !cantidad || !productoId) { res.status(400).json({ error: "tipo, cantidad y productoId requeridos" }); return; }
+  const parsed = movimientoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
 
   const { data, error } = await req.supabase!
     .from("MovimientoInventario")
-    .insert({ tipo, cantidad, motivo, productoId, fecha: fecha ?? new Date().toISOString() })
+    .insert({ ...parsed.data, fecha: parsed.data.fecha ?? new Date().toISOString() })
     .select("*, Inventario(*)")
     .single();
 

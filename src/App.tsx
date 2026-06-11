@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/store/language";
 import { CurrencyProvider } from "@/store/currency";
@@ -5,13 +6,26 @@ import { ThemeProvider } from "@/store/theme";
 import { AuthProvider, useAuth } from "@/store/auth";
 import Layout from "@/components/Layout";
 import ToastContainer from "@/components/Toast";
-import Login from "@/pages/Login";
-import Terminos from "@/pages/Terminos";
-import GeoPond from "@/pages/GeoPond";
-import {
-  Calculator, Bitacora, Especies, Fincas, Parametros, Formulas, Zootecnico,
-  VeterinaryReportWizard, Admin, Microbiologia, Finanzas, Dashboard, Inventario, Mapa,
-} from "@/pages";
+import ErrorBoundary from "@/components/ErrorBoundary";
+
+const Login = lazy(() => import("@/pages/Login"));
+const Terminos = lazy(() => import("@/pages/Terminos"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Calculator = lazy(() => import("@/pages/Calculator"));
+const Bitacora = lazy(() => import("@/pages/Bitacora"));
+const Zootecnico = lazy(() => import("@/pages/Zootecnico"));
+const Especies = lazy(() => import("@/pages/Especies"));
+const Fincas = lazy(() => import("@/pages/Fincas"));
+const Parametros = lazy(() => import("@/pages/Parametros"));
+const Formulas = lazy(() => import("@/pages/Formulas"));
+const Microbiologia = lazy(() => import("@/pages/Microbiologia"));
+const Finanzas = lazy(() => import("@/pages/Finanzas"));
+const Inventario = lazy(() => import("@/pages/Inventario"));
+const VeterinaryReportWizard = lazy(() => import("@/pages/veterinary/VeterinaryReportWizard"));
+const Admin = lazy(() => import("@/pages/Admin"));
+const Mapa = lazy(() => import("@/pages/Mapa"));
+const GeoPond = lazy(() => import("@/pages/GeoPond"));
+const Planes = lazy(() => import("@/pages/Planes"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -20,39 +34,50 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function SuspenseWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="loading-overlay"><div className="loading-spinner" /></div>}>
+      {children}
+    </Suspense>
+  );
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <LanguageProvider>
-          <CurrencyProvider>
-            <ThemeProvider>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/terminos" element={<Terminos />} />
-                <Route element={<Layout />}>
-                  <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                  <Route path="calc" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
-                  <Route path="bitacora" element={<ProtectedRoute><Bitacora /></ProtectedRoute>} />
-                  <Route path="zootecnico" element={<ProtectedRoute><Zootecnico /></ProtectedRoute>} />
-                  <Route path="especies" element={<ProtectedRoute><Especies /></ProtectedRoute>} />
-                  <Route path="fincas" element={<ProtectedRoute><Fincas /></ProtectedRoute>} />
-                  <Route path="parametros" element={<ProtectedRoute><Parametros /></ProtectedRoute>} />
-                  <Route path="formulas" element={<ProtectedRoute><Formulas /></ProtectedRoute>} />
-                  <Route path="micro" element={<ProtectedRoute><Microbiologia /></ProtectedRoute>} />
-                  <Route path="finanzas" element={<ProtectedRoute><Finanzas /></ProtectedRoute>} />
-                  <Route path="vet" element={<ProtectedRoute><VeterinaryReportWizard /></ProtectedRoute>} />
-                  <Route path="inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
-                  <Route path="admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                  <Route path="mapa" element={<ProtectedRoute><Mapa /></ProtectedRoute>} />
-                  <Route path="geo" element={<ProtectedRoute><GeoPond /></ProtectedRoute>} />
-                </Route>
-              </Routes>
-              <ToastContainer />
-            </ThemeProvider>
-          </CurrencyProvider>
-        </LanguageProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <LanguageProvider>
+            <CurrencyProvider>
+              <ThemeProvider>
+                <Routes>
+                  <Route path="/login" element={<SuspenseWrapper><Login /></SuspenseWrapper>} />
+                  <Route path="/terminos" element={<SuspenseWrapper><Terminos /></SuspenseWrapper>} />
+                  <Route element={<Layout />}>
+                    <Route index element={<ProtectedRoute><SuspenseWrapper><Dashboard /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="calc" element={<ProtectedRoute><SuspenseWrapper><Calculator /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="bitacora" element={<ProtectedRoute><SuspenseWrapper><Bitacora /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="zootecnico" element={<ProtectedRoute><SuspenseWrapper><Zootecnico /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="especies" element={<ProtectedRoute><SuspenseWrapper><Especies /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="fincas" element={<ProtectedRoute><SuspenseWrapper><Fincas /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="parametros" element={<ProtectedRoute><SuspenseWrapper><Parametros /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="formulas" element={<ProtectedRoute><SuspenseWrapper><Formulas /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="micro" element={<ProtectedRoute><SuspenseWrapper><Microbiologia /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="finanzas" element={<ProtectedRoute><SuspenseWrapper><Finanzas /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="vet" element={<ProtectedRoute><SuspenseWrapper><VeterinaryReportWizard /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="inventario" element={<ProtectedRoute><SuspenseWrapper><Inventario /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="admin" element={<ProtectedRoute><SuspenseWrapper><Admin /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="mapa" element={<ProtectedRoute><SuspenseWrapper><Mapa /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="geo" element={<ProtectedRoute><SuspenseWrapper><GeoPond /></SuspenseWrapper></ProtectedRoute>} />
+                  <Route path="planes" element={<ProtectedRoute><SuspenseWrapper><Planes /></SuspenseWrapper></ProtectedRoute>} />
+                  </Route>
+                </Routes>
+                <ToastContainer />
+              </ThemeProvider>
+            </CurrencyProvider>
+          </LanguageProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

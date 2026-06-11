@@ -94,7 +94,7 @@ export default function Zootecnico() {
               nitrito: toStr(r.nitrito),
               salinidad: toStr(r.salinidad),
             }));
-            exportZootecnicoExcel(rows);
+            exportZootecnicoExcel(rows).catch(() => {});
           }}>📊 Excel</button>
         </div>
       )}

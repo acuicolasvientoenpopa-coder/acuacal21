@@ -1,10 +1,24 @@
 import { Router, Response } from "express";
+import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 
 export const bitacoraRouter = Router();
-const asStr = (v: unknown): string => v as string;
 
 bitacoraRouter.use(requireAuth);
+
+const bitacoraSchema = z.object({
+  fecha: z.string().optional(),
+  oxigeno: z.number().min(0).max(50).optional(),
+  temperatura: z.number().min(-10).max(60).optional(),
+  ph: z.number().min(0).max(14).optional(),
+  amonio: z.number().min(0).optional(),
+  salinidad: z.number().min(0).max(100).optional(),
+  peso: z.number().min(0).optional(),
+  cantidad: z.number().int().min(0).optional(),
+  estanqueId: z.string().optional(),
+  especieId: z.string().optional(),
+  observaciones: z.string().max(5000).optional(),
+});
 
 bitacoraRouter.get("/", async (req: AuthRequest, res: Response) => {
   const { data, error } = await req.supabase!
@@ -18,9 +32,15 @@ bitacoraRouter.get("/", async (req: AuthRequest, res: Response) => {
 });
 
 bitacoraRouter.post("/", async (req: AuthRequest, res: Response) => {
+  const parsed = bitacoraSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
+
   const { data, error } = await req.supabase!
     .from("Bitacora")
-    .insert({ ...req.body, userId: req.userId })
+    .insert({ ...parsed.data, userId: req.userId })
     .select("*, Finca(*), Estanque(*), Especie(*)")
     .single();
 
@@ -28,8 +48,28 @@ bitacoraRouter.post("/", async (req: AuthRequest, res: Response) => {
   res.status(201).json(data);
 });
 
+bitacoraRouter.put("/:id", async (req: AuthRequest, res: Response) => {
+  const id = req.params.id;
+  const parsed = bitacoraSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
+
+  const { data, error } = await req.supabase!
+    .from("Bitacora")
+    .update(parsed.data)
+    .eq("id", id)
+    .eq("userId", req.userId)
+    .select("*, Finca(*), Estanque(*), Especie(*)")
+    .single();
+
+  if (error) { res.status(404).json({ error: "Registro no encontrado" }); return; }
+  res.json(data);
+});
+
 bitacoraRouter.delete("/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
+  const id = req.params.id;
 
   const { error } = await req.supabase!
     .from("Bitacora")

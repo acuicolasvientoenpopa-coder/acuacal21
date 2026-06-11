@@ -1,5 +1,15 @@
 import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+
+function downloadBlob(buf: ArrayBuffer, name: string): void {
+  const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 type RecordRow = {
   fecha: string;
@@ -256,14 +266,13 @@ export function exportZootecnicoPDF(records: ZooRow[], filtro: string, paramLabe
   doc.save("aquacalc_zootecnico.pdf");
 }
 
-export function exportZootecnicoExcel(records: ZooRow[]): void {
-  const wsData: (string | number)[][] = [
-    ["Fecha", "Estanque", "O₂ (mg/L)", "Temperatura (°C)", "pH", "NH₃ (mg/L)", "NO₂ (mg/L)", "Salinidad"],
-  ];
+export async function exportZootecnicoExcel(records: ZooRow[]): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Zootécnico");
+  ws.addRow(["Fecha", "Estanque", "O₂ (mg/L)", "Temperatura (°C)", "pH", "NH₃ (mg/L)", "NO₂ (mg/L)", "Salinidad"]);
   records.forEach((r) => {
-    wsData.push([
-      r.fecha || "",
-      r.estanque || "",
+    ws.addRow([
+      r.fecha || "", r.estanque || "",
       r.oxigeno ? Number(r.oxigeno) : "",
       r.temperatura ? Number(r.temperatura) : "",
       r.ph ? Number(r.ph) : "",
@@ -272,14 +281,12 @@ export function exportZootecnicoExcel(records: ZooRow[]): void {
       r.salinidad ? Number(r.salinidad) : "",
     ]);
   });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws["!cols"] = [
-    { wch: 12 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, "Zootécnico");
-  XLSX.writeFile(wb, "aquacalc_zootecnico.xlsx");
+  ws.getColumn(1).width = 12; ws.getColumn(2).width = 18;
+  ws.getColumn(3).width = 12; ws.getColumn(4).width = 16;
+  ws.getColumn(5).width = 8;  ws.getColumn(6).width = 12;
+  ws.getColumn(7).width = 12; ws.getColumn(8).width = 10;
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(buf, "aquacalc_zootecnico.xlsx");
 }
 
 export interface FinExcelRow {
@@ -298,8 +305,10 @@ export interface FinExcelRow {
   diasCiclo: number;
 }
 
-export function exportFinanzasExcel(records: FinExcelRow[], monedaSimbolo: string, monedaCodigo: string): void {
-  const headers = [
+export async function exportFinanzasExcel(records: FinExcelRow[], monedaSimbolo: string, monedaCodigo: string): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Finanzas");
+  ws.addRow([
     "Finca / Estanque",
     `Semilla (${monedaSimbolo} ${monedaCodigo})`,
     `Alimento (${monedaSimbolo} ${monedaCodigo})`,
@@ -317,9 +326,7 @@ export function exportFinanzasExcel(records: FinExcelRow[], monedaSimbolo: strin
     `Ingreso Total (${monedaSimbolo} ${monedaCodigo})`,
     "Margen (%)",
     "Días ciclo",
-  ];
-
-  const wsData: (string | number)[][] = [headers];
+  ]);
 
   for (const r of records) {
     const totalCostos =
@@ -329,102 +336,77 @@ export function exportFinanzasExcel(records: FinExcelRow[], monedaSimbolo: strin
     const ingresoTotal = r.biomasaCosechada * r.precioVenta;
     const margen = ingresoTotal > 0 ? ((ingresoTotal - totalCostos) / ingresoTotal * 100) : 0;
 
-    wsData.push([
-      r.fincaNombre,
-      r.semilla ?? 0,
-      r.alimento ?? 0,
-      r.medicacion ?? 0,
-      r.electricidad ?? 0,
-      r.combustible ?? 0,
-      r.manoObra ?? 0,
-      r.mantenimiento ?? 0,
-      r.transporte ?? 0,
-      r.otros ?? 0,
-      totalCostos,
-      r.biomasaCosechada ?? 0,
-      costoKg,
-      r.precioVenta ?? 0,
-      ingresoTotal,
-      Math.round(margen * 100) / 100,
-      r.diasCiclo ?? 0,
+    ws.addRow([
+      r.fincaNombre, r.semilla ?? 0, r.alimento ?? 0, r.medicacion ?? 0,
+      r.electricidad ?? 0, r.combustible ?? 0, r.manoObra ?? 0,
+      r.mantenimiento ?? 0, r.transporte ?? 0, r.otros ?? 0,
+      totalCostos, r.biomasaCosechada ?? 0, costoKg, r.precioVenta ?? 0,
+      ingresoTotal, Math.round(margen * 100) / 100, r.diasCiclo ?? 0,
     ]);
   }
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws["!cols"] = [
-    { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
-    { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
-    { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 16 },
-    { wch: 12 }, { wch: 10 },
-  ];
+  const colWidths = [20, 16, 16, 14, 16, 14, 16, 16, 14, 12, 16, 12, 14, 18, 16, 12, 10];
+  colWidths.forEach((w, i) => ws.getColumn(i + 1).width = w);
 
-  XLSX.utils.book_append_sheet(wb, ws, "Finanzas");
-  XLSX.writeFile(wb, "aquacalc_finanzas.xlsx");
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(buf, "aquacalc_finanzas.xlsx");
 }
 
-export function exportAllExcel(): void {
-  const wb = XLSX.utils.book_new();
+export async function exportAllExcel(): Promise<void> {
+  const wb = new ExcelJS.Workbook();
 
-  // Bitácora sheet
   try {
     const bitacora = JSON.parse(localStorage.getItem("aquacalc_bitacora") || "[]");
     if (Array.isArray(bitacora) && bitacora.length > 0) {
-      const headers = ["Fecha", "Estanque", "Especie", "Alimento", "Mortalidades", "Peso", "O₂", "Temp", "pH", "NH₃", "NO₂", "Salinidad", "Biomasa", "SGR", "FCR"];
-      const rows: (string | number)[][] = [headers];
+      const ws = wb.addWorksheet("Bitácora");
+      ws.addRow(["Fecha", "Estanque", "Especie", "Alimento", "Mortalidades", "Peso", "O₂", "Temp", "pH", "NH₃", "NO₂", "Salinidad", "Biomasa", "SGR", "FCR"]);
       for (const r of bitacora) {
-        rows.push([r.fecha, r.estanque, r.especie, r.alimento, r.mortalidades, r.pesoMuestreo, r.oxigeno, r.temperatura, r.ph, r.amonio, r.nitrito, r.salinidad, r.biomasa, r.sgr, r.fcrAcum]);
+        ws.addRow([r.fecha, r.estanque, r.especie, r.alimento, r.mortalidades, r.pesoMuestreo, r.oxigeno, r.temperatura, r.ph, r.amonio, r.nitrito, r.salinidad, r.biomasa, r.sgr, r.fcrAcum]);
       }
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 }];
-      XLSX.utils.book_append_sheet(wb, ws, "Bitácora");
+      const cw = [12, 14, 12, 10, 12, 10, 8, 8, 6, 8, 8, 10, 10, 8, 8];
+      cw.forEach((w, i) => ws.getColumn(i + 1).width = w);
     }
   } catch { /* skip */ }
 
-  // Cultivos sheet
   try {
     const cultivos = JSON.parse(localStorage.getItem("aquacalc_cultivos") || "[]");
     if (Array.isArray(cultivos) && cultivos.length > 0) {
-      const headers = ["Fecha", "Estanque", "Especie", "Tipo Muestra", "Órgano", "Resultado", "Agente", "Carga"];
-      const rows: (string | number)[][] = [headers];
+      const ws = wb.addWorksheet("Cultivos");
+      ws.addRow(["Fecha", "Estanque", "Especie", "Tipo Muestra", "Órgano", "Resultado", "Agente", "Carga"]);
       for (const r of cultivos) {
-        rows.push([r.fecha, r.estanqueNombre, r.especie, r.tipoMuestra, r.organo, r.resultado, r.agente, r.carga]);
+        ws.addRow([r.fecha, r.estanqueNombre, r.especie, r.tipoMuestra, r.organo, r.resultado, r.agente, r.carga]);
       }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Cultivos");
     }
   } catch { /* skip */ }
 
-  // Medicación sheet
   try {
     const meds = JSON.parse(localStorage.getItem("aquacalc_medicacion") || "[]");
     if (Array.isArray(meds) && meds.length > 0) {
-      const headers = ["Inicio", "Fin", "Estanque", "Producto", "Dosis", "Vía", "Duración", "Retiro", "Estado"];
-      const rows: (string | number)[][] = [headers];
+      const ws = wb.addWorksheet("Medicación");
+      ws.addRow(["Inicio", "Fin", "Estanque", "Producto", "Dosis", "Vía", "Duración", "Retiro", "Estado"]);
       for (const r of meds) {
-        rows.push([r.fechaInicio, r.fechaFin, r.estanqueNombre, r.producto, r.dosis, r.via, r.duracion, r.retiroDias, r.estado]);
+        ws.addRow([r.fechaInicio, r.fechaFin, r.estanqueNombre, r.producto, r.dosis, r.via, r.duracion, r.retiroDias, r.estado]);
       }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Medicación");
     }
   } catch { /* skip */ }
 
-  // Finanzas sheet
   try {
     const fin = JSON.parse(localStorage.getItem("aquacalc_finanzas") || "[]");
     if (Array.isArray(fin) && fin.length > 0) {
-      const headers = ["Finca", "Semilla", "Alimento", "Medicación", "Electricidad", "Combustible", "MO", "Manten.", "Transp.", "Otros", "Total", "Biomasa", "Costo/kg", "Precio/kg", "Ingreso", "Margen%"];
-      const rows: (string | number)[][] = [headers];
+      const ws = wb.addWorksheet("Finanzas");
+      ws.addRow(["Finca", "Semilla", "Alimento", "Medicación", "Electricidad", "Combustible", "MO", "Manten.", "Transp.", "Otros", "Total", "Biomasa", "Costo/kg", "Precio/kg", "Ingreso", "Margen%"]);
       for (const r of fin) {
         const total = (r.semilla || 0) + (r.alimento || 0) + (r.medicacion || 0) + (r.electricidad || 0) + (r.combustible || 0) + (r.manoObra || 0) + (r.mantenimiento || 0) + (r.transporte || 0) + (r.otros || 0);
         const ingreso = (r.biomasaCosechada || 0) * (r.precioVenta || 0);
         const costoKg = r.biomasaCosechada > 0 ? total / r.biomasaCosechada : 0;
         const margen = ingreso > 0 ? ((ingreso - total) / ingreso * 100) : 0;
-        rows.push([r.fincaNombre, r.semilla || 0, r.alimento || 0, r.medicacion || 0, r.electricidad || 0, r.combustible || 0, r.manoObra || 0, r.mantenimiento || 0, r.transporte || 0, r.otros || 0, total, r.biomasaCosechada || 0, costoKg, r.precioVenta || 0, ingreso, Math.round(margen * 100) / 100]);
+        ws.addRow([r.fincaNombre, r.semilla || 0, r.alimento || 0, r.medicacion || 0, r.electricidad || 0, r.combustible || 0, r.manoObra || 0, r.mantenimiento || 0, r.transporte || 0, r.otros || 0, total, r.biomasaCosechada || 0, costoKg, r.precioVenta || 0, ingreso, Math.round(margen * 100) / 100]);
       }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Finanzas");
     }
   } catch { /* skip */ }
 
-  XLSX.writeFile(wb, "aquacalc_exportacion_completa.xlsx");
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(buf, "aquacalc_exportacion_completa.xlsx");
 }
 
 export interface VetPDFData {

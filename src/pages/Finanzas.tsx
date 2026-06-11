@@ -58,6 +58,7 @@ export default function Finanzas() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [finFilter, setFinFilter] = useState("");
   const saveState = useSaveIndicator([records]);
+  const [saving, setSaving] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     const res = await fetch(apiUrl + path, {
@@ -93,6 +94,7 @@ export default function Finanzas() {
   }, [reloadLookups]);
 
   const bulkSave = async (data: FinRecord[]) => {
+    setSaving(true);
     setRecords(data);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     for (const rec of data) {
@@ -109,6 +111,7 @@ export default function Finanzas() {
         });
       } catch { break; }
     }
+    setSaving(false);
   };
 
   const agg: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0 };
@@ -155,7 +158,7 @@ export default function Finanzas() {
           <p className="page-subtitle">{t("finanzasSub")}</p>
         </div>
         {records.length > 0 && (
-          <button className="btn-primary btn-sm" onClick={() => exportFinanzasExcel(records, currency.simbolo, code)}>⬇️ {t("exportExcel")}</button>
+          <button className="btn-primary btn-sm" onClick={() => exportFinanzasExcel(records, currency.simbolo, code).catch(() => {})}>⬇️ {t("exportExcel")}</button>
         )}
       </div>
 
@@ -249,8 +252,8 @@ export default function Finanzas() {
           <label>📅 {t("finanzasCiclo")}<input type="number" value={form.diasCiclo || ""} onChange={(e) => setForm({ ...form, diasCiclo: Number(e.target.value) })} placeholder="150" /></label>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="calc-btn" style={{ marginTop: 12, flex: 1 }} onClick={saveRecord}>
-            💾 {editId ? t("finanzasCargado") : t("finanzasGuardar")}
+          <button className="calc-btn" style={{ marginTop: 12, flex: 1 }} onClick={saveRecord} disabled={saving}>
+            {saving ? t("saving") : `💾 ${editId ? t("finanzasCargado") : t("finanzasGuardar")}`}
           </button>
           {saveState && <span className={`save-indicator ${saveState}`}>{saveState === "saving" ? "⏳" : "✅"}</span>}
         </div>

@@ -29,6 +29,7 @@ export default function Fincas() {
   const [editEst, setEditEst] = useState<{ fincaId: string; index: number; value: string } | null>(null);
   const [newEst, setNewEst] = useState<{ fincaId: string; value: string } | null>(null);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     const res = await fetch(apiUrl + path, {
@@ -62,6 +63,7 @@ export default function Fincas() {
     if (!form.nombre.trim()) return;
     if (!edit && excedeLimiteFincas(plan, list.length)) { setError(t("limiteFincas")); return; }
     const payload = { nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim() };
+    setSaving(true);
     try {
       if (edit) {
         const updated = await api(`/fincas/${edit.id}`, { method: "PUT", body: JSON.stringify(payload) });
@@ -80,7 +82,7 @@ export default function Fincas() {
         ? { ...edit, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim() }
         : { id: `f_${Date.now()}`, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim(), estanques: [form.nombre.trim()] };
       setList(edit ? list.map((x) => (x.id === edit.id ? f : x)) : [...list, f]);
-    }
+    } finally { setSaving(false); }
     setShow(false);
   };
 
@@ -199,7 +201,7 @@ export default function Fincas() {
             </div>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShow(false)}>{t("cancelar")}</button>
-              <button className="btn-primary" onClick={saveFinca}>{t("guardar")}</button>
+              <button className="btn-primary" onClick={saveFinca} disabled={saving}>{saving ? t("saving") : t("guardar")}</button>
             </div>
           </div>
         </div>
