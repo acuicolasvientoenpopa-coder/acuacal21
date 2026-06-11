@@ -11,6 +11,10 @@ CREATE INDEX IF NOT EXISTS idx_inventario_userId ON "Inventario" ("userId");
 CREATE INDEX IF NOT EXISTS idx_movimientoinventario_productoId ON "MovimientoInventario" ("productoId");
 CREATE INDEX IF NOT EXISTS idx_microbiologia_userId ON "Microbiologia" ("userId");
 CREATE INDEX IF NOT EXISTS idx_veterinaria_userId ON "Veterinaria" ("userId");
-CREATE INDEX IF NOT EXISTS idx_subscription_userId ON "Subscription" ("userId");
 CREATE INDEX IF NOT EXISTS idx_fincauser_fincaId ON "FincaUser" ("fincaId");
 CREATE INDEX IF NOT EXISTS idx_fincauser_userId ON "FincaUser" ("userId");
+
+-- Subscription (creados también en migration_subscription.sql)
+CREATE INDEX IF NOT EXISTS idx_subscription_userId ON "Subscription" ("userId");
+CREATE INDEX IF NOT EXISTS idx_subscription_plan ON "Subscription" (plan);
+CREATE INDEX IF NOT EXISTS idx_subscription_status ON "Subscription" (status);
