@@ -4,7 +4,6 @@ import { useTranslation } from "@/store/language";
 import { useLookups } from "@/store/lookups";
 import { useCurrency } from "@/store/currency";
 import { toast } from "@/components/Toast";
-import { exportFinanzasExcel } from "@/utils/excel";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useSaveIndicator } from "@/store/saveIndicator";
 import { enqueue, scheduleProcess } from "@/services/sync";
@@ -167,7 +166,7 @@ export default function Finanzas() {
           <p className="page-subtitle">{t("finanzasSub")}</p>
         </div>
         {records.length > 0 && (
-          <button className="btn-primary btn-sm" onClick={() => exportFinanzasExcel(records, currency.simbolo, code).catch(() => {})}>⬇️ {t("exportExcel")}</button>
+          <button className="btn-primary btn-sm" onClick={() => import("@/utils/excel").then(m => m.exportFinanzasExcel(records, currency.simbolo, code)).catch(() => {})}>⬇️ {t("exportExcel")}</button>
         )}
       </div>
 

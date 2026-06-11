@@ -4,8 +4,6 @@ import { useCurrency } from "@/store/currency";
 import { useAuth } from "@/store/auth";
 import { Link } from "react-router-dom";
 import { NAV_LINKS } from "@/data/navLinks";
-import { exportAllExcel } from "@/utils/excel";
-
 type Stats = {
   fincas: number;
   bitacora: number;
@@ -62,9 +60,13 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setExporting(true);
-    setTimeout(() => { exportAllExcel().catch(() => {}).finally(() => setExporting(false)); }, 100);
+    try {
+      const { exportAllExcel } = await import("@/utils/excel");
+      await exportAllExcel();
+    } catch {}
+    setExporting(false);
   };
 
   if (!stats) return null;

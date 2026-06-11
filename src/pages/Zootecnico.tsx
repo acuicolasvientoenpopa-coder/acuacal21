@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { exportZootecnicoPDF } from "@/utils/pdf";
-import { exportZootecnicoExcel } from "@/utils/excel";
+
 
 const RECORDS_KEY = "aquacalc_bitacora";
 
@@ -144,7 +144,7 @@ export default function Zootecnico() {
               nitrito: toStr(r.nitrito),
               salinidad: toStr(r.salinidad),
             }));
-            exportZootecnicoExcel(rows).catch(() => {});
+            import("@/utils/excel").then(m => m.exportZootecnicoExcel(rows)).catch(() => {});
           }}>📊 Excel</button>
         </div>
       )}
