@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { createClient, type User } from "@supabase/supabase-js";
+import type { Plan, Rol } from "@/core";
 
 const SUPABASE_URL = "https://smvjffbeshxcfltjoolm.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_EQRvreJDv4d-wYZmaMY3Bg_x2D3kM_v";
@@ -13,6 +14,8 @@ type AuthContext = {
   user: User | null;
   token: string | null;
   loading: boolean;
+  plan: Plan;
+  rol: Rol;
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string, nombre: string) => Promise<string | null>;
   resetPassword: (email: string) => Promise<string | null>;
@@ -27,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState<Plan>(() => (localStorage.getItem("aquacalc_plan_override") as Plan) || "free");
+  const [rol, setRol] = useState<Rol>(() => (localStorage.getItem("aquacalc_rol_override") as Rol) || "productor");
 
   useEffect(() => {
     const session = supabase.auth.getSession();
@@ -34,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session) {
         setUser(session.user);
         setToken(session.access_token);
+        syncPlanRol(session.user);
       }
       setLoading(false);
     });
@@ -41,10 +47,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setToken(session?.access_token ?? null);
+      if (session?.user) syncPlanRol(session.user);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  function syncPlanRol(u: User | null) {
+    const overridePlan = localStorage.getItem("aquacalc_plan_override") as Plan | null;
+    const overrideRol = localStorage.getItem("aquacalc_rol_override") as Rol | null;
+    setPlan(overridePlan || (u?.user_metadata?.plan as Plan) || "free");
+    setRol(overrideRol || (u?.user_metadata?.rol as Rol) || "productor");
+  }
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -52,7 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, password: string, nombre: string): Promise<string | null> => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { nombre, plan: "free", rol: "productor" } },
+    });
     if (error) return error.message;
     if (!data.session) return "Revisá tu email para confirmar la cuenta";
 
@@ -77,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ user, token, loading, login, register, resetPassword, logout, supabase, apiUrl: API_URL }}>
+    <Ctx.Provider value={{ user, token, loading, plan, rol, login, register, resetPassword, logout, supabase, apiUrl: API_URL }}>
       {children}
     </Ctx.Provider>
   );
