@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
-import { exportZootecnicoPDF, exportZootecnicoExcel } from "@/utils/pdf";
+import { exportZootecnicoPDF } from "@/utils/pdf";
+import { exportZootecnicoExcel } from "@/utils/excel";
 
 const RECORDS_KEY = "aquacalc_bitacora";
 

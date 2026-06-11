@@ -4,7 +4,7 @@ import { useTranslation } from "@/store/language";
 import { useLookups } from "@/store/lookups";
 import { useCurrency } from "@/store/currency";
 import { toast } from "@/components/Toast";
-import { exportFinanzasExcel } from "@/utils/pdf";
+import { exportFinanzasExcel } from "@/utils/excel";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useSaveIndicator } from "@/store/saveIndicator";
 import { enqueue, scheduleProcess } from "@/services/sync";

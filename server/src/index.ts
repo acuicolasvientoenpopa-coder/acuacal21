@@ -14,6 +14,8 @@ import { pagosRouter } from "./routes/pagos.js";
 import { feedbackRouter } from "./routes/feedback.js";
 import { geoRouter } from "./routes/geo.js";
 import { adminRouter } from "./routes/admin.js";
+import { dashboardRouter } from "./routes/dashboard.js";
+import { parametrosRouter } from "./routes/parametros.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -73,6 +75,8 @@ app.use("/api/pagos", pagosRouter);
 app.use("/api/feedback", feedbackRouter);
 app.use("/api/geo", geoRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/dashboard", dashboardRouter);
+app.use("/api/parametros", parametrosRouter);
 
 app.use(errorHandler);
 

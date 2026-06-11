@@ -1,12 +1,12 @@
 # PROJECT STATUS — AcuiCal
 
-> Última actualización: 2026-06-10
+> Última actualización: 2026-06-11
 
 ---
 
 ## Nivel de Madurez
 
-**MVP con seguridad, calidad, pagos ONVO Pay y CI/CD** — Backend con rate limiting, Zod, helmet. Frontend con code splitting nativo. Integración ONVO Pay lista (requiere config manual). 9 páginas en API + 3 solo localStorage.
+**MVP con seguridad, calidad, pagos ONVO Pay y CI/CD** — Backend con rate limiting, Zod, helmet. Frontend con code splitting nativo (pdf.js separado). Integración ONVO Pay lista (requiere config manual). 10 páginas en API + 2 solo localStorage.
 
 **Avance estimado: ~85% del camino a SaaS vendible.**
 
@@ -59,8 +59,8 @@
 - AuthProvider con sesión persistente (Supabase)
 - Login/Register con checkbox "Acepto Términos", i18n completo, loading states
 - ProtectedRoute + logout
-- 9 páginas migradas a API con fallback localStorage:
-  - Fincas, Bitácora, Especies, Finanzas, Inventario, Microbiología, Veterinaria, **Dashboard**
+- 10 páginas migradas a API con fallback localStorage:
+  - Fincas, Bitácora, Especies, Finanzas, Inventario, Microbiología, Veterinaria, **Dashboard**, **Zootécnico**, **Parámetros**
 - PWA: manifest + service worker + Workbox precaching + splash screen + icons SVG + shortcuts
 - Temas dark/light (persistente)
 - Exportación Excel (exceljs — 0 vulnerabilidades) y PDF (jsPDF)
@@ -105,8 +105,9 @@
 - [ ] Rotar DB password en Supabase (expuesta en commits anteriores)
 
 ### Páginas solo localStorage → API
-- [ ] Zootécnico (seguimiento con gráficos)
-- [ ] Parametros (WQ overrides)
+- [x] Dashboard
+- [x] Zootécnico (seguimiento con gráficos)
+- [x] Parametros (WQ overrides)
 
 ### Sync offline
 - [ ] Cola de cambios cuando offline
@@ -150,5 +151,5 @@
 2. Ejecutar RLS policies + índices + rotar DB password en Supabase
 3. Comprar dominio + verificar en Resend
 4. Activar confirmación de email en Supabase Auth
-5. Migrar Zootécnico y Parámetros a API
+5. ~~Migrar Zootécnico y Parámetros a API~~ ✅
 6. Desplegar cambios a Railway + Netlify

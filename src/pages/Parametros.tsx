@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { ESPECIES_DEFAULT } from "@/core";
 import type { SpeciesParams } from "@/core";
 import { useTranslation } from "@/store/language";
+import { useAuth } from "@/store/auth";
 
 const PARAMS_KEY = "aquacalc_params_overrides";
 
 type Overrides = Record<string, Partial<SpeciesParams>>;
 
-function loadOverrides(): Overrides {
+function loadLocal(): Overrides {
   try {
     return JSON.parse(localStorage.getItem(PARAMS_KEY) || "{}");
   } catch {
@@ -17,7 +18,8 @@ function loadOverrides(): Overrides {
 
 export default function Parametros() {
   const { t } = useTranslation();
-  const [overrides, setOverrides] = useState<Overrides>(loadOverrides);
+  const { token, apiUrl } = useAuth();
+  const [overrides, setOverrides] = useState<Overrides>(loadLocal);
   const [active, setActive] = useState(ESPECIES_DEFAULT[0].id);
   const [local, setLocal] = useState<Partial<SpeciesParams>>({});
 
@@ -28,8 +30,19 @@ export default function Parametros() {
   useEffect(() => { save(overrides); }, [overrides, save]);
 
   useEffect(() => {
+    if (!token) return;
+    fetch(`${apiUrl}/parametros`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((data: Overrides) => {
+        setOverrides(data);
+        localStorage.setItem(PARAMS_KEY, JSON.stringify(data));
+      })
+      .catch(() => setOverrides(loadLocal()));
+  }, [apiUrl, token]);
+
+  useEffect(() => {
     const h = (e: StorageEvent) => {
-      if (e.key === PARAMS_KEY) setOverrides(loadOverrides());
+      if (e.key === PARAMS_KEY) setOverrides(loadLocal());
     };
     window.addEventListener("storage", h);
     return () => window.removeEventListener("storage", h);
@@ -57,18 +70,40 @@ export default function Parametros() {
     const clean = Object.fromEntries(
       Object.entries(local).filter(([, v]) => v !== "" && v !== undefined)
     );
-    setOverrides({ ...overrides, [active]: clean as Partial<SpeciesParams> });
+    const next = { ...overrides, [active]: clean as Partial<SpeciesParams> };
+    setOverrides(next);
+    if (token) {
+      fetch(`${apiUrl}/parametros`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(next),
+      }).catch(() => {});
+    }
   };
 
   const resetOne = () => {
     const { [active]: _, ...rest } = overrides;
     setOverrides(rest);
     setLocal({});
+    if (token) {
+      fetch(`${apiUrl}/parametros`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(rest),
+      }).catch(() => {});
+    }
   };
 
   const resetAll = () => {
     setOverrides({});
     setLocal({});
+    if (token) {
+      fetch(`${apiUrl}/parametros`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      }).catch(() => {});
+    }
   };
 
   const hasChanges = Object.keys(local).length > 0;

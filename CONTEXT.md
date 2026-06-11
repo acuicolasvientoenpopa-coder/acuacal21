@@ -19,7 +19,7 @@ SaaS de gestión acuícola para productores pequeños y medianos de LATAM. Offli
 - **Autenticación**: Supabase Auth (JWT, persistSession)
 - **Persistencia**: Híbrida — API primaria + localStorage como fallback/cache
 - **PWA**: vite-plugin-pwa con service worker + Workbox
-- **Tests**: 25 tests vitest para core (calcular, calcRacion)
+- **Tests**: 33 tests vitest para core (calcular, calcRacion, plan)
 - **Build**: `tsc -b && vite build` — compila y pasa
 
 ### URLs
@@ -39,11 +39,11 @@ acucal2.1/
 │   │   ├── formulas.ts           # cálculos acuícolas (biomasa, FCR, ración)
 │   │   ├── species.ts            # 7 especies predefinidas + ENERGY_DEFAULTS
 │   │   ├── currencies.ts         # 16 monedas con formato locale
-│   │   ├── i18n.ts               # ~430 claves × 3 idiomas (ES/EN/PT)
+│   │   ├── i18n.ts               # ~494 claves × 3 idiomas (ES/EN/PT)
 │   │   ├── validators.ts         # validación WQ, formularios, email
 │   │   ├── observations.ts       # 10 observaciones clínicas
 │   │   ├── inventario-types.ts   # tipos Producto, Movimiento, Categoría
-│   │   ├── __tests__/            # 25 tests vitest
+│   │   ├── __tests__/            # 33 tests vitest
 │   │   └── index.ts
 │   ├── store/                    # React Context + hooks
 │   │   ├── auth.tsx              # AuthProvider (Supabase login/register/logout)
@@ -84,7 +84,7 @@ acucal2.1/
 │
 ├── server/                       # Backend Express + Prisma
 │   ├── src/
-│   │   ├── index.ts              # servidor Express (8 routers)
+│   │   ├── index.ts              # servidor Express (9 routers)
 │   │   ├── middleware/
 │   │   │   ├── auth.ts           # verificación JWT Supabase
 │   │   │   └── errorHandler.ts   # manejo global de errores
@@ -96,7 +96,13 @@ acucal2.1/
 │   │       ├── finanzas.ts       # CRUD /api/finanzas
 │   │       ├── inventario.ts     # CRUD /api/inventario/productos + movimientos
 │   │       ├── microbiologia.ts  # CRUD /api/microbiologia
-│   │       └── veterinaria.ts    # CRUD /api/veterinaria
+│   │       ├── veterinaria.ts    # CRUD /api/veterinaria
+│   │       ├── dashboard.ts      # GET /api/dashboard/stats
+│   │       ├── parametros.ts     # GET/PUT /api/parametros
+│   │       ├── pagos.ts          # POST /api/pagos/checkout, /webhook, /subscription
+│   │       ├── feedback.ts       # POST /api/feedback
+│   │       ├── geo.ts            # POST /api/geo/estanques
+│   │       └── admin.ts          # GET /api/admin/users, /stats, /subscriptions
 │   ├── prisma/
 │   │   ├── schema.prisma         # 10 tablas: User, Finca, Estanque, Especie, Bitacora, Finanza, Inventario, MovimientoInventario, Microbiologia, Veterinaria
 │   │   └── migration.sql         # migración SQL generada
@@ -134,13 +140,13 @@ acucal2.1/
 | Seguimiento zootécnico con gráficos | ✅ | localStorage |
 | CRUD especies (7 predefinidas + personalizadas) | ✅ | API + localStorage |
 | CRUD fincas + estanques (jerarquía) | ✅ | API + localStorage |
-| Parámetros WQ por especie | ✅ | localStorage |
+| Parámetros WQ por especie | ✅ | API + localStorage |
 | Fórmulas de referencia (FAO, Boyd, Timmons) | ✅ | Estático |
 | Microbiología (cultivos + medicación) | ✅ | API + localStorage |
 | Finanzas por ciclo | ✅ | API + localStorage |
 | Inventario (productos, movimientos, alertas) | ✅ | API + localStorage |
 | Wizard veterinario (diagnóstico sanitario) | ✅ | API + localStorage |
-| Dashboard con resumen global | ✅ | localStorage |
+| Dashboard con resumen global | ✅ | API + localStorage |
 | Master Panel (admin, editor localStorage) | ✅ | localStorage |
 | Mapa de arquitectura | ✅ | localStorage |
 | Login / Register con Supabase Auth | ✅ | API (Supabase) |
@@ -155,7 +161,7 @@ acucal2.1/
 | Sidebar responsive + hamburger menu | ✅ | Contexto |
 | Indicador de guardado + toast | ✅ | Contexto |
 
-### Backend (8 routers, 26 endpoints)
+### Backend (9 routers, 30+ endpoints)
 | Router | Endpoints | Auth |
 |--------|-----------|------|
 | `auth.ts` | 3 POST (register, login, logout) | ❌ |
@@ -166,6 +172,12 @@ acucal2.1/
 | `inventario.ts` | 6 (GET productos, POST productos, PUT/:id, DELETE/:id, GET movimientos, POST movimientos) | ✅ JWT |
 | `microbiologia.ts` | 4 (GET list, POST, PUT/:id, DELETE/:id) | ✅ JWT |
 | `veterinaria.ts` | 3 (GET list, POST, DELETE/:id) | ✅ JWT |
+| `dashboard.ts` | 1 (GET /stats) | ✅ JWT |
+| `parametros.ts` | 2 (GET, PUT) | ✅ JWT |
+| `geo.ts` | 1 (POST /estanques) | ✅ JWT |
+| `pagos.ts` | 3 (checkout, webhook, subscription) | ✅ JWT |
+| `feedback.ts` | 1 (POST) | ❌ |
+| `admin.ts` | 3 (GET users, stats, subscriptions) | ✅ JWT + owner
 
 ### Base de datos (10 tablas PostgreSQL en Supabase)
 - User, Finca, Estanque, Especie, Bitacora, Finanza, Inventario, MovimientoInventario, Microbiologia, Veterinaria
@@ -199,13 +211,13 @@ acucal2.1/
 | Página | API | localStorage | Data |
 |--------|:---:|:------------:|------|
 | Login | ✅ Supabase | ❌ | Sesión |
-| Dashboard | ❌ | ✅ | `aquacalc_*` todos |
+| Dashboard | ✅ | ✅ | `aquacalc_*` todos | API + localStorage fallback |
 | Calculator | ❌ | Indirecto (lookups) | Cálculos locales |
 | Bitácora | ✅ | ✅ `aquacalc_bitacora` | API primario + localStorage fallback |
-| Zootécnico | ❌ | ✅ `aquacalc_bitacora` | Solo localStorage |
+| Zootécnico | ✅ | ✅ `aquacalc_bitacora` | API primario + localStorage fallback |
 | Especies | ✅ | ✅ `aquacalc_custom_species` | API primario + localStorage fallback |
 | Fincas | ✅ | ✅ `aquacalc_fincas` | API primario + localStorage fallback |
-| Parámetros | ❌ | ✅ `aquacalc_params_overrides` | Solo localStorage |
+| Parámetros | ✅ | ✅ `aquacalc_params_overrides` | API primario + localStorage fallback |
 | Fórmulas | ❌ | ❌ | Estático |
 | Microbiología | ✅ | ✅ `aquacalc_cultivos`, `aquacalc_medicacion` | API primario + localStorage fallback |
 | Finanzas | ✅ | ✅ `aquacalc_finanzas` | API primario + localStorage fallback |
@@ -219,13 +231,13 @@ acucal2.1/
 
 ## Pendientes para MVP Vendible
 
-1. **Pagos**: Lemon Squeezy (Stripe no disponible en Costa Rica). Planes Free/Pro ($29)/Enterprise ($99)
+1. **Pagos**: ONVO Pay. Planes Free/Pro ($29)/Enterprise ($99). Código listo, falta crear productos en dashboard ONVO y configurar webhook + keys en Railway.
 2. **Dominio**: comprar (~$8/yr Cloudflare) para URL marcada y emails transaccionales
 3. **Multi-usuario**: roles admin/productor/tecnico con gating de permisos
 4. **Sync offline**: cola de cambios localStorage → API con reconciliación
-5. **Dashboard + Parametros + Zootécnico**: migrar a API (hoy solo localStorage)
+5. **Dashboard + Parametros + Zootécnico**: migrar a API (hoy solo localStorage) — ✅ COMPLETADO
 6. **CI/CD**: GitHub Actions (typecheck + test + build)
-7. **Code splitting**: reducir chunk size (>500 kB warning actual)
+7. **Code splitting**: reducir chunk size (>500 kB warning actual) — ✅ pdf.js separado, falta excel.js
 
 ---
 
@@ -248,7 +260,7 @@ acucal2.1/
 ```bash
 npm run dev              # Frontend dev server
 npm run build            # Frontend build (tsc -b && vite build)
-npm run test             # 25 vitest tests
+npm run test             # 33 vitest tests
 cd server && npm run dev # Backend dev server (tsx watch)
 cd server && npm run build # Backend tsc build
 ```

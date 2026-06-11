@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-06-11 — Dashboard migrado a API + endpoint agregado + Parámetros a API + code splitting pdf.js
+
+### Objetivo
+Migrar Dashboard de solo localStorage a API, reemplazando 7 fetch() paralelos por un único endpoint agregado.
+
+### Archivos modificados
+- `server/src/routes/dashboard.ts` — Nuevo: `GET /api/dashboard/stats`
+- `server/src/routes/parametros.ts` — Nuevo: `GET/PUT /api/parametros`
+- `server/prisma/migration_parametros.sql` — Nueva: tabla ParametroOverride
+- `server/src/index.ts` — + dashboardRouter, parametrosRouter
+- `src/pages/Dashboard.tsx` — Rewrite: un solo fetch(), fallback localStorage
+- `src/pages/Parametros.tsx` — Rewrite: API + localStorage fallback
+- `src/utils/pdf.ts` — Separado: solo jsPDF (405 kB)
+- `src/utils/excel.ts` — Nuevo: solo ExcelJS (934 kB)
+- `src/pages/Dashboard.tsx` — Import desde excel.ts
+- `src/pages/Finanzas.tsx` — Import desde excel.ts
+- `src/pages/Zootecnico.tsx` — PDF desde pdf.ts, Excel desde excel.ts
+- `CHANGELOG.md` — Este registro
+- `PROJECT_STATUS.md` — Actualizado
+- `CONTEXT.md` — Actualizado
+
+### Cambios realizados
+1. Backend: nuevo endpoint `GET /api/dashboard/stats` que hace 7 consultas paralelas a Supabase (counts + finanzas + inventario) y devuelve un solo JSON con todos los stats del usuario autenticado
+2. Backend: nuevos endpoints `GET/PUT /api/parametros` con tabla ParametroOverride (userId, especieId, params JSONB)
+3. Frontend: Dashboard.tsx simplificado de 7 fetch() a 1, con fallback a localStorage si la API falla
+4. Frontend: Parametros.tsx migrado a API con localStorage fallback
+5. Frontend: pdf.ts separado en pdf.ts (jsPDF, 405 kB) y excel.ts (ExcelJS, 934 kB) — Dashboard y Finanzas ya no cargan jspdf en absoluto
+
+---
+
 ## 2026-06-10 — Auditoría de documentación y actualización masiva
 
 ### Objetivo
