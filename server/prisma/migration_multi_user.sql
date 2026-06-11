@@ -36,3 +36,14 @@ CREATE POLICY "FincaUser delete own" ON "FincaUser" FOR DELETE
 -- Índice
 CREATE INDEX IF NOT EXISTS idx_fincauser_fincaId ON "FincaUser" ("fincaId");
 CREATE INDEX IF NOT EXISTS idx_fincauser_userId ON "FincaUser" ("userId");
+
+-- Feedback table
+CREATE TABLE IF NOT EXISTS "Feedback" (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT,
+  email TEXT,
+  message TEXT NOT NULL,
+  rating INT,
+  page TEXT,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now()
+);

@@ -11,6 +11,7 @@ import { inventarioRouter } from "./routes/inventario.js";
 import { microbiologiaRouter } from "./routes/microbiologia.js";
 import { veterinariaRouter } from "./routes/veterinaria.js";
 import { pagosRouter } from "./routes/pagos.js";
+import { feedbackRouter } from "./routes/feedback.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -67,6 +68,7 @@ app.use("/api/inventario", inventarioRouter);
 app.use("/api/microbiologia", microbiologiaRouter);
 app.use("/api/veterinaria", veterinariaRouter);
 app.use("/api/pagos", pagosRouter);
+app.use("/api/feedback", feedbackRouter);
 
 app.use(errorHandler);
 

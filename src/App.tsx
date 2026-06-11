@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/store/auth";
 import Layout from "@/components/Layout";
 import ToastContainer from "@/components/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 const Login = lazy(() => import("@/pages/Login"));
 const Terminos = lazy(() => import("@/pages/Terminos"));
@@ -28,10 +29,12 @@ const GeoPond = lazy(() => import("@/pages/GeoPond"));
 const MedirEstanque = lazy(() => import("@/pages/MedirEstanque"));
 const Planes = lazy(() => import("@/pages/Planes"));
 
+const PUBLIC_PATHS = ["/calc", "/formulas", "/geo", "/medir-estanque"];
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading-overlay"><div className="loading-spinner" /></div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user && !PUBLIC_PATHS.includes(window.location.pathname)) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
@@ -75,6 +78,7 @@ export default function App() {
                   </Route>
                 </Routes>
                 <ToastContainer />
+                <FeedbackWidget />
               </ThemeProvider>
             </CurrencyProvider>
           </LanguageProvider>

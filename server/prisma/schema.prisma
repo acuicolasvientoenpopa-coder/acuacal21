@@ -193,3 +193,13 @@ model Veterinaria {
   userId    String
   createdAt DateTime @default(now())
 }
+
+model Feedback {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?
+  message   String
+  rating    Int?
+  page      String?
+  createdAt DateTime @default(now())
+}

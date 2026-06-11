@@ -1075,6 +1075,27 @@ textarea:focus {
   font-family: monospace;
 }
 
+/* Feedback FAB */
+.feedback-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,200,150,0.3);
+  transition: transform 0.2s;
+}
+.feedback-fab:hover {
+  transform: scale(1.1);
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
