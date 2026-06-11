@@ -25,6 +25,7 @@ const VeterinaryReportWizard = lazy(() => import("@/pages/veterinary/VeterinaryR
 const Admin = lazy(() => import("@/pages/Admin"));
 const Mapa = lazy(() => import("@/pages/Mapa"));
 const GeoPond = lazy(() => import("@/pages/GeoPond"));
+const MedirEstanque = lazy(() => import("@/pages/MedirEstanque"));
 const Planes = lazy(() => import("@/pages/Planes"));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -69,7 +70,8 @@ export default function App() {
                     <Route path="admin" element={<ProtectedRoute><SuspenseWrapper><Admin /></SuspenseWrapper></ProtectedRoute>} />
                     <Route path="mapa" element={<ProtectedRoute><SuspenseWrapper><Mapa /></SuspenseWrapper></ProtectedRoute>} />
                     <Route path="geo" element={<ProtectedRoute><SuspenseWrapper><GeoPond /></SuspenseWrapper></ProtectedRoute>} />
-                  <Route path="planes" element={<ProtectedRoute><SuspenseWrapper><Planes /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="medir-estanque" element={<ProtectedRoute><SuspenseWrapper><MedirEstanque /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="planes" element={<ProtectedRoute><SuspenseWrapper><Planes /></SuspenseWrapper></ProtectedRoute>} />
                   </Route>
                 </Routes>
                 <ToastContainer />

@@ -99,7 +99,24 @@ export function calcVolumenTanqueCilindrico(diametro: number, altura: number): V
   return { volumenM3: m3, litros: m3 * 1000 };
 }
 
-export type FormaEstanque = "manual" | "rectangular" | "circular" | "trapezoidal" | "tanque";
+export function calcVolumenTriangular(base: number, altura: number, profundidad: number): VolumenResult {
+  const areaBase = (base * altura) / 2;
+  const m3 = areaBase * profundidad;
+  return { volumenM3: m3, litros: m3 * 1000 };
+}
+
+export function calcAreaPoligono(puntos: { x: number; y: number }[]): number {
+  if (puntos.length < 3) return 0;
+  let area = 0;
+  for (let i = 0; i < puntos.length; i++) {
+    const j = (i + 1) % puntos.length;
+    area += puntos[i].x * puntos[j].y;
+    area -= puntos[j].x * puntos[i].y;
+  }
+  return Math.abs(area) / 2;
+}
+
+export type FormaEstanque = "manual" | "rectangular" | "circular" | "trapezoidal" | "tanque" | "triangular" | "poligono";
 
 export interface DimensionesEstanque {
   forma: FormaEstanque;
@@ -112,6 +129,8 @@ export interface DimensionesEstanque {
   diametro?: number;
   profundidad?: number;
   altura?: number;
+  base?: number;
+  alturaTri?: number;
 }
 
 export function calcVolumen(dim: DimensionesEstanque): VolumenResult {
@@ -128,6 +147,8 @@ export function calcVolumen(dim: DimensionesEstanque): VolumenResult {
       );
     case "tanque":
       return calcVolumenTanqueCilindrico(dim.diametro || 0, dim.altura || 0);
+    case "triangular":
+      return calcVolumenTriangular(dim.base || 0, dim.alturaTri || 0, dim.profundidad || 0);
     default:
       return { volumenM3: 0, litros: 0 };
   }
@@ -256,103 +277,4 @@ export function calcRacion(inputs: RacionInputs): RacionResults {
   return { racionDiaria, racionComida };
 }
 
-// --- Fórmulas de referencia (texto informativo) ---
 
-export interface ReferenceFormula {
-  id: string;
-  title: string;
-  formula: string;
-  description: string;
-  fuente: string;
-}
-
-export const REFERENCE_FORMULAS: ReferenceFormula[] = [
-  {
-    id: "biomasa",
-    title: "Biomasa",
-    formula: "Biomasa (kg) = N° animales × Peso promedio (g) ÷ 1000",
-    description:
-      "Indica el peso total de los animales en el sistema. Ejemplo: 1000 peces × 300g = 300 kg de biomasa.",
-    fuente: "Pillay, T.V.R. & Kutty, M.N. (2005). Aquaculture: Principles and Practices. 2nd ed. Blackwell Publishing.",
-  },
-  {
-    id: "fcr",
-    title: "FCR — Factor de Conversión Alimenticia",
-    formula: "FCR = Alimento consumido (kg) ÷ Ganancia de peso (kg)",
-    description:
-      "Mide la eficiencia alimenticia. Un FCR de 1.5 significa que se necesitan 1.5 kg de alimento para producir 1 kg de carne. Menor es mejor.",
-    fuente: "Tacon, A.G.J. (1987). The Nutrition and Feeding of Farmed Fish and Shrimp. FAO Training Manual.",
-  },
-  {
-    id: "sgr",
-    title: "SGR — Tasa de Crecimiento Específico",
-    formula: "SGR (%/día) = [(ln Pf − ln Pi) ÷ días] × 100",
-    description:
-      "Indica el porcentaje de ganancia de peso por día relativo al peso corporal. Pf = peso final, Pi = peso inicial.",
-    fuente: "Ricker, W.E. (1975). Computation and Interpretation of Biological Statistics of Fish Populations. Fisheries Research Board of Canada Bulletin 191.",
-  },
-  {
-    id: "supervivencia",
-    title: "Supervivencia",
-    formula: "Supervivencia (%) = (Animales finales ÷ Animales iniciales) × 100",
-    description:
-      "Porcentaje de animales que sobreviven durante el ciclo de producción.",
-    fuente: "Boyd, C.E. & Tucker, C.S. (1998). Pond Aquaculture Water Quality Management. Springer.",
-  },
-  {
-    id: "factor_condicion",
-    title: "Factor de Condición (K)",
-    formula: "K = (Peso (g) ÷ Longitud (cm)³) × 100",
-    description:
-      "Indica el estado de bienestar del pez. Valores cercanos a 1 son normales. Valores menores pueden indicar desnutrición.",
-    fuente: "Fulton, T.W. (1904). The Rate of Growth of Fishes. Fisheries Board of Scotland Annual Report 22.",
-  },
-  {
-    id: "cv",
-    title: "Coeficiente de Variación (CV)",
-    formula: "CV (%) = (Desviación estándar ÷ Media) × 100",
-    description:
-      "Mide la uniformidad del lote. CV menor a 20% indica lote uniforme. Mayor a 35% sugiere heterogeneidad problemática.",
-    fuente: "Zar, J.H. (2010). Biostatistical Analysis. 5th ed. Pearson Prentice-Hall.",
-  },
-  {
-    id: "tasa_alimentacion",
-    title: "Tasa de Alimentación",
-    formula: "Ración diaria (kg) = Biomasa (kg) × Tasa (%) ÷ 100",
-    description:
-      "La tasa de alimentación varía según especie, temperatura y etapa de crecimiento. Generalmente entre 1% y 6% de la biomasa por día.",
-    fuente: "Timmons, M.B. & Ebeling, J.M. (2010). Recirculating Aquaculture. 3rd ed. NRAC Publication.",
-  },
-  {
-    id: "densidad",
-    title: "Densidad de Siembra",
-    formula: "Densidad = N° animales ÷ Volumen (m³ o m²)",
-    description:
-      "Define cuántos animales se colocan por unidad de volumen o área. Afecta directamente la calidad del agua y el crecimiento.",
-    fuente: "Boyd, C.E. (2015). Water Quality: An Introduction. Springer. ISBN 978-3319174457.",
-  },
-  {
-    id: "costo_kg",
-    title: "Costo por kg Producido",
-    formula: "Costo/kg = Costo total alimento ÷ Biomasa cosechada (kg)",
-    description:
-      "Indica cuánto cuesta producir cada kilogramo de producto. Es el principal indicador de rentabilidad.",
-    fuente: "Engle, C.R. (2010). Aquaculture Economics and Financing: Management and Analysis. Blackwell Publishing.",
-  },
-  {
-    id: "utilidad",
-    title: "Utilidad",
-    formula: "Utilidad = Ingreso bruto − Costo de alimento",
-    description:
-      "Ingreso bruto = Biomasa cosechada × Precio de venta. Nota: no incluye otros costos operativos.",
-    fuente: "Engle, C.R. (2010). Aquaculture Economics and Financing. Blackwell Publishing.",
-  },
-  {
-    id: "dias_mercado",
-    title: "Días al Mercado",
-    formula: "Días = (Peso cosecha − Peso inicial) ÷ GPD",
-    description:
-      "GPD = Ganancia de peso diaria (g/día). Estima el tiempo necesario para alcanzar el peso de cosecha.",
-    fuente: "El-Sayed, A.F.M. (2006). Tilapia Culture. CABI Publishing.",
-  },
-];

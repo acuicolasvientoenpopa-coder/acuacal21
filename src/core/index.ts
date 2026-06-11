@@ -6,14 +6,14 @@ export {
   calcVolumenCircular,
   calcVolumenTrapezoidal,
   calcVolumenTanqueCilindrico,
-  REFERENCE_FORMULAS,
+  calcVolumenTriangular,
+  calcAreaPoligono,
 } from "./formulas";
 export type {
   CalculationInputs,
   CalculationResults,
   RacionInputs,
   RacionResults,
-  ReferenceFormula,
   DimensionesEstanque,
   FormaEstanque,
   VolumenResult,
