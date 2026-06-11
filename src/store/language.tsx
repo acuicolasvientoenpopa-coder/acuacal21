@@ -5,14 +5,14 @@ import type { Idioma, TranslationKey } from "@/core";
 type LangContext = {
   lang: Idioma;
   setLang: (l: Idioma) => void;
-  t: (key: TranslationKey | string) => string;
+  t: (key: TranslationKey) => string;
 };
 
 const Ctx = createContext<LangContext | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Idioma>("es");
-  const t = (key: TranslationKey | string) => (IDIOMAS[lang] as Record<string, string>)[key] ?? key;
+  const t = (key: TranslationKey) => (IDIOMAS[lang] as Record<string, string>)[key] ?? key;
   return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>;
 }
 

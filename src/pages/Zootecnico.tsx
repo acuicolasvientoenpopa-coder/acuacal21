@@ -15,12 +15,12 @@ function toStr(v: unknown): string {
 
 export default function Zootecnico() {
   const { t } = useTranslation();
-  const [records] = useState<any[]>(loadRecords);
+  const [records, setRecords] = useState<any[]>(loadRecords);
   const [filtro, setFiltro] = useState("");
   const [param, setParam] = useState("oxigeno");
 
   useEffect(() => {
-    const h = (e: StorageEvent) => { if (e.key === RECORDS_KEY) window.location.reload(); };
+    const h = (e: StorageEvent) => { if (e.key === RECORDS_KEY) setRecords(loadRecords()); };
     window.addEventListener("storage", h);
     return () => window.removeEventListener("storage", h);
   }, []);

@@ -46,7 +46,7 @@ function getPondos(): { id: string; label: string }[] {
         return [...fincas.map((f: { id: string; nombre: string }) => ({ id: f.id, label: f.nombre })), { id: "general", label: "General / toda la finca" }];
       }
     }
-  } catch {}
+  } catch { return [{ id: "general", label: "General / toda la finca" }]; }
   return [{ id: "general", label: "General / toda la finca" }];
 }
 

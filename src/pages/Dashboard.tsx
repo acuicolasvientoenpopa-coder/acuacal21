@@ -72,8 +72,8 @@ export default function Dashboard() {
       {exporting && <div className="loading-overlay"><div className="loading-spinner" /></div>}
       <div className="page-header">
         <div>
-          <h2 className="page-title">🏠 {t("calc")}</h2>
-          <p className="page-subtitle">{t("calc")}</p>
+          <h2 className="page-title">🏠 {t("dashboardTitle")}</h2>
+          <p className="page-subtitle">{t("dashboardSub")}</p>
         </div>
         <button className="btn-primary btn-sm" onClick={handleExport} disabled={exporting}>⬇️ {t("exportExcel")}</button>
       </div>

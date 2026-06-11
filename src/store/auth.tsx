@@ -15,6 +15,7 @@ type AuthContext = {
   loading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string, nombre: string) => Promise<string | null>;
+  resetPassword: (email: string) => Promise<string | null>;
   logout: () => Promise<void>;
   supabase: typeof supabase;
   apiUrl: string;
@@ -64,6 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }, []);
 
+  const resetPassword = useCallback(async (email: string): Promise<string | null> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/" });
+    return error?.message ?? null;
+  }, []);
+
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -71,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ user, token, loading, login, register, logout, supabase, apiUrl: API_URL }}>
+    <Ctx.Provider value={{ user, token, loading, login, register, resetPassword, logout, supabase, apiUrl: API_URL }}>
       {children}
     </Ctx.Provider>
   );
