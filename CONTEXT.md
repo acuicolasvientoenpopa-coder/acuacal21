@@ -271,7 +271,7 @@ cd server && npm run build # Backend tsc build
 
 - Supabase URL: `https://smvjffbeshxcfltjoolm.supabase.co`
 - Supabase anon key: `sb_publishable_EQRvreJDv4d-wYZmaMY3Bg_x2D3kM_v`
-- DB password: `rmA2F4H0Y3FHmgD2`
+- DB password: `WA2zbvqKVGkoY4aLrjS71E8s` (rotada 2026-06-11)
 - API URL (frontend): `https://acuacal21-production.up.railway.app/api`
 - Master Panel PIN: `211203`
 - Resend SMTP: `smtp.resend.com:465`, key `re_XzQe6JmD_BKRZ6vsV7QdJgGogjpLHz8Mi` (solo puede enviar a owner email)
