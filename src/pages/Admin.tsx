@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/Toast";
-import { generateBitacora, generateFincas, generateParams, generateFinanzas, generateAll, clearAll } from "@/utils/debugData";
+import { generateBitacora, generateFincas, generateParams, generateFinanzas, generateEspecies, generateInventario, generateMicrobiologia, generateVeterinaria, generateAll, clearAll } from "@/utils/debugData";
 
 const ADMIN_PIN = "211203";
 const API = "https://acuacal21-production.up.railway.app/api";
@@ -53,6 +53,17 @@ export default function Admin() {
   const [unlocked, setUnlocked] = useState(false);
   const [count, setCount] = useState(20);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [netLog, setNetLog] = useState<{ time: string; status: string }[]>([]);
+  const [online, setOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const on = () => { setOnline(true); setNetLog(prev => [{ time: new Date().toLocaleTimeString(), status: "🟢 online" }, ...prev].slice(0, 50)); };
+    const off = () => { setOnline(false); setNetLog(prev => [{ time: new Date().toLocaleTimeString(), status: "🔴 offline" }, ...prev].slice(0, 50)); };
+    setNetLog([{ time: new Date().toLocaleTimeString(), status: navigator.onLine ? "🟢 online" : "🔴 offline" }]);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
 
   const [services, setServices] = useState<Record<string, "checking" | "ok" | "error">>({
     railway: "checking", supabase: "checking", frontend: "checking", resend: "checking",
@@ -262,6 +273,27 @@ export default function Admin() {
           )}
         </div>
 
+        {/* Network Status */}
+        <div className="card" style={{ borderColor: online ? "var(--accent)" : "var(--danger)" }}>
+          <div className="card-title" style={{ fontSize: 15 }}>📡 Estado de Red</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 20 }}>{online ? "🟢" : "🔴"}</span>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>{online ? "Online" : "Offline"}</span>
+            <span style={{ fontSize: 11, color: "var(--text3)" }}>Últimos eventos:</span>
+            <button className="btn-sm" style={{ fontSize: 10, marginLeft: "auto" }} onClick={() => setNetLog([])}>Limpiar</button>
+          </div>
+          <div style={{ maxHeight: 150, overflowY: "auto", fontSize: 11, fontFamily: "monospace" }}>
+            {netLog.length === 0 ? <span style={{ color: "var(--text3)" }}>Sin eventos</span> : (
+              netLog.map((e, i) => (
+                <div key={i} style={{ padding: "2px 0", display: "flex", gap: 8 }}>
+                  <span style={{ color: "var(--text3)", minWidth: 60 }}>{e.time}</span>
+                  <span>{e.status}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Herramientas Locales */}
         <div className="card" style={{ borderColor: "var(--accent3)" }}>
           <div className="card-title" style={{ fontSize: 15 }}>🛠️ Herramientas de Desarrollo</div>
@@ -272,6 +304,10 @@ export default function Admin() {
               <button className="btn-primary btn-sm" onClick={() => { generateFincas(); toast("Fincas generadas", "success"); }}>Generar Fincas</button>
               <button className="btn-primary btn-sm" onClick={() => { generateParams(); toast("Parámetros generados", "success"); }}>Generar Parámetros</button>
               <button className="btn-primary btn-sm" onClick={() => { generateFinanzas(); toast("Finanzas generadas", "success"); }}>Generar Finanzas</button>
+              <button className="btn-primary btn-sm" onClick={() => { generateEspecies(); toast("Especies generadas", "success"); }}>Generar Especies</button>
+              <button className="btn-primary btn-sm" onClick={() => { generateInventario(); toast("Inventario generado", "success"); }}>Generar Inventario</button>
+              <button className="btn-primary btn-sm" onClick={() => { generateMicrobiologia(); toast("Microbiología generada", "success"); }}>Generar Microbiología</button>
+              <button className="btn-primary btn-sm" onClick={() => { generateVeterinaria(); toast("Veterinaria generada", "success"); }}>Generar Veterinaria</button>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn-primary btn-sm" onClick={() => { generateAll(); toast("Datos completos generados", "success"); }}>⚡ Generar Todo</button>
