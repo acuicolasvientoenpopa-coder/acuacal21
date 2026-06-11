@@ -13,6 +13,7 @@ ALTER TABLE "MovimientoInventario" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Microbiologia" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Veterinaria" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Subscription" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "FincaUser" ENABLE ROW LEVEL SECURITY;
 
 -- Users: cada uno ve su propio perfil, admin ve todos
 CREATE POLICY "Users select own" ON "User" FOR SELECT
@@ -113,3 +114,19 @@ CREATE POLICY "Subscription select own" ON "Subscription" FOR SELECT
   USING ("userId" = auth.uid());
 CREATE POLICY "Subscription insert own" ON "Subscription" FOR INSERT
   WITH CHECK ("userId" = auth.uid());
+
+-- FincaUser: colaboradores
+CREATE POLICY "FincaUser select own" ON "FincaUser" FOR SELECT
+  USING ("userId" = auth.uid());
+
+CREATE POLICY "FincaUser insert admin" ON "FincaUser" FOR INSERT
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM "FincaUser" WHERE "FincaUser"."fincaId" = fincaId AND "FincaUser"."userId" = auth.uid() AND "FincaUser".rol = 'admin')
+    OR EXISTS (SELECT 1 FROM "Finca" WHERE "Finca".id = fincaId AND "Finca"."userId" = auth.uid())
+  );
+
+CREATE POLICY "FincaUser delete admin" ON "FincaUser" FOR DELETE
+  USING (
+    EXISTS (SELECT 1 FROM "FincaUser" WHERE "FincaUser"."fincaId" = fincaId AND "FincaUser"."userId" = auth.uid() AND "FincaUser".rol = 'admin')
+    OR EXISTS (SELECT 1 FROM "Finca" WHERE "Finca".id = fincaId AND "Finca"."userId" = auth.uid())
+  );

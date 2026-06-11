@@ -1,11 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { exportZootecnicoPDF, exportZootecnicoExcel } from "@/utils/pdf";
 
 const RECORDS_KEY = "aquacalc_bitacora";
 
-function loadRecords(): any[] {
+function loadLocal(): any[] {
   try { return JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]"); } catch { return []; }
+}
+
+function dbToRecord(r: any): any {
+  let extra: any = {};
+  try { if (r.observaciones) extra = JSON.parse(r.observaciones); } catch {}
+  return {
+    id: r.id, fecha: r.fecha?.slice(0, 10) || "",
+    estanque: extra.estanque || r.estanqueId || "",
+    especie: extra.especie || r.especieId || "",
+    alimento: extra.alimento || "", mortalidades: extra.mortalidades || "",
+    pesoMuestreo: r.peso != null ? String(r.peso) : "",
+    oxigeno: r.oxigeno != null ? String(r.oxigeno) : "",
+    temperatura: r.temperatura != null ? String(r.temperatura) : "",
+    ph: r.ph != null ? String(r.ph) : "",
+    amonio: r.amonio != null ? String(r.amonio) : "",
+    nitrito: extra.nitrito || "",
+    salinidad: r.salinidad != null ? String(r.salinidad) : "",
+    biomasa: extra.biomasa || "",
+    sgr: extra.sgr || "",
+    fcrAcum: extra.fcrAcum || "",
+    observaciones: extra.observaciones || "",
+    createdAt: r.createdAt || "",
+  };
 }
 
 function toStr(v: unknown): string {
@@ -15,12 +39,37 @@ function toStr(v: unknown): string {
 
 export default function Zootecnico() {
   const { t } = useTranslation();
-  const [records, setRecords] = useState<any[]>(loadRecords);
+  const { token, apiUrl } = useAuth();
+  const [records, setRecords] = useState<any[]>(loadLocal);
   const [filtro, setFiltro] = useState("");
   const [param, setParam] = useState("oxigeno");
 
+  const api = useCallback(async (path: string) => {
+    const res = await fetch(apiUrl + path, {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }, [apiUrl, token]);
+
   useEffect(() => {
-    const h = (e: StorageEvent) => { if (e.key === RECORDS_KEY) setRecords(loadRecords()); };
+    api("/bitacora").then((data: any[]) => {
+      const mapped = data.map(dbToRecord);
+      setRecords(mapped);
+      localStorage.setItem(RECORDS_KEY, JSON.stringify(mapped));
+    }).catch(() => setRecords(loadLocal()));
+  }, [api]);
+
+  useEffect(() => {
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+  }, [records]);
+
+  useEffect(() => {
+    const h = (e: StorageEvent) => {
+      if (e.key === RECORDS_KEY) {
+        try { setRecords(JSON.parse(e.newValue || "[]")); } catch {}
+      }
+    };
     window.addEventListener("storage", h);
     return () => window.removeEventListener("storage", h);
   }, []);

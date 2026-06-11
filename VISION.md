@@ -1,6 +1,6 @@
 # VISIÓN — AcuiCal y el Ecosistema Acuícolas Viento en Popa
 
-> Documento estratégico. Actualizado: 2026-06-09.
+> Documento estratégico. Actualizado: 2026-06-10. Post Fase 1-3 (seguridad, calidad, pagos ONVO Pay, CI/CD).
 
 ---
 

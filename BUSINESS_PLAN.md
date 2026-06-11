@@ -1,7 +1,7 @@
 # BUSINESS PLAN — AcuiCal
 
 > Plan de negocio para AcuiCal, SaaS acuícola.
-> Actualizado: 2026-06-10.
+> Actualizado: 2026-06-10. Última revisión post-Fase 3 (seguridad, calidad, pagos ONVO Pay, CI/CD).
 
 ---
 
@@ -129,7 +129,7 @@ Ninguna herramienta accesible y económica integra:
 | Mercado LATAM no paga SaaS | Muy alto | Media | Ofrecer factura local + transferencia bancaria |
 | Clientes no técnicos abandonan | Alto | Alta | Onboarding guiado + soporte WhatsApp |
 | Estacionalidad del sector | Medio | Alta | Planes anuales con descuento |
-| Stripe no disponible en Costa Rica | Alto | Alta | Usar Lemon Squeezy como procesador |
+| Stripe no disponible en Costa Rica | Alto | Alta | Usar ONVO Pay como procesador |
 
 ---
 
@@ -141,8 +141,10 @@ Ninguna herramienta accesible y económica integra:
 - **Descuento educativo**: 50% para universidades
 - **Descuento early adopter**: $19/mes vitalicio para primeros 50 clientes
 
-Procesador de pagos: **Lemon Squeezy** (Stripe no disponible en Costa Rica).
-Comisión estimada: ~5% por transacción.
+Procesador de pagos: **ONVO Pay** (procesador en Costa Rica, disponible para LATAM).
+Integración vía API REST: backend genera sesión de pago, webhook recibe confirmación, actualiza plan en Supabase Auth via Admin API.
+Plan gratis funcional sin tarjeta. Planes pagos requieren webhook + secret key configurados en `server/.env`.
+Comisión estimada: ~3-5% por transacción.
 
 ---
 
@@ -156,6 +158,6 @@ Comisión estimada: ~5% por transacción.
 | 9 | 800 | 40 | 5 | $1,655 |
 | 12 | 1000 | 60 | 8 | $2,532 |
 
-**Costo operativo estimado**: $100-200/mes (servidor + dominio + Lemon Squeezy fees).
+**Costo operativo estimado**: $100-200/mes (servidor + dominio + ONVO Pay fees).
 
 **Break-even**: Mes 3-4 con ~15 clientes pagadores.

@@ -7,6 +7,8 @@ const LS_KEY = "aquacalc_fincas";
 
 type Finca = { id: string; nombre: string; ubicacion: string; descripcion: string; estanques: string[] };
 
+type FincaUser = { id: string; userId: string; rol: string; email: string; nombre: string };
+
 function migrar(f: any): Finca {
   return Array.isArray(f.estanques) ? f : { ...f, estanques: f.nombre ? [f.nombre] : [] };
 }
@@ -21,7 +23,7 @@ function saveLocal(fs: Finca[]) {
 
 export default function Fincas() {
   const { t } = useTranslation();
-  const { token, apiUrl, plan } = useAuth();
+  const { token, apiUrl, user } = useAuth();
   const [list, setList] = useState<Finca[]>(loadLocal);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Finca | null>(null);
@@ -30,6 +32,9 @@ export default function Fincas() {
   const [newEst, setNewEst] = useState<{ fincaId: string; value: string } | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [users, setUsers] = useState<Record<string, FincaUser[]>>({});
+  const [invite, setInvite] = useState<{ fincaId: string; email: string; rol: string } | null>(null);
+  const [inviting, setInviting] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
     const res = await fetch(apiUrl + path, {
@@ -51,8 +56,16 @@ export default function Fincas() {
       }));
       setList(mapped);
       saveLocal(mapped);
+      mapped.forEach((f) => fetchUsers(f.id));
     }).catch(() => setList(loadLocal()));
   }, [api]);
+
+  const fetchUsers = async (fincaId: string) => {
+    try {
+      const data = await api(`/fincas/${fincaId}/users`);
+      setUsers((prev) => ({ ...prev, [fincaId]: data }));
+    } catch {}
+  };
 
   useEffect(() => { saveLocal(list); }, [list]);
 
@@ -76,6 +89,7 @@ export default function Fincas() {
         };
         await api(`/fincas/${created.id}/estanques`, { method: "POST", body: JSON.stringify({ nombre: created.nombre }) });
         setList([...list, newF]);
+        fetchUsers(newF.id);
       }
     } catch {
       const f: Finca = edit
@@ -111,6 +125,34 @@ export default function Fincas() {
   const removeEstanque = (fincaId: string, index: number) => {
     setList(list.map((f) => f.id === fincaId ? { ...f, estanques: f.estanques.filter((_, i) => i !== index) } : f));
   };
+
+  const sendInvite = async (fincaId: string) => {
+    if (!invite || !invite.email.trim()) return;
+    setInviting(true);
+    try {
+      await api(`/fincas/${fincaId}/users`, { method: "POST", body: JSON.stringify({ email: invite.email.trim(), rol: invite.rol }) });
+      setInvite(null);
+      fetchUsers(fincaId);
+    } catch (err: any) {
+      setError(err.message || "Error al invitar");
+    } finally { setInviting(false); }
+  };
+
+  const removeUser = async (fincaId: string, userId: string) => {
+    try {
+      await api(`/fincas/${fincaId}/users/${userId}`, { method: "DELETE" });
+      fetchUsers(fincaId);
+    } catch (err: any) {
+      setError(err.message || "Error al eliminar usuario");
+    }
+  };
+
+  const isAdmin = (fincaId: string) => {
+    const fu = users[fincaId] || [];
+    return fu.some((u) => u.userId === user?.id && u.rol === "admin");
+  };
+
+  const plan = "free"; // fallback
 
   return (
     <div>
@@ -183,6 +225,44 @@ export default function Fincas() {
                   <button className="btn-sm" style={{ marginTop: 6, fontSize: 12 }} onClick={() => setNewEst({ fincaId: f.id, value: "" })}>
                     ➕ {t("nuevoEstanque")}
                   </button>
+                )}
+              </div>
+
+              <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                <div className="card-subtitle" style={{ fontSize: 13, marginBottom: 6 }}>👥 Usuarios</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+                  {(users[f.id] || []).map((u) => (
+                    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span>{u.email || u.nombre || u.userId.slice(0, 8)}</span>
+                      <span className={`badge ${u.rol === "admin" ? "badge-green" : "badge-blue"}`} style={{ fontSize: 10 }}>{u.rol}</span>
+                      {isAdmin(f.id) && u.userId !== user?.id && (
+                        <button className="btn-sm" style={{ fontSize: 11, color: "var(--danger)", marginLeft: "auto" }} onClick={() => removeUser(f.id, u.userId)}>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {users[f.id]?.length === 0 && <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Cargando...</span>}
+                {isAdmin(f.id) && (
+                  <div style={{ marginTop: 6 }}>
+                    {invite?.fincaId === f.id ? (
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <input value={invite.email} onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+                          placeholder="email@ejemplo.com" style={{ flex: 1, fontSize: 12 }} />
+                        <select value={invite.rol} onChange={(e) => setInvite({ ...invite, rol: e.target.value })} style={{ fontSize: 12 }}>
+                          <option value="productor">Productor</option>
+                          <option value="tecnico">Técnico</option>
+                        </select>
+                        <button className="btn-sm" onClick={() => sendInvite(f.id)} disabled={inviting}>➕</button>
+                        <button className="btn-sm" onClick={() => setInvite(null)}>✕</button>
+                      </div>
+                    ) : (
+                      <button className="btn-sm" style={{ fontSize: 12 }} onClick={() => setInvite({ fincaId: f.id, email: "", rol: "productor" })}>
+                        ➕ Invitar usuario
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

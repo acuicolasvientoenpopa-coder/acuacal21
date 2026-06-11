@@ -12,3 +12,5 @@ CREATE INDEX IF NOT EXISTS idx_movimientoinventario_productoId ON "MovimientoInv
 CREATE INDEX IF NOT EXISTS idx_microbiologia_userId ON "Microbiologia" ("userId");
 CREATE INDEX IF NOT EXISTS idx_veterinaria_userId ON "Veterinaria" ("userId");
 CREATE INDEX IF NOT EXISTS idx_subscription_userId ON "Subscription" ("userId");
+CREATE INDEX IF NOT EXISTS idx_fincauser_fincaId ON "FincaUser" ("fincaId");
+CREATE INDEX IF NOT EXISTS idx_fincauser_userId ON "FincaUser" ("userId");
