@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AcuiCal — Deploy Panel</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #0a1628; color: #e0e6f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.panel { background: #111d33; border-radius: 16px; padding: 32px; max-width: 520px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.logo { font-size: 40px; text-align: center; margin-bottom: 4px; }
+h1 { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 4px; }
+.sub { font-size: 12px; color: #8892a8; text-align: center; margin-bottom: 24px; }
+.buttons { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.btn { padding: 12px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; display: flex; align-items: center; gap: 8px; justify-content: center; }
+.btn:hover { filter: brightness(1.15); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+.btn-primary { background: #00c896; color: #0a1628; }
+.btn-danger { background: #ff4d6d; color: #fff; }
+.btn-secondary { background: #1e2d4a; color: #e0e6f0; }
+.links { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.links .btn { flex: 1; font-size: 12px; padding: 8px 12px; min-width: 100px; }
+.output { background: #0a1628; border-radius: 10px; padding: 14px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 11px; line-height: 1.6; max-height: 240px; overflow-y: auto; white-space: pre-wrap; color: #8892a8; }
+.output .ok { color: #00c896; }
+.output .err { color: #ff4d6d; }
+.output .info { color: #60a5fa; }
+.status-bar { display: flex; justify-content: space-between; font-size: 11px; color: #4a5568; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #1a2940; }
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="logo">🐟</div>
+  <h1>AcuiCal</h1>
+  <p class="sub">Panel de despliegue local</p>
+
+  <div class="status-bar">
+    <span id="lastCommit">Repositorio: —</span>
+    <span id="status">Listo</span>
+  </div>
+
+  <div class="buttons">
+    <button class="btn btn-primary" id="btnDeploy" onclick="deploy()">🚀 Build + Commit + Push</button>
+    <button class="btn btn-secondary" id="btnBuild" onclick="build()">🔨 Solo Build</button>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-secondary" href="https://acuacla2112.netlify.app" target="_blank">🌐 Abrir App</a>
+    <a class="btn btn-secondary" href="https://acuacla2112.netlify.app/admin" target="_blank">⚙️ Admin</a>
+    <a class="btn btn-secondary" href="https://app.netlify.com/sites/acuacla2112" target="_blank">📊 Netlify</a>
+  </div>
+
+  <div class="output" id="output">Panel listo. Hacé clic en un botón para empezar.</div>
+</div>
+
+<script>
+function log(text, type) {
+  const el = document.getElementById('output');
+  el.innerHTML += `<span class="${type}">${text}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setBusy(busy) {
+  document.getElementById('btnDeploy').disabled = busy;
+  document.getElementById('btnBuild').disabled = busy;
+  document.getElementById('status').textContent = busy ? 'Trabajando...' : 'Listo';
+}
+
+async function build() {
+  setBusy(true);
+  document.getElementById('output').innerHTML = '';
+  log('🔨 Build iniciado...', 'info');
+  try {
+    const res = await fetch('/api/build');
+    const data = await res.json();
+    log(data.out, data.ok ? 'ok' : 'err');
+    if (!data.ok) log('❌ Build falló', 'err');
+    else log('✅ Build exitoso', 'ok');
+  } catch (e) {
+    log('❌ Error de conexión: ' + e.message, 'err');
+  }
+  setBusy(false);
+}
+
+async function deploy() {
+  setBusy(true);
+  document.getElementById('output').innerHTML = '';
+  log('🚀 Deploy completo iniciado...', 'info');
+  try {
+    const res = await fetch('/api/deploy');
+    const data = await res.json();
+    if (data.build) log(data.build, 'ok');
+    if (data.commit) log(data.commit, data.commit.includes('nothing to commit') ? 'info' : 'ok');
+    if (data.push) log(data.push, 'ok');
+    if (!data.ok) log('❌ Deploy falló en paso: ' + (data.step || 'unknown'), 'err');
+    else log('✅ Deploy completado. Netlify compilando... (~2 min)', 'ok');
+    loadStatus();
+  } catch (e) {
+    log('❌ Error de conexión: ' + e.message, 'err');
+  }
+  setBusy(false);
+}
+
+async function loadStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    document.getElementById('lastCommit').textContent = 'Último commit: ' + (data.lastCommit || '—');
+  } catch {}
+}
+
+loadStatus();
+</script>
+</body>
+</html>
