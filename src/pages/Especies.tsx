@@ -3,6 +3,7 @@ import { ESPECIES_DEFAULT } from "@/core";
 import type { Species, SpeciesParams } from "@/core";
 import { useTranslation } from "@/store/language";
 import { useAuth } from "@/store/auth";
+import { enqueue, scheduleProcess } from "@/services/sync";
 
 const CUSTOM_KEY = "aquacalc_custom_species";
 
@@ -42,7 +43,14 @@ export default function Especies() {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+        let body: unknown;
+        try { body = JSON.parse(opts.body as string); } catch {}
+        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+      }
+      throw new Error(await res.text());
+    }
     return res.json();
   }, [apiUrl, token]);
 
@@ -51,6 +59,7 @@ export default function Especies() {
   }, []);
 
   useEffect(() => {
+    if (token) scheduleProcess(apiUrl, token);
     api("/especies").then((data: any[]) => {
       const mapped = data.filter((e: any) => e.esPersonal !== false).map(dbToSpecies);
       setCustom(mapped);

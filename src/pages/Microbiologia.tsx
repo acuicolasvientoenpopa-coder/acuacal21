@@ -3,6 +3,7 @@ import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { toast } from "@/components/Toast";
 import { useLookups } from "@/store/lookups";
+import { enqueue, scheduleProcess } from "@/services/sync";
 
 export const ANTIBIOTICOS = [
   "Oxitetraciclina", "Florfenicol", "Enrofloxacina", "Sulfadiazina + Trimetoprima",
@@ -89,11 +90,19 @@ export default function Microbiologia() {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+        let body: unknown;
+        try { body = JSON.parse(opts.body as string); } catch {}
+        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+      }
+      throw new Error(await res.text());
+    }
     return res.json();
   }, [apiUrl, token]);
 
   useEffect(() => {
+    if (token) scheduleProcess(apiUrl, token);
     api("/microbiologia").then((data: any[]) => {
       const cults: Cultivo[] = []; const meds: Medicacion[] = [];
       for (const r of data) {

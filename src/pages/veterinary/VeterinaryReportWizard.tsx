@@ -7,6 +7,7 @@ import {
 import { calcularRiesgo } from "./riskCalculator";
 import type { RiskResult } from "./riskCalculator";
 import { exportVetPDF } from "@/utils/pdf";
+import { enqueue, scheduleProcess } from "@/services/sync";
 
 type FormData = { estanque: string; alimentacion: string[]; comportamiento: string[]; sintomas: string[]; agua: string[]; imagenes: string[]; };
 type ArrKeys = "alimentacion" | "comportamiento" | "sintomas" | "agua" | "imagenes";
@@ -68,11 +69,19 @@ export default function VeterinaryReportWizard() {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+        let body: unknown;
+        try { body = JSON.parse(opts.body as string); } catch {}
+        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+      }
+      throw new Error(await res.text());
+    }
     return res.json();
   }, [apiUrl, token]);
 
   useEffect(() => {
+    if (token) scheduleProcess(apiUrl, token);
     api("/veterinaria").then((data: any[]) => {
       const mapped = data.map((r: any) => {
         let base: any = { id: r.id, fecha: r.fecha?.slice(0, 10) || "", riesgo: r.riesgo || "verde" };

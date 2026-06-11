@@ -7,6 +7,7 @@ import { toast } from "@/components/Toast";
 import { exportFinanzasExcel } from "@/utils/pdf";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useSaveIndicator } from "@/store/saveIndicator";
+import { enqueue, scheduleProcess } from "@/services/sync";
 
 const STORAGE_KEY = "aquacalc_finanzas";
 
@@ -65,11 +66,19 @@ export default function Finanzas() {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+        let body: unknown;
+        try { body = JSON.parse(opts.body as string); } catch {}
+        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+      }
+      throw new Error(await res.text());
+    }
     return res.json();
   }, [apiUrl, token]);
 
   useEffect(() => {
+    if (token) scheduleProcess(apiUrl, token);
     api("/finanzas").then((data: any[]) => {
       const parsed = data
         .filter((r: any) => r.tipo === "fin_record")

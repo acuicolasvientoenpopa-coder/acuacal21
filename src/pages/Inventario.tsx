@@ -6,6 +6,7 @@ import { useInventario } from "@/store/inventario";
 import { toast } from "@/components/Toast";
 import { PRODUCTO_DEFAULT, CATEGORIAS } from "@/core/inventario-types";
 import type { Producto, MovimientoInventario } from "@/core/inventario-types";
+import { enqueue, scheduleProcess } from "@/services/sync";
 
 function apiToProducto(r: any): Producto {
   return {
@@ -31,11 +32,19 @@ export default function Inventario() {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+        let body: unknown;
+        try { body = JSON.parse(opts.body as string); } catch {}
+        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+      }
+      throw new Error(await res.text());
+    }
     return res.json();
   }, [apiUrl, token]);
 
   useEffect(() => {
+    if (token) scheduleProcess(apiUrl, token);
     Promise.all([
       api("/inventario/productos").catch(() => null),
       api("/inventario/movimientos").catch(() => null),
