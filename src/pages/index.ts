@@ -6,7 +6,7 @@ export { default as Fincas } from "./Fincas";
 export { default as Parametros } from "./Parametros";
 export { default as Formulas } from "./Formulas";
 export { VeterinaryReportWizard } from "./veterinary";
-export { default as MasterPage } from "./MasterPage";
+export { default as Admin } from "./Admin";
 export { default as Microbiologia } from "./Microbiologia";
 export { default as Finanzas } from "./Finanzas";
 export { default as Dashboard } from "./Dashboard";
