@@ -99,7 +99,24 @@ export function calcVolumenTanqueCilindrico(diametro: number, altura: number): V
   return { volumenM3: m3, litros: m3 * 1000 };
 }
 
-export type FormaEstanque = "manual" | "rectangular" | "circular" | "trapezoidal" | "tanque";
+export function calcVolumenTriangular(base: number, altura: number, profundidad: number): VolumenResult {
+  const areaBase = (base * altura) / 2;
+  const m3 = areaBase * profundidad;
+  return { volumenM3: m3, litros: m3 * 1000 };
+}
+
+export function calcAreaPoligono(puntos: { x: number; y: number }[]): number {
+  if (puntos.length < 3) return 0;
+  let area = 0;
+  for (let i = 0; i < puntos.length; i++) {
+    const j = (i + 1) % puntos.length;
+    area += puntos[i].x * puntos[j].y;
+    area -= puntos[j].x * puntos[i].y;
+  }
+  return Math.abs(area) / 2;
+}
+
+export type FormaEstanque = "manual" | "rectangular" | "circular" | "trapezoidal" | "tanque" | "triangular" | "poligono";
 
 export interface DimensionesEstanque {
   forma: FormaEstanque;
@@ -112,6 +129,8 @@ export interface DimensionesEstanque {
   diametro?: number;
   profundidad?: number;
   altura?: number;
+  base?: number;
+  alturaTri?: number;
 }
 
 export function calcVolumen(dim: DimensionesEstanque): VolumenResult {
@@ -128,6 +147,8 @@ export function calcVolumen(dim: DimensionesEstanque): VolumenResult {
       );
     case "tanque":
       return calcVolumenTanqueCilindrico(dim.diametro || 0, dim.altura || 0);
+    case "triangular":
+      return calcVolumenTriangular(dim.base || 0, dim.alturaTri || 0, dim.profundidad || 0);
     default:
       return { volumenM3: 0, litros: 0 };
   }

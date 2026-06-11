@@ -6,6 +6,8 @@ export {
   calcVolumenCircular,
   calcVolumenTrapezoidal,
   calcVolumenTanqueCilindrico,
+  calcVolumenTriangular,
+  calcAreaPoligono,
   REFERENCE_FORMULAS,
 } from "./formulas";
 export type {
