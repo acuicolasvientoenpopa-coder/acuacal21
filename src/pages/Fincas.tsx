@@ -3,6 +3,7 @@ import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useNavigate } from "react-router-dom";
 import { excedeLimiteFincas, excedeLimiteEstanques } from "@/core";
+import { enqueue, scheduleProcess } from "@/services/sync";
 
 const LS_KEY = "aquacalc_fincas";
 
@@ -44,11 +45,19 @@ export default function Fincas() {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+        let body: unknown;
+        try { body = JSON.parse(opts.body as string); } catch {}
+        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+      }
+      throw new Error(await res.text());
+    }
     return res.json();
   }, [apiUrl, token]);
 
   useEffect(() => {
+    if (token) scheduleProcess(apiUrl, token);
     api("/fincas").then((data: any[]) => {
       const mapped = data.map((f: any) => ({
         id: f.id,

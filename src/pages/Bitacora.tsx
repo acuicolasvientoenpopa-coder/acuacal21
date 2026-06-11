@@ -5,6 +5,7 @@ import { OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/cor
 import { toast } from "@/components/Toast";
 import { exportBitacoraPDF } from "@/utils/pdf";
 import { useLookups } from "@/store/lookups";
+import { enqueue, scheduleProcess } from "@/services/sync";
 
 const RECORDS_KEY = "aquacalc_bitacora";
 
@@ -63,7 +64,14 @@ export default function Bitacora() {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+        let body: unknown;
+        try { body = JSON.parse(opts.body as string); } catch {}
+        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+      }
+      throw new Error(await res.text());
+    }
     return res.json();
   }, [apiUrl, token]);
 
@@ -73,7 +81,8 @@ export default function Bitacora() {
       setRecords(mapped);
       localStorage.setItem(RECORDS_KEY, JSON.stringify(mapped));
     }).catch(() => setRecords(loadLocal()));
-  }, [api]);
+    if (token) scheduleProcess(apiUrl, token);
+  }, [api, apiUrl, token]);
 
   useEffect(() => {
     localStorage.setItem(RECORDS_KEY, JSON.stringify(records));

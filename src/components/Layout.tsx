@@ -9,9 +9,12 @@ import { useState, useEffect, useRef } from "react";
 import ProfileModal, { useProfile } from "./Profile";
 import Tutorial from "./Tutorial";
 import GlobalSearch from "./GlobalSearch";
+import SyncBadge from "./SyncBadge";
+import { scheduleProcess } from "@/services/sync";
 import { NAV_LINKS } from "@/data/navLinks";
 
 const links = NAV_LINKS;
+const API_URL = "https://acuacal21-production.up.railway.app/api";
 
 const IDIOMA_OPTS: { value: Idioma; label: string }[] = [
   { value: "es", label: "Español" },
@@ -39,11 +42,14 @@ export default function Layout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const { profile, saveProfile } = useProfile();
 
   useEffect(() => {
-    const goOnline = () => setOnline(true);
+    const goOnline = () => {
+      setOnline(true);
+      if (token) scheduleProcess(API_URL, token);
+    };
     const goOffline = () => setOnline(false);
     const handleInstall = (e: Event) => { e.preventDefault(); setDeferredPrompt(e); };
     window.addEventListener("online", goOnline);
@@ -84,6 +90,7 @@ export default function Layout() {
             </span>
           )}
           <button className="theme-toggle" style={{ border: "none", fontSize: 11 }} onClick={logout} title="Cerrar sesión">🚪</button>
+          <SyncBadge />
           <button className="profile-btn" onClick={() => setProfileOpen(true)}>
             {profile.nombre ? profile.nombre.charAt(0).toUpperCase() : "👤"}
           </button>

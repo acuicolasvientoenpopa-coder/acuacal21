@@ -1,3 +1,5 @@
+import { enqueue, scheduleProcess } from "./sync";
+
 const BASE = "https://acuacal21-production.up.railway.app/api";
 
 async function request(token: string, method: string, path: string, body?: unknown) {
@@ -22,5 +24,8 @@ export function api(token: string) {
     post: (path: string, body: unknown) => request(token, "POST", path, body),
     put: (path: string, body: unknown) => request(token, "PUT", path, body),
     del: (path: string) => request(token, "DELETE", path),
+    enqueue: (method: "POST" | "PUT" | "DELETE", path: string, body?: unknown) =>
+      enqueue({ method, path, body }),
+    scheduleProcess: () => scheduleProcess(BASE, token),
   };
 }
