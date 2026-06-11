@@ -956,7 +956,7 @@ export const IDIOMAS = {
     geoTitle: "Medição georreferenciada",
     geoSub: "Desenhe um retângulo no mapa para medir o tanque",
     geoResultados: "Resultados",
-    geoInstrucoes: "Clique em 'Medir tanque' e depois dois cliques no mapa para definir o retângulo.",
+    geoInstrucciones: "Clique em 'Medir tanque' e depois dois cliques no mapa para definir o retângulo.",
     geoClickEsquina1: "Clique para primeira esquina",
     geoClickEsquina2: "Clique para segunda esquina",
     geoArea: "Área",
