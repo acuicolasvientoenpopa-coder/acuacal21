@@ -12,6 +12,8 @@ import { microbiologiaRouter } from "./routes/microbiologia.js";
 import { veterinariaRouter } from "./routes/veterinaria.js";
 import { pagosRouter } from "./routes/pagos.js";
 import { feedbackRouter } from "./routes/feedback.js";
+import { geoRouter } from "./routes/geo.js";
+import { adminRouter } from "./routes/admin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -69,6 +71,8 @@ app.use("/api/microbiologia", microbiologiaRouter);
 app.use("/api/veterinaria", veterinariaRouter);
 app.use("/api/pagos", pagosRouter);
 app.use("/api/feedback", feedbackRouter);
+app.use("/api/geo", geoRouter);
+app.use("/api/admin", adminRouter);
 
 app.use(errorHandler);
 

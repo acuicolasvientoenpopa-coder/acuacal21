@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
+import { useNavigate } from "react-router-dom";
 import { excedeLimiteFincas, excedeLimiteEstanques } from "@/core";
 
 const LS_KEY = "aquacalc_fincas";
@@ -24,12 +25,14 @@ function saveLocal(fs: Finca[]) {
 export default function Fincas() {
   const { t } = useTranslation();
   const { token, apiUrl, user } = useAuth();
+  const navigate = useNavigate();
   const [list, setList] = useState<Finca[]>(loadLocal);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Finca | null>(null);
   const [form, setForm] = useState({ nombre: "", ubicacion: "", descripcion: "" });
   const [editEst, setEditEst] = useState<{ fincaId: string; index: number; value: string } | null>(null);
   const [newEst, setNewEst] = useState<{ fincaId: string; value: string } | null>(null);
+  const [showCreateMode, setShowCreateMode] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [users, setUsers] = useState<Record<string, FincaUser[]>>({});
@@ -221,8 +224,18 @@ export default function Fincas() {
                     <button className="btn-sm" onClick={() => addEstanque(f.id)}>➕</button>
                     <button className="btn-sm" onClick={() => setNewEst(null)}>✕</button>
                   </div>
+                ) : showCreateMode === f.id ? (
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <button className="btn-sm" style={{ fontSize: 12 }} onClick={() => { setShowCreateMode(null); setNewEst({ fincaId: f.id, value: "" }); }}>
+                      📝 {t("gpsManual") || "Manual"}
+                    </button>
+                    <button className="btn-sm" style={{ fontSize: 12 }} onClick={() => navigate(`/geo?fincaId=${f.id}&returnTo=/fincas`)}>
+                      🗺️ {t("gpsDesdeFinca") || "GPS"}
+                    </button>
+                    <button className="btn-sm" onClick={() => setShowCreateMode(null)}>✕</button>
+                  </div>
                 ) : (
-                  <button className="btn-sm" style={{ marginTop: 6, fontSize: 12 }} onClick={() => setNewEst({ fincaId: f.id, value: "" })}>
+                  <button className="btn-sm" style={{ marginTop: 6, fontSize: 12 }} onClick={() => setShowCreateMode(f.id)}>
                     ➕ {t("nuevoEstanque")}
                   </button>
                 )}

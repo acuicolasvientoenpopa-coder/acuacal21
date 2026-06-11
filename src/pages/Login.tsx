@@ -12,6 +12,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
+  const [rol, setRol] = useState("productor");
   const [acepto, setAcepto] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ export default function Login() {
     setLoading(true);
 
     const err = mode === "register"
-      ? await register(email, password, nombre)
+      ? await register(email, password, nombre, rol)
       : await login(email, password);
 
     if (err) { setError(err); setLoading(false); }
@@ -79,6 +80,15 @@ export default function Login() {
               <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
                 {t("name")}
                 <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder={t("namePlaceholder")} required />
+              </label>
+            )}
+            {mode === "register" && (
+              <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
+                {t("rolLabel")}
+                <select value={rol} onChange={(e) => setRol(e.target.value)} style={{ width: "100%" }}>
+                  <option value="productor">{t("rolProductor")}</option>
+                  <option value="tecnico">{t("rolTecnico")}</option>
+                </select>
               </label>
             )}
             <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>

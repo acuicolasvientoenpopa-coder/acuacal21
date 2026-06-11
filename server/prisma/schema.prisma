@@ -94,6 +94,10 @@ model Estanque {
   nombre String
   fincaId String
   finca  Finca  @relation(fields: [fincaId], references: [id], onDelete: Cascade)
+  coordenadas Json?
+  profundidad Float?
+  areaM2 Float?
+  volumenM3 Float?
 
   bitacoras Bitacora[]
 }

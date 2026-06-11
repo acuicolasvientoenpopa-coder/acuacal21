@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "@/store/language";
 import { useCurrency } from "@/store/currency";
 import { useTheme } from "@/store/theme";
@@ -34,7 +34,6 @@ export default function Layout() {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
-  const navigate = useNavigate();
   const [online, setOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -42,15 +41,6 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
   const { profile, saveProfile } = useProfile();
-  const logoClickCount = useRef(0);
-
-  const handleLogoClick = () => {
-    logoClickCount.current++;
-    if (logoClickCount.current >= 5) {
-      logoClickCount.current = 0;
-      navigate("/admin");
-    }
-  };
 
   useEffect(() => {
     const goOnline = () => setOnline(true);
@@ -77,7 +67,7 @@ export default function Layout() {
       {!online && <div className="offline-bar">{t("offline")}</div>}
       <header className="app-header">
         <button className="hamburger" onClick={() => setSidebarOpen(true)} aria-label="Menu">☰</button>
-        <div className="app-logo" onClick={handleLogoClick} style={{ cursor: "pointer" }}>
+        <div className="app-logo">
           <span className="app-logo-icon">🐟</span>
           <div>
             <h1>AquaCalc</h1>

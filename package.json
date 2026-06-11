@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",
     "exceljs": "^4.4.0",
+    "idb": "^8.0.3",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "posthog-js": "^1.386.1",

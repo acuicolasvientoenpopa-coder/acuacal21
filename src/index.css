@@ -2524,3 +2524,12 @@ p {
   padding: 6px 0;
   opacity: 0.7;
 }
+
+.gps-marker-icon,
+.gps-current-icon {
+  background: none !important;
+  border: none !important;
+}
+.gps-marker-icon div {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}

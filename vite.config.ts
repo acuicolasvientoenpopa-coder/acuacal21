@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   base: "/",
   plugins: [react(), VitePWA({
-      registerType: 'autoUpdate',
+    registerType: 'autoUpdate',
     injectRegister: null,
     includeAssets: ['favicon.svg', 'icons/*.svg'],
     manifest: {
@@ -28,6 +28,19 @@ export default defineConfig({
       shortcuts: [
         { name: 'Calculadora', url: '/calc', icons: [{ src: '/favicon.svg', sizes: 'any' }] },
         { name: 'Bitácora', url: '/bitacora', icons: [{ src: '/favicon.svg', sizes: 'any' }] },
+      ],
+    },
+    workbox: {
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/[a-z]\.tile\.openstreetmap\.org\/.*$/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'osm-tiles',
+            expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
       ],
     },
   })],

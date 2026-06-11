@@ -17,7 +17,7 @@ type AuthContext = {
   plan: Plan;
   rol: Rol;
   login: (email: string, password: string) => Promise<string | null>;
-  register: (email: string, password: string, nombre: string) => Promise<string | null>;
+  register: (email: string, password: string, nombre: string, rol?: string) => Promise<string | null>;
   resetPassword: (email: string) => Promise<string | null>;
   logout: () => Promise<void>;
   supabase: typeof supabase;
@@ -68,10 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error?.message ?? null;
   }, []);
 
-  const register = useCallback(async (email: string, password: string, nombre: string): Promise<string | null> => {
+  const register = useCallback(async (email: string, password: string, nombre: string, rol?: string): Promise<string | null> => {
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { nombre, plan: "free", rol: "productor" } },
+      options: { data: { nombre, plan: "free", rol: rol || "productor" } },
     });
     if (error) return error.message;
     if (!data.session) return "Revisá tu email para confirmar la cuenta";

@@ -18,3 +18,6 @@ CREATE INDEX IF NOT EXISTS idx_fincauser_userId ON "FincaUser" ("userId");
 CREATE INDEX IF NOT EXISTS idx_subscription_userId ON "Subscription" ("userId");
 CREATE INDEX IF NOT EXISTS idx_subscription_plan ON "Subscription" (plan);
 CREATE INDEX IF NOT EXISTS idx_subscription_status ON "Subscription" (status);
+
+-- Estanque (creados también en migration_coordenadas_estanque.sql)
+CREATE INDEX IF NOT EXISTS idx_estanque_volumen ON "Estanque" ("volumenM3");
