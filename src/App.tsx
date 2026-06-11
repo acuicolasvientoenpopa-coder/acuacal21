@@ -7,7 +7,7 @@ import Layout from "@/components/Layout";
 import ToastContainer from "@/components/Toast";
 import Login from "@/pages/Login";
 import Terminos from "@/pages/Terminos";
-import GeoPond from "@/pages/GeoPond";
+import MedirEstanque from "@/pages/MedirEstanque";
 import {
   Calculator, Bitacora, Especies, Fincas, Parametros, Formulas, Zootecnico,
   VeterinaryReportWizard, Admin, Microbiologia, Finanzas, Dashboard, Inventario, Mapa,
@@ -45,7 +45,7 @@ export default function App() {
                   <Route path="inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
                   <Route path="admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="mapa" element={<ProtectedRoute><Mapa /></ProtectedRoute>} />
-                  <Route path="geo" element={<ProtectedRoute><GeoPond /></ProtectedRoute>} />
+                  <Route path="medir-estanque" element={<ProtectedRoute><MedirEstanque /></ProtectedRoute>} />
                 </Route>
               </Routes>
               <ToastContainer />
