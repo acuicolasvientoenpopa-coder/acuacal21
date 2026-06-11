@@ -10,7 +10,7 @@ import Terminos from "@/pages/Terminos";
 import GeoPond from "@/pages/GeoPond";
 import {
   Calculator, Bitacora, Especies, Fincas, Parametros, Formulas, Zootecnico,
-  VeterinaryReportWizard, MasterPage, Microbiologia, Finanzas, Dashboard, Inventario, Mapa,
+  VeterinaryReportWizard, Admin, Microbiologia, Finanzas, Dashboard, Inventario, Mapa,
 } from "@/pages";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,7 +43,7 @@ export default function App() {
                   <Route path="finanzas" element={<ProtectedRoute><Finanzas /></ProtectedRoute>} />
                   <Route path="vet" element={<ProtectedRoute><VeterinaryReportWizard /></ProtectedRoute>} />
                   <Route path="inventario" element={<ProtectedRoute><Inventario /></ProtectedRoute>} />
-                  <Route path="master" element={<ProtectedRoute><MasterPage /></ProtectedRoute>} />
+                  <Route path="admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="mapa" element={<ProtectedRoute><Mapa /></ProtectedRoute>} />
                   <Route path="geo" element={<ProtectedRoute><GeoPond /></ProtectedRoute>} />
                 </Route>

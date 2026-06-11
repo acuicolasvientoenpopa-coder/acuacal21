@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/store/auth";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "@/store/language";
+import type { Idioma } from "@/core";
 
 export default function Login() {
   const { login, register, resetPassword } = useAuth();
+  const { lang, setLang } = useTranslation();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [email, setEmail] = useState("");
@@ -48,6 +51,15 @@ export default function Login() {
         <p style={{ fontSize: 12, color: "var(--text2)", textAlign: "center", marginBottom: 20 }}>
           AcuiCal — Gestión Acuícola
         </p>
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
+          {(["es", "en", "pt"] as Idioma[]).map((id) => (
+            <button key={id} onClick={() => setLang(id)}
+              style={{ padding: "4px 10px", fontSize: 12, borderRadius: 6, border: lang === id ? "2px solid var(--accent)" : "1px solid var(--border)", background: lang === id ? "var(--accent)" : "transparent", color: lang === id ? "#fff" : "var(--text)", cursor: "pointer", fontWeight: lang === id ? 700 : 400 }}>
+              {id === "es" ? "🇪🇸 ES" : id === "en" ? "🇺🇸 EN" : "🇧🇷 PT"}
+            </button>
+          ))}
+        </div>
 
         {error && (
           <div style={{ background: "rgba(255,77,109,0.1)", border: "1px solid var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "var(--danger)", marginBottom: 16 }}>
