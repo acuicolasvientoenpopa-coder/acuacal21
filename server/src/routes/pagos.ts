@@ -85,14 +85,20 @@ pagosRouter.post("/webhook", async (req: Request, res: Response) => {
   const event: any = req.body;
   console.log("Webhook recibido:", event.type);
 
+  async function updateUserPlan(userId: string, plan: string) {
+    const admin = getAdminClient();
+    const { data: existing } = await admin.auth.admin.getUserById(userId);
+    const currentMeta = existing?.user?.user_metadata || {};
+    await admin.auth.admin.updateUserById(userId, {
+      user_metadata: { ...currentMeta, plan },
+    });
+  }
+
   try {
     if (event.type === "checkout-session.succeeded") {
       const { metadata } = event.data;
       if (metadata?.userId && metadata?.plan) {
-        const admin = getAdminClient();
-        await admin.auth.admin.updateUserById(metadata.userId, {
-          user_metadata: { plan: metadata.plan },
-        });
+        await updateUserPlan(metadata.userId, metadata.plan);
         console.log(`Plan actualizado a ${metadata.plan} para usuario ${metadata.userId}`);
       }
     }
@@ -100,10 +106,7 @@ pagosRouter.post("/webhook", async (req: Request, res: Response) => {
     if (event.type === "subscription.renewal.succeeded") {
       const { metadata } = event.data;
       if (metadata?.userId && metadata?.plan) {
-        const admin = getAdminClient();
-        await admin.auth.admin.updateUserById(metadata.userId, {
-          user_metadata: { plan: metadata.plan },
-        });
+        await updateUserPlan(metadata.userId, metadata.plan);
         console.log(`Suscripción renovada: ${metadata.plan} para usuario ${metadata.userId}`);
       }
     }
@@ -112,10 +115,7 @@ pagosRouter.post("/webhook", async (req: Request, res: Response) => {
       const { metadata } = event.data;
       if (metadata?.userId) {
         console.log(`Renovación fallida para usuario ${metadata.userId}`);
-        const admin = getAdminClient();
-        await admin.auth.admin.updateUserById(metadata.userId, {
-          user_metadata: { plan: "free" },
-        });
+        await updateUserPlan(metadata.userId, "free");
       }
     }
 
