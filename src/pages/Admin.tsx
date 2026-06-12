@@ -71,7 +71,7 @@ function ServiceDot({ status }: { status: "checking" | "ok" | "error" }) {
 }
 
 export default function Admin() {
-  const { token } = useAuth();
+  const { user, token, rol } = useAuth();
   const [pin, setPin] = useState("");
   const [unlocked, setUnlocked] = useState(() => localStorage.getItem("acuical_admin_unlocked") === "1");
   const [tab, setTab] = useState<Tab>("overview");
@@ -183,6 +183,23 @@ export default function Admin() {
     }
     return (total / 1024).toFixed(1);
   })();
+
+  if (!user || rol !== "admin") {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div className="card" style={{ maxWidth: 400, width: "100%", textAlign: "center", padding: "32px 24px" }}>
+          <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.7 }}>{String.fromCharCode(0x1F6AB)}</div>
+          <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Acceso restringido</h3>
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 6 }}>
+            Solo usuarios con rol <strong>admin</strong> pueden acceder al panel.
+          </p>
+          <p style={{ fontSize: 12, color: "var(--text3)" }}>
+            {!user ? "Iniciá sesión con una cuenta que tenga rol admin." : "Tu rol actual no tiene permisos de administración."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!unlocked) {
     return (

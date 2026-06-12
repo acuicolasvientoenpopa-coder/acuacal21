@@ -6,8 +6,6 @@ export const adminRouter = Router();
 
 adminRouter.use(requireAuth);
 
-const OWNER_EMAIL = "acuicolasvientoenpopa@gmail.com";
-
 function getAdminClient() {
   return createClient(
     process.env.SUPABASE_URL ?? "",
@@ -17,14 +15,19 @@ function getAdminClient() {
 }
 
 adminRouter.use(async (req: AuthRequest, res: Response, next) => {
-  const { data: users } = await req.supabase!
-    .from("User")
-    .select("email")
-    .eq("id", req.userId)
-    .single();
+  const uid = req.userId;
+  if (!uid) { res.status(401).json({ error: "No autenticado" }); return; }
 
-  if (!users || (users as any).email !== OWNER_EMAIL) {
-    res.status(403).json({ error: "No autorizado" });
+  try {
+    const admin = getAdminClient();
+    const { data: userData } = await admin.auth.admin.getUserById(uid);
+    const rol = userData?.user?.user_metadata?.rol as string | undefined;
+    if (rol !== "admin") {
+      res.status(403).json({ error: "Se requiere rol admin" });
+      return;
+    }
+  } catch {
+    res.status(500).json({ error: "Error al verificar rol" });
     return;
   }
   next();
