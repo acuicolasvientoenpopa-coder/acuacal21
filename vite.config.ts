@@ -4,6 +4,7 @@ import path from 'node:path'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: { __APP_BUILD__: JSON.stringify(new Date().toISOString()) },
   base: "/",
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',

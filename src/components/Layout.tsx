@@ -5,7 +5,7 @@ import { useTheme } from "@/store/theme";
 import { useAuth } from "@/store/auth";
 import type { Idioma } from "@/core";
 import { MONEDAS } from "@/core";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ProfileModal, { useProfile } from "./Profile";
 import Tutorial from "./Tutorial";
 import GlobalSearch from "./GlobalSearch";
@@ -42,8 +42,33 @@ export default function Layout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   const { user, token, logout } = useAuth();
   const { profile, saveProfile } = useProfile();
+
+  const checkUpdate = useCallback(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (reg?.waiting) setUpdateAvailable(true);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    checkUpdate();
+    const h = () => { if (document.visibilityState === "visible") checkUpdate(); };
+    document.addEventListener("visibilitychange", h);
+    return () => document.removeEventListener("visibilitychange", h);
+  }, [checkUpdate]);
+
+  const refreshApp = () => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        reg?.waiting?.postMessage({ type: "SKIP_WAITING" });
+      });
+    }
+    window.location.reload();
+  };
 
   useEffect(() => {
     const goOnline = () => {
@@ -71,6 +96,14 @@ export default function Layout() {
   return (
     <div className="layout">
       {!online && <div className="offline-bar">{t("offline")}</div>}
+      {updateAvailable && (
+        <div style={{ background: "var(--accent2)", color: "#fff", textAlign: "center", padding: "6px 12px", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span>🆕 {t("updateAvailable")}</span>
+          <button onClick={refreshApp} style={{ background: "#fff", color: "var(--accent2)", border: "none", padding: "4px 14px", borderRadius: 6, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>
+            {t("updateRefresh")}
+          </button>
+        </div>
+      )}
       <header className="app-header">
         <button className="hamburger" onClick={() => setSidebarOpen(true)} aria-label="Menu">☰</button>
         <div className="app-logo">
@@ -160,6 +193,9 @@ export default function Layout() {
           </div>
           <div style={{ marginTop: 8, textAlign: "center" }}>
             <a href="/terminos" style={{ fontSize: 11, color: "var(--text3)", textDecoration: "underline" }} target="_blank" rel="noopener noreferrer">📜 {t("terminos") || "Términos y Condiciones"}</a>
+          </div>
+          <div style={{ marginTop: 4, textAlign: "center", fontSize: 9, color: "var(--text3)" }}>
+            v{__APP_BUILD__.slice(0, 10)}
           </div>
         </div>
             )}
