@@ -394,7 +394,7 @@ export default function Calculator() {
         )}
       </section>
 
-      <button className="calc-btn" onClick={handleCalcular} onKeyDown={(e) => e.key === 'Enter' && handleCalcular()}>
+      <button className="calc-btn" onClick={handleCalcular}>
         {t("calc")}
       </button>
 

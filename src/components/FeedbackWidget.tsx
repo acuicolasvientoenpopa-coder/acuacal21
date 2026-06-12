@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { toast } from "@/components/Toast";
+import { API_URL } from "@/utils/config";
 
-const API = "https://acuacal21-production.up.railway.app/api";
-const LS_KEY = "aquacalc_feedback_pending";
+const API = API_URL;
+const LS_KEY = "acuical_feedback_pending";
 
 type Feedback = { name: string; email: string; message: string; rating: number; page: string };
 

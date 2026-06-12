@@ -15,11 +15,11 @@ function downloadJSON(data: unknown, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function getAllAquacalcData(): Record<string, unknown> {
+function getAllAcuicalData(): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k?.startsWith("aquacalc_")) {
+    if (k?.startsWith("acuical_")) {
       try { out[k] = JSON.parse(localStorage.getItem(k) ?? ""); }
       catch { out[k] = localStorage.getItem(k); }
     }
@@ -32,7 +32,7 @@ export default function MasterPage() {
   const [count, setCount] = useState(20);
   const [showKeys, setShowKeys] = useState(false);
   const [pin, setPin] = useState("");
-  const [unlocked, setUnlocked] = useState(localStorage.getItem("aquacalc_master_unlocked") === "1");
+  const [unlocked, setUnlocked] = useState(localStorage.getItem("acuical_master_unlocked") === "1");
   const [lsKeys, setLsKeys] = useState<string[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -44,7 +44,7 @@ export default function MasterPage() {
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k?.startsWith("aquacalc_")) keys.push(k);
+      if (k?.startsWith("acuical_")) keys.push(k);
     }
     setLsKeys(keys);
   }, []);
@@ -54,7 +54,7 @@ export default function MasterPage() {
   const handleUnlock = () => {
     if (pin === MASTER_PIN) {
       setUnlocked(true);
-      localStorage.setItem("aquacalc_master_unlocked", "1");
+      localStorage.setItem("acuical_master_unlocked", "1");
       setPin("");
       toast("Master Panel desbloqueado", "success");
     } else {
@@ -65,13 +65,13 @@ export default function MasterPage() {
 
   const handleLock = () => {
     setUnlocked(false);
-    localStorage.removeItem("aquacalc_master_unlocked");
+    localStorage.removeItem("acuical_master_unlocked");
   };
 
   // Export
   const handleExport = () => {
-    const data = getAllAquacalcData();
-    downloadJSON(data, `aquacalc_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    const data = getAllAcuicalData();
+    downloadJSON(data, `acuical_backup_${new Date().toISOString().slice(0, 10)}.json`);
     toast("Backup descargado", "success");
   };
 
@@ -85,7 +85,7 @@ export default function MasterPage() {
         const data = JSON.parse(reader.result as string);
         let count = 0;
         for (const [k, v] of Object.entries(data)) {
-          if (k.startsWith("aquacalc_")) {
+          if (k.startsWith("acuical_")) {
             localStorage.setItem(k, JSON.stringify(v));
             count++;
           }
@@ -152,7 +152,7 @@ export default function MasterPage() {
 
   // Reset Tutorial
   const resetTutorial = () => {
-    localStorage.removeItem("aquacalc_tutorial_done");
+    localStorage.removeItem("acuical_tutorial_done");
     toast("Tutorial reiniciado. Recargá la página.", "info");
   };
 
@@ -163,9 +163,9 @@ export default function MasterPage() {
       userAgent: navigator.userAgent,
       online: navigator.onLine,
       language: navigator.language,
-      localStorage: getAllAquacalcData(),
+      localStorage: getAllAcuicalData(),
     };
-    downloadJSON(data, `aquacalc_diagnostico_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadJSON(data, `acuical_diagnostico_${new Date().toISOString().slice(0, 10)}.json`);
     toast("Diagnóstico descargado", "success");
   };
 
@@ -247,7 +247,7 @@ export default function MasterPage() {
         </button>
         {showKeys && (
           <div style={{ marginTop: 12 }}>
-            {lsKeys.length === 0 && <p style={{ fontSize: 12, color: "var(--text2)" }}>No hay claves aquacalc_</p>}
+            {lsKeys.length === 0 && <p style={{ fontSize: 12, color: "var(--text2)" }}>No hay claves acuical_</p>}
             {lsKeys.map((k) => (
               <div key={k} style={{ borderBottom: "1px solid var(--border)", padding: "8px 0" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -298,7 +298,7 @@ export default function MasterPage() {
                 <strong style={{ color: "var(--accent)" }}>{c.name}</strong>
                 <span style={{ color: "var(--text3)", marginLeft: 8 }}>({c.urls.length} entradas)</span>
                 <div style={{ maxHeight: 120, overflowY: "auto", marginTop: 4, background: "var(--surface2)", padding: 6, borderRadius: 6 }}>
-                  {c.urls.map((u, i) => <div key={i} style={{ fontSize: 10, color: "var(--text2)", wordBreak: "break-all" }}>{u}</div>)}
+                  {c.urls.map((u) => <div key={u} style={{ fontSize: 10, color: "var(--text2)", wordBreak: "break-all" }}>{u}</div>)}
                 </div>
               </div>
             ))}

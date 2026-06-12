@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 import { IDIOMAS } from "@/core";
 import type { Idioma, TranslationKey } from "@/core";
 
-const STORAGE_KEY = "aquacalc_lang";
+const STORAGE_KEY = "acuical_lang";
 
 function getInitialLang(): Idioma {
   try {

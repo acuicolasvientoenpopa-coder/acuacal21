@@ -182,7 +182,7 @@ export default function GeoPond() {
         volumenM3,
         litros: volumenM3 * 1000,
       };
-      localStorage.setItem("aquacalc_geo_dimensions", JSON.stringify(data));
+      localStorage.setItem("acuical_geo_dimensions", JSON.stringify(data));
       navigate("/calc");
     }
   }, [volumenM3, prof, areaM2, puntos, navigate]);
@@ -241,7 +241,7 @@ export default function GeoPond() {
                 <Polygon positions={poligonoCerrado} pathOptions={{ color: "var(--accent)", weight: 2, fillOpacity: 0.15 }} />
               )}
               {coordsMap.map((c, i) => (
-                <Marker key={i} position={c} icon={numeroIcono(i + 1)}>
+                <Marker key={c[0] + '-' + c[1]} position={c} icon={numeroIcono(i + 1)}>
                   <Tooltip permanent direction="top" offset={[0, -16]}>
                     <span style={{ fontSize: 10 }}>P{i + 1}</span>
                   </Tooltip>
@@ -297,8 +297,8 @@ export default function GeoPond() {
 
             {puntos.length > 0 && (
               <div style={{ fontSize: 12, color: "var(--text2)", display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {puntos.map((_, i) => (
-                  <span key={i} className="badge badge-green" style={{ fontSize: 10 }}>#{i + 1}</span>
+                {puntos.map((p, i) => (
+                  <span key={p.lat + '-' + p.lng} className="badge badge-green" style={{ fontSize: 10 }}>#{i + 1}</span>
                 ))}
               </div>
             )}

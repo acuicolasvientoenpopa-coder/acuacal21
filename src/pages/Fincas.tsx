@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { excedeLimiteFincas, excedeLimiteEstanques } from "@/core";
 import { enqueue, scheduleProcess } from "@/services/sync";
 
-const LS_KEY = "aquacalc_fincas";
+const LS_KEY = "acuical_fincas";
 
 type Finca = { id: string; nombre: string; ubicacion: string; descripcion: string; estanques: string[] };
 
@@ -25,7 +25,7 @@ function saveLocal(fs: Finca[]) {
 
 export default function Fincas() {
   const { t } = useTranslation();
-  const { token, apiUrl, user } = useAuth();
+  const { token, apiUrl, user, plan } = useAuth();
   const navigate = useNavigate();
   const [list, setList] = useState<Finca[]>(loadLocal);
   const [show, setShow] = useState(false);
@@ -41,6 +41,7 @@ export default function Fincas() {
   const [inviting, setInviting] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
+    if (!apiUrl) throw new Error("API no disponible");
     const res = await fetch(apiUrl + path, {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
@@ -57,7 +58,7 @@ export default function Fincas() {
   }, [apiUrl, token]);
 
   useEffect(() => {
-    if (token) scheduleProcess(apiUrl, token);
+    if (token && apiUrl) scheduleProcess(apiUrl, token);
     api("/fincas").then((data: any[]) => {
       const mapped = data.map((f: any) => ({
         id: f.id,
@@ -164,7 +165,6 @@ export default function Fincas() {
     return fu.some((u) => u.userId === user?.id && u.rol === "admin");
   };
 
-  const plan = "free"; // fallback
 
   return (
     <div>
@@ -206,7 +206,7 @@ export default function Fincas() {
                 <div className="card-subtitle" style={{ fontSize: 13, marginBottom: 6 }}>🌊 {t("estanques")}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   {f.estanques.map((e, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <div key={f.id + '-' + e + '-' + i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
                       {editEst?.fincaId === f.id && editEst.index === i ? (
                         <>
                           <input value={editEst.value} onChange={(e2) => setEditEst({ ...editEst, value: e2.target.value })}

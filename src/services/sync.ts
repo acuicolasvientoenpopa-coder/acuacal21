@@ -11,8 +11,9 @@ export interface SyncOp {
 }
 
 const DB_NAME = "acuacal_sync";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = "queue";
+const FAILED_STORE = "failed";
 const MAX_RETRIES = 5;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -24,6 +25,9 @@ function getDb() {
       upgrade(db) {
         if (!db.objectStoreNames.contains(STORE)) {
           db.createObjectStore(STORE, { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains(FAILED_STORE)) {
+          db.createObjectStore(FAILED_STORE, { keyPath: "id" });
         }
       },
     });
@@ -64,6 +68,7 @@ async function doProcess(apiUrl: string, token: string) {
         op.lastError = `HTTP ${res.status}`;
         if (op.retries >= MAX_RETRIES) {
           await db.delete(STORE, op.id);
+          await db.put(FAILED_STORE, op);
         } else {
           await db.put(STORE, op);
         }
@@ -73,6 +78,7 @@ async function doProcess(apiUrl: string, token: string) {
       op.lastError = err.message;
       if (op.retries >= MAX_RETRIES) {
         await db.delete(STORE, op.id);
+        await db.put(FAILED_STORE, op);
       } else {
         await db.put(STORE, op);
       }
@@ -129,4 +135,46 @@ export async function clearQueue() {
   const db = await getDb();
   await db.clear(STORE);
   notify();
+}
+
+export async function getFailedOps(): Promise<SyncOp[]> {
+  const db = await getDb();
+  const all = await db.getAll(FAILED_STORE);
+  return all.sort((a, b) => a.timestamp - b.timestamp);
+}
+
+export async function retryFailedOp(id: string) {
+  const db = await getDb();
+  const op = await db.get(FAILED_STORE, id);
+  if (op) {
+    op.retries = 0;
+    op.lastError = "";
+    await db.delete(FAILED_STORE, id);
+    await db.put(STORE, op);
+    notify();
+  }
+}
+
+export async function retryAllFailed() {
+  const db = await getDb();
+  const failed = await db.getAll(FAILED_STORE);
+  for (const op of failed) {
+    op.retries = 0;
+    op.lastError = "";
+    await db.delete(FAILED_STORE, op.id);
+    await db.put(STORE, op);
+  }
+  notify();
+}
+
+export async function clearFailedOps() {
+  const db = await getDb();
+  await db.clear(FAILED_STORE);
+  notify();
+}
+
+export async function getFailedCount(): Promise<number> {
+  const db = await getDb();
+  const all = await db.getAll(FAILED_STORE);
+  return all.length;
 }

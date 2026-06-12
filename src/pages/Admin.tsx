@@ -2,19 +2,20 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/Toast";
 import { generateBitacora, generateFincas, generateParams, generateFinanzas, generateEspecies, generateInventario, generateMicrobiologia, generateVeterinaria, generateAll, clearAll } from "@/utils/debugData";
+import { API_URL, FRONTEND_URL } from "@/utils/config";
+import { getFailedOps, retryFailedOp, retryAllFailed, clearFailedOps, getFailedCount, onQueueChange, type SyncOp } from "@/services/sync";
 
 const ADMIN_PIN = "211203";
-const API = "https://acuacal21-production.up.railway.app/api";
 
 type UserInfo = { id: string; email: string; nombre: string; idioma: string; createdAt: string };
 type Stats = { totalUsers: number; totalFincas: number; totalBitacoras: number; planCounts: Record<string, number> };
 type Subscription = { id: string; plan: string; status: string; userId: string; currentPeriodEnd: string; onvoSubscriptionId: string };
 
-function getAllAquacalcData(): Record<string, unknown> {
+function getAllAcuicalData(): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k?.startsWith("aquacalc_")) {
+    if (k?.startsWith("acuical_")) {
       try { out[k] = JSON.parse(localStorage.getItem(k) ?? ""); }
       catch { out[k] = localStorage.getItem(k); }
     }
@@ -72,9 +73,21 @@ export default function Admin() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loadError, setLoadError] = useState("");
+  const [failedOps, setFailedOps] = useState<SyncOp[]>([]);
+  const [failedCount, setFailedCount] = useState(0);
+
+  useEffect(() => {
+    getFailedOps().then(setFailedOps);
+    getFailedCount().then(setFailedCount);
+    const unsub = onQueueChange(async () => {
+      setFailedOps(await getFailedOps());
+      setFailedCount(await getFailedCount());
+    });
+    return unsub;
+  }, []);
 
   const api = useCallback(async (path: string) => {
-    const r = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(5000) });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   }, [token]);
@@ -84,9 +97,9 @@ export default function Admin() {
     setLoadError("");
 
     Promise.all([
-      fetch(`${API}/health`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok).catch(() => false),
+      fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok).catch(() => false),
       fetch("https://smvjffbeshxcfltjoolm.supabase.co", { method: "HEAD", signal: AbortSignal.timeout(5000) }).then(() => true).catch(() => false),
-      fetch("https://acuacla2112.netlify.app", { signal: AbortSignal.timeout(5000) }).then((r) => r.ok).catch(() => false),
+      fetch(FRONTEND_URL, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok).catch(() => false),
       fetch("https://status.resend.com", { signal: AbortSignal.timeout(5000) }).then((r) => r.ok).catch(() => false),
     ]).then(([r, s, f, re]) => {
       setServices({ railway: r ? "ok" : "error", supabase: s ? "ok" : "error", frontend: f ? "ok" : "error", resend: re ? "ok" : "error" });
@@ -100,7 +113,7 @@ export default function Admin() {
   const handleUnlock = () => {
     if (pin === ADMIN_PIN) {
       setUnlocked(true);
-      localStorage.setItem("aquacalc_admin_unlocked", "1");
+      localStorage.setItem("acuical_admin_unlocked", "1");
       setPin("");
       toast("Admin desbloqueado", "success");
     } else {
@@ -109,9 +122,9 @@ export default function Admin() {
     }
   };
 
-  const handleLock = () => { setUnlocked(false); localStorage.removeItem("aquacalc_admin_unlocked"); };
+  const handleLock = () => { setUnlocked(false); localStorage.removeItem("acuical_admin_unlocked"); };
 
-  const handleExport = () => { downloadJSON(getAllAquacalcData(), `aquacalc_backup_${new Date().toISOString().slice(0, 10)}.json`); toast("Backup descargado", "success"); };
+  const handleExport = () => { downloadJSON(getAllAcuicalData(), `acuical_backup_${new Date().toISOString().slice(0, 10)}.json`); toast("Backup descargado", "success"); };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -122,7 +135,7 @@ export default function Admin() {
         const data = JSON.parse(reader.result as string);
         let c = 0;
         for (const [k, v] of Object.entries(data)) {
-          if (k.startsWith("aquacalc_")) { localStorage.setItem(k, JSON.stringify(v)); c++; }
+          if (k.startsWith("acuical_")) { localStorage.setItem(k, JSON.stringify(v)); c++; }
         }
         toast(`Importados ${c} registros`, "success");
       } catch { toast("Error al leer archivo", "error"); }
@@ -147,7 +160,7 @@ export default function Admin() {
     let total = 0;
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k?.startsWith("aquacalc_")) total += (localStorage.getItem(k)?.length ?? 0);
+      if (k?.startsWith("acuical_")) total += (localStorage.getItem(k)?.length ?? 0);
     }
     return (total / 1024).toFixed(1);
   })();
@@ -188,9 +201,9 @@ export default function Admin() {
         <div className="card" style={{ borderColor: "var(--accent2)" }}>
           <div className="card-title" style={{ fontSize: 15 }}>☁️ Servicios</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <ServiceCard name="Railway (Backend API)" url={`${API}/health`} status={services.railway} />
+            <ServiceCard name="Railway (Backend API)" url={`${API_URL}/health`} status={services.railway} />
             <ServiceCard name="Supabase (Base de datos)" url="https://smvjffbeshxcfltjoolm.supabase.co" status={services.supabase} />
-            <ServiceCard name="Netlify (Frontend)" url="https://acuacla2112.netlify.app" status={services.frontend} />
+            <ServiceCard name="Netlify (Frontend)" url={FRONTEND_URL} status={services.frontend} />
             <ServiceCard name="Resend (Email)" url="https://resend.com" status={services.resend} />
           </div>
           <button className="btn-sm" style={{ marginTop: 8, fontSize: 11 }} onClick={() => setServices({ railway: "checking", supabase: "checking", frontend: "checking", resend: "checking" })}>🔄 Re-verificar</button>
@@ -284,10 +297,36 @@ export default function Admin() {
           </div>
           <div style={{ maxHeight: 150, overflowY: "auto", fontSize: 11, fontFamily: "monospace" }}>
             {netLog.length === 0 ? <span style={{ color: "var(--text3)" }}>Sin eventos</span> : (
-              netLog.map((e, i) => (
-                <div key={i} style={{ padding: "2px 0", display: "flex", gap: 8 }}>
+              netLog.map((e) => (
+                <div key={e.time + e.status} style={{ padding: "2px 0", display: "flex", gap: 8 }}>
                   <span style={{ color: "var(--text3)", minWidth: 60 }}>{e.time}</span>
                   <span>{e.status}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Sync Fallidos */}
+        <div className="card" style={{ borderColor: failedCount > 0 ? "var(--danger)" : "var(--border)" }}>
+          <div className="card-title" style={{ fontSize: 15, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>🔄 Sincronización {failedCount > 0 && <span className="badge badge-red" style={{ fontSize: 10 }}>{failedCount} fallidos</span>}</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              {failedCount > 0 && <button className="btn-sm" style={{ fontSize: 10 }} onClick={async () => { await retryAllFailed(); toast("Reintentando todos...", "info"); }}>Reintentar todos</button>}
+              {failedCount > 0 && <button className="btn-sm" style={{ fontSize: 10 }} onClick={async () => { await clearFailedOps(); toast("Fallos limpiados", "success"); }}>Limpiar</button>}
+            </div>
+          </div>
+          <div style={{ maxHeight: 200, overflowY: "auto", fontSize: 11, fontFamily: "monospace" }}>
+            {failedOps.length === 0 ? (
+              <span style={{ color: "var(--text3)" }}>Sin operaciones fallidas</span>
+            ) : (
+              failedOps.map((op) => (
+                <div key={op.id} style={{ padding: "4px 0", display: "flex", gap: 8, alignItems: "center", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ fontWeight: 600, minWidth: 50 }}>{op.method}</span>
+                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{op.path}</span>
+                  <span style={{ color: "var(--danger)", fontSize: 10, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{op.lastError}</span>
+                  <span style={{ fontSize: 10, color: "var(--text3)", minWidth: 40 }}>{op.retries}r</span>
+                  <button className="btn-sm" style={{ fontSize: 10 }} onClick={async () => { await retryFailedOp(op.id); toast("Reintentando...", "info"); }}>↻</button>
                 </div>
               ))
             )}

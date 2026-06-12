@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import type { Producto, MovimientoInventario } from "@/core/inventario-types";
 
-const PROD_KEY = "aquacalc_inventario_productos";
-const MOV_KEY = "aquacalc_inventario_movimientos";
+const PROD_KEY = "acuical_inventario_productos";
+const MOV_KEY = "acuical_inventario_movimientos";
 
 function loadProd(): Producto[] {
   try { return JSON.parse(localStorage.getItem(PROD_KEY) || "[]"); } catch { return []; }

@@ -1,6 +1,7 @@
 import { enqueue, scheduleProcess } from "./sync";
+import { API_URL } from "@/utils/config";
 
-const BASE = "https://acuacal21-production.up.railway.app/api";
+const BASE = API_URL;
 
 async function request(token: string, method: string, path: string, body?: unknown) {
   const res = await fetch(`${BASE}${path}`, {

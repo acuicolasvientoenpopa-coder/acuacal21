@@ -4,7 +4,7 @@ import type { SpeciesParams } from "@/core";
 import { useTranslation } from "@/store/language";
 import { useAuth } from "@/store/auth";
 
-const PARAMS_KEY = "aquacalc_params_overrides";
+const PARAMS_KEY = "acuical_params_overrides";
 
 type Overrides = Record<string, Partial<SpeciesParams>>;
 

@@ -40,7 +40,7 @@ export function generateBitacora(count = 20) {
       observaciones: "",
     });
   }
-  localStorage.setItem("aquacalc_bitacora", JSON.stringify(records));
+  localStorage.setItem("acuical_bitacora", JSON.stringify(records));
   toast(`Bitácora: ${count} registros generados`, "info");
 }
 
@@ -54,7 +54,7 @@ export function generateFincas(count = 6) {
       descripcion: "Generado automáticamente para pruebas",
     });
   }
-  localStorage.setItem("aquacalc_fincas", JSON.stringify(fincas));
+  localStorage.setItem("acuical_fincas", JSON.stringify(fincas));
   toast(`Fincas: ${count} generadas`, "info");
 }
 
@@ -72,7 +72,7 @@ export function generateParams() {
       tasaAlim: rand(1.5, 6, 2),
     };
   });
-  localStorage.setItem("aquacalc_params_overrides", JSON.stringify(overrides));
+  localStorage.setItem("acuical_params_overrides", JSON.stringify(overrides));
   toast("Parámetros generados para todas las especies", "info");
 }
 
@@ -89,7 +89,7 @@ export function generateAll() {
 }
 
 export function generateFinanzas() {
-  const existing = JSON.parse(localStorage.getItem("aquacalc_fincas") || "[]");
+  const existing = JSON.parse(localStorage.getItem("acuical_fincas") || "[]");
   let fincas = existing;
   if (fincas.length === 0) {
     fincas = [];
@@ -121,7 +121,7 @@ export function generateFinanzas() {
     diasCiclo: [120, 150, 180, 210, 240][rand(0, 4)],
   }));
 
-  localStorage.setItem("aquacalc_finanzas", JSON.stringify(records));
+  localStorage.setItem("acuical_finanzas", JSON.stringify(records));
   toast(`Finanzas: ${records.length} registros generados`, "info");
 }
 
@@ -143,7 +143,7 @@ export function generateEspecies(count = 6) {
     },
     createdAt: new Date().toISOString(),
   }));
-  localStorage.setItem("aquacalc_custom_species", JSON.stringify(custom));
+  localStorage.setItem("acuical_custom_species", JSON.stringify(custom));
   toast(`Especies: ${count} generadas`, "info");
 }
 
@@ -162,7 +162,7 @@ export function generateInventario() {
     stockActual: rand(1, 50),
     createdAt: new Date().toISOString(),
   }));
-  localStorage.setItem("aquacalc_inventario_productos", JSON.stringify(prods));
+  localStorage.setItem("acuical_inventario_productos", JSON.stringify(prods));
 
   const movs = prods.map((p, i) => ({
     id: "mov_" + Date.now() + "_" + i,
@@ -172,7 +172,7 @@ export function generateInventario() {
     fecha: randDate(30),
     descripcion: "Movimiento generado",
   }));
-  localStorage.setItem("aquacalc_inventario_movimientos", JSON.stringify(movs));
+  localStorage.setItem("acuical_inventario_movimientos", JSON.stringify(movs));
   toast(`Inventario: ${prods.length} productos + ${movs.length} movimientos`, "info");
 }
 
@@ -191,7 +191,7 @@ export function generateMicrobiologia() {
       carga: ["baja", "media", "alta"][rand(0, 2)],
     });
   }
-  localStorage.setItem("aquacalc_cultivos", JSON.stringify(cultivos));
+  localStorage.setItem("acuical_cultivos", JSON.stringify(cultivos));
 
   const meds = [];
   for (let i = 0; i < 4; i++) {
@@ -210,7 +210,7 @@ export function generateMicrobiologia() {
       estado: "completado",
     });
   }
-  localStorage.setItem("aquacalc_medicacion", JSON.stringify(meds));
+  localStorage.setItem("acuical_medicacion", JSON.stringify(meds));
   toast(`Microbiología: ${cultivos.length} cultivos + ${meds.length} medicaciones`, "info");
 }
 
@@ -232,21 +232,21 @@ export function generateVeterinaria(count = 4) {
       lang: "es",
     });
   }
-  localStorage.setItem("aquacalc_vet_reports", JSON.stringify(reports));
+  localStorage.setItem("acuical_vet_reports", JSON.stringify(reports));
   toast(`Veterinaria: ${count} reportes generados`, "info");
 }
 
 export function clearAll() {
-  localStorage.removeItem("aquacalc_bitacora");
-  localStorage.removeItem("aquacalc_fincas");
-  localStorage.removeItem("aquacalc_params_overrides");
-  localStorage.removeItem("aquacalc_custom_species");
-  localStorage.removeItem("aquacalc_profile");
-  localStorage.removeItem("aquacalc_finanzas");
-  localStorage.removeItem("aquacalc_inventario_productos");
-  localStorage.removeItem("aquacalc_inventario_movimientos");
-  localStorage.removeItem("aquacalc_cultivos");
-  localStorage.removeItem("aquacalc_medicacion");
-  localStorage.removeItem("aquacalc_vet_reports");
+  localStorage.removeItem("acuical_bitacora");
+  localStorage.removeItem("acuical_fincas");
+  localStorage.removeItem("acuical_params_overrides");
+  localStorage.removeItem("acuical_custom_species");
+  localStorage.removeItem("acuical_profile");
+  localStorage.removeItem("acuical_finanzas");
+  localStorage.removeItem("acuical_inventario_productos");
+  localStorage.removeItem("acuical_inventario_movimientos");
+  localStorage.removeItem("acuical_cultivos");
+  localStorage.removeItem("acuical_medicacion");
+  localStorage.removeItem("acuical_vet_reports");
   toast("Todos los datos de prueba eliminados", "success");
 }

@@ -12,9 +12,9 @@ import GlobalSearch from "./GlobalSearch";
 import SyncBadge from "./SyncBadge";
 import { scheduleProcess } from "@/services/sync";
 import { NAV_LINKS } from "@/data/navLinks";
+import { API_URL } from "@/utils/config";
 
 const links = NAV_LINKS;
-const API_URL = "https://acuacal21-production.up.railway.app/api";
 
 const IDIOMA_OPTS: { value: Idioma; label: string }[] = [
   { value: "es", label: "Español" },

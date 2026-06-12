@@ -30,7 +30,7 @@ export async function exportZootecnicoExcel(records: ZooRow[]): Promise<void> {
   ws.getColumn(5).width = 8;  ws.getColumn(6).width = 12;
   ws.getColumn(7).width = 12; ws.getColumn(8).width = 10;
   const buf = await wb.xlsx.writeBuffer();
-  downloadBlob(buf, "aquacalc_zootecnico.xlsx");
+  downloadBlob(buf, "acuical_zootecnico.xlsx");
 }
 
 export interface ZooRow {
@@ -104,14 +104,14 @@ export async function exportFinanzasExcel(records: FinExcelRow[], monedaSimbolo:
   colWidths.forEach((w, i) => ws.getColumn(i + 1).width = w);
 
   const buf = await wb.xlsx.writeBuffer();
-  downloadBlob(buf, "aquacalc_finanzas.xlsx");
+  downloadBlob(buf, "acuical_finanzas.xlsx");
 }
 
 export async function exportAllExcel(): Promise<void> {
   const wb = new ExcelJS.Workbook();
 
   try {
-    const bitacora = JSON.parse(localStorage.getItem("aquacalc_bitacora") || "[]");
+    const bitacora = JSON.parse(localStorage.getItem("acuical_bitacora") || "[]");
     if (Array.isArray(bitacora) && bitacora.length > 0) {
       const ws = wb.addWorksheet("Bitácora");
       ws.addRow(["Fecha", "Estanque", "Especie", "Alimento", "Mortalidades", "Peso", "O₂", "Temp", "pH", "NH₃", "NO₂", "Salinidad", "Biomasa", "SGR", "FCR"]);
@@ -124,7 +124,7 @@ export async function exportAllExcel(): Promise<void> {
   } catch { /* skip */ }
 
   try {
-    const cultivos = JSON.parse(localStorage.getItem("aquacalc_cultivos") || "[]");
+    const cultivos = JSON.parse(localStorage.getItem("acuical_cultivos") || "[]");
     if (Array.isArray(cultivos) && cultivos.length > 0) {
       const ws = wb.addWorksheet("Cultivos");
       ws.addRow(["Fecha", "Estanque", "Especie", "Tipo Muestra", "Órgano", "Resultado", "Agente", "Carga"]);
@@ -135,7 +135,7 @@ export async function exportAllExcel(): Promise<void> {
   } catch { /* skip */ }
 
   try {
-    const meds = JSON.parse(localStorage.getItem("aquacalc_medicacion") || "[]");
+    const meds = JSON.parse(localStorage.getItem("acuical_medicacion") || "[]");
     if (Array.isArray(meds) && meds.length > 0) {
       const ws = wb.addWorksheet("Medicación");
       ws.addRow(["Inicio", "Fin", "Estanque", "Producto", "Dosis", "Vía", "Duración", "Retiro", "Estado"]);
@@ -146,7 +146,7 @@ export async function exportAllExcel(): Promise<void> {
   } catch { /* skip */ }
 
   try {
-    const fin = JSON.parse(localStorage.getItem("aquacalc_finanzas") || "[]");
+    const fin = JSON.parse(localStorage.getItem("acuical_finanzas") || "[]");
     if (Array.isArray(fin) && fin.length > 0) {
       const ws = wb.addWorksheet("Finanzas");
       ws.addRow(["Finca", "Semilla", "Alimento", "Medicación", "Electricidad", "Combustible", "MO", "Manten.", "Transp.", "Otros", "Total", "Biomasa", "Costo/kg", "Precio/kg", "Ingreso", "Margen%"]);
@@ -161,5 +161,5 @@ export async function exportAllExcel(): Promise<void> {
   } catch { /* skip */ }
 
   const buf = await wb.xlsx.writeBuffer();
-  downloadBlob(buf, "aquacalc_exportacion_completa.xlsx");
+  downloadBlob(buf, "acuical_exportacion_completa.xlsx");
 }

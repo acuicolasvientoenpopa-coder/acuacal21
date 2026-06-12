@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useLookups } from "@/store/lookups";
@@ -8,7 +8,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { useSaveIndicator } from "@/store/saveIndicator";
 import { enqueue, scheduleProcess } from "@/services/sync";
 
-const STORAGE_KEY = "aquacalc_finanzas";
+const STORAGE_KEY = "acuical_finanzas";
 
 interface FinRecord {
   id: string; fincaId: string; fincaNombre: string;
@@ -122,17 +122,20 @@ export default function Finanzas() {
     setSaving(false);
   };
 
-  const agg: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0 };
-  for (const r of records) {
-    for (const c of CATS) (agg[c.key] as number) += (r[c.key] as number) || 0;
-    agg.biomasaCosechada += r.biomasaCosechada || 0;
-    agg.precioVenta = r.precioVenta || 0;
-  }
-  const totalGastos = CATS.reduce((s, c) => s + ((agg[c.key] as number) || 0), 0);
-  const ingresoTotal = agg.biomasaCosechada * agg.precioVenta;
-  const costoKg = agg.biomasaCosechada > 0 ? totalGastos / agg.biomasaCosechada : 0;
-  const margen = ingresoTotal > 0 ? ((ingresoTotal - totalGastos) / ingresoTotal * 100) : 0;
-  const maxCat = Math.max(...CATS.map((c) => (agg[c.key] as number) || 0), 1);
+  const { agg, totalGastos, ingresoTotal, costoKg, margen, maxCat } = useMemo(() => {
+    const a: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0 };
+    for (const r of records) {
+      for (const c of CATS) (a[c.key] as number) += (r[c.key] as number) || 0;
+      a.biomasaCosechada += r.biomasaCosechada || 0;
+      a.precioVenta = r.precioVenta || 0;
+    }
+    const gastos = CATS.reduce((s, c) => s + ((a[c.key] as number) || 0), 0);
+    const ingreso = a.biomasaCosechada * a.precioVenta;
+    const ckg = a.biomasaCosechada > 0 ? gastos / a.biomasaCosechada : 0;
+    const mg = ingreso > 0 ? ((ingreso - gastos) / ingreso * 100) : 0;
+    const mx = Math.max(...CATS.map((c) => (a[c.key] as number) || 0), 1);
+    return { agg: a, totalGastos: gastos, ingresoTotal: ingreso, costoKg: ckg, margen: mg, maxCat: mx };
+  }, [records]);
 
   const current = editId ? records.find((r) => r.id === editId) : null;
   const [form, setForm] = useState<FinRecord>(current ?? emptyRec());

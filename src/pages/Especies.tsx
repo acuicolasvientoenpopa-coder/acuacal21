@@ -5,7 +5,7 @@ import { useTranslation } from "@/store/language";
 import { useAuth } from "@/store/auth";
 import { enqueue, scheduleProcess } from "@/services/sync";
 
-const CUSTOM_KEY = "aquacalc_custom_species";
+const CUSTOM_KEY = "acuical_custom_species";
 
 const defaultParams: SpeciesParams = {
   densidad: 20, densidadUnit: "peces/m³", supervivencia: 85, fcr: 1.5,
@@ -28,6 +28,9 @@ function dbToSpecies(e: any): Species {
   };
 }
 
+function loadLocal(): Species[] {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"); } catch { return []; }
+}
 
 export default function Especies() {
   const { t } = useTranslation();
@@ -39,6 +42,7 @@ export default function Especies() {
   const [saving, setSaving] = useState(false);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
+    if (!apiUrl) throw new Error("API no disponible");
     const res = await fetch(apiUrl + path, {
       ...opts,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
@@ -54,18 +58,14 @@ export default function Especies() {
     return res.json();
   }, [apiUrl, token]);
 
-  const loadLocal = useCallback(() => {
-    try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"); } catch { return []; }
-  }, []);
-
   useEffect(() => {
-    if (token) scheduleProcess(apiUrl, token);
+    if (token && apiUrl) scheduleProcess(apiUrl, token);
     api("/especies").then((data: any[]) => {
       const mapped = data.filter((e: any) => e.esPersonal !== false).map(dbToSpecies);
       setCustom(mapped);
       localStorage.setItem(CUSTOM_KEY, JSON.stringify(mapped));
     }).catch(() => setCustom(loadLocal()));
-  }, [api, loadLocal]);
+  }, [api]);
 
   useEffect(() => {
     localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom));

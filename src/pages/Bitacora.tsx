@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/core";
 import { toast } from "@/components/Toast";
 import { exportBitacoraPDF } from "@/utils/pdf";
 import { useLookups } from "@/store/lookups";
-import { enqueue, scheduleProcess } from "@/services/sync";
+import { enqueue, scheduleProcess, getQueueLength } from "@/services/sync";
 
-const RECORDS_KEY = "aquacalc_bitacora";
+const RECORDS_KEY = "acuical_bitacora";
 
 type RecordData = {
   id: string; fecha: string; estanque: string; especie: string; alimento: string;
@@ -58,18 +58,31 @@ export default function Bitacora() {
   const [form, setForm] = useState<RecordData>(emptyRecord);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(records.length / pageSize));
+  const pageRecords = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return records.slice(start, start + pageSize);
+  }, [records, page, pageSize]);
 
   const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) {
-      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
+    const isMutation = opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method);
+    let res: Response;
+    try {
+      res = await fetch(apiUrl + path, {
+        ...opts,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
+      });
+    } catch {
+      if (isMutation) {
         let body: unknown;
-        try { body = JSON.parse(opts.body as string); } catch {}
-        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
+        try { body = JSON.parse(opts!.body as string); } catch {}
+        await enqueue({ method: opts!.method as "POST" | "PUT" | "DELETE", path, body });
       }
+      throw new Error("Sin conexión");
+    }
+    if (!res.ok) {
       throw new Error(await res.text());
     }
     return res.json();
@@ -81,12 +94,14 @@ export default function Bitacora() {
       setRecords(mapped);
       localStorage.setItem(RECORDS_KEY, JSON.stringify(mapped));
     }).catch(() => setRecords(loadLocal()));
-    if (token) scheduleProcess(apiUrl, token);
+    if (apiUrl && token) getQueueLength().then(len => { if (len > 0) scheduleProcess(apiUrl, token); });
   }, [api, apiUrl, token]);
 
   useEffect(() => {
     localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
   }, [records]);
+
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [records.length]);
 
   useEffect(() => {
     const h = (e: StorageEvent) => {
@@ -259,7 +274,7 @@ export default function Bitacora() {
           <div className="empty-state"><div className="empty-icon">📋</div><p>{t("sinRegistros")}</p></div>
         ) : (
           <div>
-            {records.map((r) => {
+            {pageRecords.map((r) => {
               const wqOk = (v: string, min: number, max: number) => {
                 const n = Number(v); return isNaN(n) || n === 0 ? "" : n >= min && n <= max ? "wq-ok" : "wq-alert";
               };
@@ -311,6 +326,13 @@ export default function Bitacora() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16, alignItems: "center" }}>
+            <button className="btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>◀</button>
+            <span style={{ fontSize: 12, color: "var(--text2)" }}>{page} / {totalPages}</span>
+            <button className="btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>▶</button>
           </div>
         )}
       </div>

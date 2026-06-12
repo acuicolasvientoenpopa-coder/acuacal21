@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { createClient, type User } from "@supabase/supabase-js";
 import type { Plan, Rol } from "@/core";
+import { API_URL } from "@/utils/config";
 
 const SUPABASE_URL = "https://smvjffbeshxcfltjoolm.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_EQRvreJDv4d-wYZmaMY3Bg_x2D3kM_v";
-const API_URL = "https://acuacal21-production.up.railway.app/api";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true },

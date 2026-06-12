@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/store/language";
 
-const STORAGE_KEY = "aquacalc_profile";
+const STORAGE_KEY = "acuical_profile";
 
 interface ProfileData {
   nombre: string;

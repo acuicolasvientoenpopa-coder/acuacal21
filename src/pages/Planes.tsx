@@ -41,8 +41,8 @@ export default function Planes() {
               <p style={{ fontSize: 11, color: "var(--text2)", marginBottom: 8 }}>{p.desc}</p>
               <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 16 }}>{p.precio}</div>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 13, textAlign: "left" }}>
-                {p.features.map((f, i) => (
-                  <li key={i} style={{ padding: "4px 0" }}>✅ {f}</li>
+                {p.features.map((f) => (
+                  <li key={f} style={{ padding: "4px 0" }}>✅ {f}</li>
                 ))}
               </ul>
               <div style={{ marginTop: 20 }}>

@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "@/store/language";
 import { useCurrency } from "@/store/currency";
 import { useAuth } from "@/store/auth";
 import { Link } from "react-router-dom";
 import { NAV_LINKS } from "@/data/navLinks";
+
+let dashboardCache: { data: Stats; timestamp: number } | null = null;
+const CACHE_TTL = 30000;
+
 type Stats = {
   fincas: number;
   bitacora: number;
@@ -18,24 +22,34 @@ type Stats = {
   invAlertas: number;
 };
 
-const API = "https://acuacal21-production.up.railway.app/api";
-
 export default function Dashboard() {
   const { t } = useTranslation();
   const { fmt } = useCurrency();
-  const { token } = useAuth();
+  const { token, apiUrl } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     if (!token) { setLoading(false); return; }
+
+    const now = Date.now();
+    if (dashboardCache && now - dashboardCache.timestamp < CACHE_TTL) {
+      setStats(dashboardCache.data);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    fetch(`${API}/dashboard/stats`, { headers: { Authorization: `Bearer ${token}` } })
+    const ctrl = new AbortController();
+    fetch(`${apiUrl}/dashboard/stats`, { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal })
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then((data: Stats) => setStats(data))
+      .then((data: Stats) => { if (mountedRef.current) { setStats(data); dashboardCache = { data, timestamp: Date.now() }; } })
       .catch(() => {
-        const fin = JSON.parse(localStorage.getItem("aquacalc_finanzas") || "[]");
+        if (!mountedRef.current) return;
+        const fin = JSON.parse(localStorage.getItem("acuical_finanzas") || "[]");
         let totalGastos = 0, totalBiomasa = 0;
         if (Array.isArray(fin)) {
           for (const r of fin) {
@@ -43,22 +57,23 @@ export default function Dashboard() {
             totalBiomasa += r.biomasaCosechada || 0;
           }
         }
-        const prods = JSON.parse(localStorage.getItem("aquacalc_inventario_productos") || "[]");
+        const prods = JSON.parse(localStorage.getItem("acuical_inventario_productos") || "[]");
         const invValor = Array.isArray(prods) ? prods.reduce((s: number, p: any) => s + (p.stockActual || 0) * (p.precioUnitario || 0), 0) : 0;
         const invAlertas = Array.isArray(prods) ? prods.filter((p: any) => p.stockMinimo > 0 && (p.stockActual || 0) <= p.stockMinimo).length : 0;
         setStats({
-          fincas: JSON.parse(localStorage.getItem("aquacalc_fincas") || "[]").length,
-          bitacora: JSON.parse(localStorage.getItem("aquacalc_bitacora") || "[]").length,
+          fincas: JSON.parse(localStorage.getItem("acuical_fincas") || "[]").length,
+          bitacora: JSON.parse(localStorage.getItem("acuical_bitacora") || "[]").length,
           finanzas: fin.length,
           inventario: Array.isArray(prods) ? prods.length : 0,
-          especies: JSON.parse(localStorage.getItem("aquacalc_custom_species") || "[]").length,
-          micro: JSON.parse(localStorage.getItem("aquacalc_cultivos") || "[]").length,
-          vet: JSON.parse(localStorage.getItem("aquacalc_vet_reports") || "[]").length,
+          especies: JSON.parse(localStorage.getItem("acuical_custom_species") || "[]").length,
+          micro: JSON.parse(localStorage.getItem("acuical_cultivos") || "[]").length,
+          vet: JSON.parse(localStorage.getItem("acuical_vet_reports") || "[]").length,
           totalGastos, totalBiomasa, invValor, invAlertas,
         });
       })
-      .finally(() => setLoading(false));
-  }, [token]);
+      .finally(() => { if (mountedRef.current) setLoading(false); });
+    return () => { mountedRef.current = false; ctrl.abort(); };
+  }, [token, apiUrl]);
 
   const handleExport = async () => {
     setExporting(true);
@@ -69,7 +84,7 @@ export default function Dashboard() {
     setExporting(false);
   };
 
-  if (!stats) return null;
+  if (!stats) return <div className="page-header"><h2 className="page-title">🏠 {t("dashboardTitle")}</h2>{loading && <div className="loading-spinner" />}</div>;
 
   const moduleCounts: Record<string, number> = {
     fincas: stats.fincas, bitacora: stats.bitacora, finanzas: stats.finanzas,

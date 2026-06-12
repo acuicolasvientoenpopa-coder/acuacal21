@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { toast } from "@/components/Toast";
@@ -18,8 +18,8 @@ export const VIAS_ADMIN = [
   "Oral (alimento)", "Baño / inmersión", "Inyección", "Tópico",
 ];
 
-const CULTIVOS_KEY = "aquacalc_cultivos";
-const MEDICACION_KEY = "aquacalc_medicacion";
+const CULTIVOS_KEY = "acuical_cultivos";
+const MEDICACION_KEY = "acuical_medicacion";
 
 interface AntibiogramaEntry { antibiotico: string; sensibilidad: "S" | "I" | "R"; }
 
@@ -198,8 +198,8 @@ export default function Microbiologia() {
     toast("Medicación eliminada", "info");
   };
 
-  const filtradosC = cultivos.filter((c) => !filtroEst || c.estanqueNombre.toLowerCase().includes(filtroEst.toLowerCase()));
-  const filtradosM = medicacion.filter((c) => !filtroEst || c.estanqueNombre.toLowerCase().includes(filtroEst.toLowerCase()));
+  const filtradosC = useMemo(() => cultivos.filter((c) => !filtroEst || c.estanqueNombre.toLowerCase().includes(filtroEst.toLowerCase())), [cultivos, filtroEst]);
+  const filtradosM = useMemo(() => medicacion.filter((c) => !filtroEst || c.estanqueNombre.toLowerCase().includes(filtroEst.toLowerCase())), [medicacion, filtroEst]);
 
   const estadoColor = (e: string) => e === "en_curso" ? "var(--accent3)" : e === "completado" ? "var(--accent)" : "var(--danger)";
   const estadoLabel = (e: string) => e === "en_curso" ? t("microEnCurso") : e === "completado" ? t("microCompletado") : t("microSuspendido");

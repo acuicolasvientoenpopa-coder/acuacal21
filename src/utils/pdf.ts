@@ -138,7 +138,7 @@ export function exportBitacoraPDF(records: RecordRow[], _t: (k: string) => strin
     y += 5;
   });
 
-  doc.save("aquacalc_bitacora.pdf");
+  doc.save("acuical_bitacora.pdf");
 }
 
 export interface ZooRow {
@@ -252,7 +252,7 @@ export function exportZootecnicoPDF(records: ZooRow[], filtro: string, paramLabe
     y += 5;
   });
 
-  doc.save("aquacalc_zootecnico.pdf");
+  doc.save("acuical_zootecnico.pdf");
 }
 
 export interface VetPDFData {
