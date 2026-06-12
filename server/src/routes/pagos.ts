@@ -15,6 +15,12 @@ const PRICE_IDS: Record<string, string> = {
   enterprise_monthly: process.env.ONVO_PRICE_ENTERPRISE_MONTHLY ?? "",
 };
 
+const ROLES_BY_PLAN: Record<string, string[]> = {
+  free: ["productor"],
+  pro: ["productor", "tecnico"],
+  enterprise: ["admin", "productor", "tecnico"],
+};
+
 function getAdminClient() {
   return createClient(
     process.env.SUPABASE_URL ?? "",
@@ -123,6 +129,40 @@ pagosRouter.post("/webhook", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Error procesando webhook:", err);
     res.status(500).json({ error: "Error procesando webhook" });
+  }
+});
+
+const rolSchema = z.object({
+  rol: z.enum(["productor", "tecnico", "admin"]),
+});
+
+pagosRouter.post("/rol", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const parsed = rolSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+      return;
+    }
+
+    const uid = req.userId!;
+    const admin = getAdminClient();
+    const { data: userData } = await admin.auth.admin.getUserById(uid);
+    const meta = userData?.user?.user_metadata || {};
+    const currentPlan = (meta.plan as string) || "free";
+    const allowed = ROLES_BY_PLAN[currentPlan] || ["productor"];
+
+    if (!allowed.includes(parsed.data.rol)) {
+      res.status(403).json({ error: `Rol no disponible en el plan ${currentPlan}. Roles válidos: ${allowed.join(", ")}` });
+      return;
+    }
+
+    await admin.auth.admin.updateUserById(uid, {
+      user_metadata: { ...meta, rol: parsed.data.rol },
+    });
+
+    res.json({ rol: parsed.data.rol });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Error al actualizar rol" });
   }
 });
 
