@@ -5,15 +5,15 @@ import { PLANES } from "@/core";
 import { createApi } from "@/services/api";
 
 const ROLES = [
-  { id: "productor", label: "Productor", desc: "Gestión completa de fincas y producción" },
+  { id: "gestor", label: "Gestor de finca", desc: "Gestión completa de fincas y producción" },
   { id: "tecnico", label: "Técnico", desc: "Monitoreo, bitácora y parámetros WQ" },
   { id: "admin", label: "Admin", desc: "Acceso total incluyendo panel de administración" },
 ] as const;
 
 const ROLES_BY_PLAN: Record<string, string[]> = {
-  free: ["productor"],
-  pro: ["productor", "tecnico"],
-  enterprise: ["admin", "productor", "tecnico"],
+  free: ["gestor"],
+  pro: ["gestor", "tecnico"],
+  enterprise: ["admin", "gestor", "tecnico"],
 };
 
 export default function Planes() {
@@ -49,7 +49,7 @@ export default function Planes() {
   };
 
   const paidPlan = plan !== "free";
-  const availableRoles = ROLES_BY_PLAN[plan] || ["productor"];
+  const availableRoles = ROLES_BY_PLAN[plan] || ["gestor"];
 
   return (
     <div>

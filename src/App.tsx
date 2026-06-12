@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/store/language";
 import { CurrencyProvider } from "@/store/currency";
 import { ThemeProvider } from "@/store/theme";
-import { AuthProvider, useAuth } from "@/store/auth";
+import AuthProvider, { useAuth } from "@/store/auth";
 import Layout from "@/components/Layout";
 import ToastContainer from "@/components/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";

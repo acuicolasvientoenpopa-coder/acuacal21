@@ -202,7 +202,7 @@ fincasRouter.post("/:id/users", async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const parsed = z.object({ email: z.string().email(), rol: z.enum(["productor", "tecnico"]).default("productor") }).safeParse(req.body);
+  const parsed = z.object({ email: z.string().email(), rol: z.enum(["gestor", "tecnico"]).default("gestor") }).safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Email válido requerido" });
     return;

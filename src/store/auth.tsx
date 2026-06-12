@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { createClient, type User } from "@supabase/supabase-js";
 import type { Plan, Rol } from "@/core";
 import { API_URL } from "@/utils/config";
@@ -31,15 +31,15 @@ function getPlanFromUser(u: User | null): Plan {
 }
 
 function getRolFromUser(u: User | null): Rol {
-  return (u?.user_metadata?.rol as Rol) || "productor";
+  return (u?.user_metadata?.rol as Rol) || "gestor";
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState<Plan>("free");
-  const [rol, setRol] = useState<Rol>("productor");
+  const [rol, setRol] = useState<Rol>("gestor");
 
   useEffect(() => {
     const session = supabase.auth.getSession();
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string, nombre: string, rol?: string): Promise<string | null> => {
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { nombre, plan: "free", rol: rol || "productor" } },
+      options: { data: { nombre, plan: "free", rol: rol || "gestor" } },
     });
     if (error) return error.message;
     if (!data.session) return "Revisá tu email para confirmar la cuenta";

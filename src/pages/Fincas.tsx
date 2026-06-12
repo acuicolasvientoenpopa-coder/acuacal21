@@ -265,14 +265,14 @@ export default function Fincas() {
                         <input value={invite.email} onChange={(e) => setInvite({ ...invite, email: e.target.value })}
                           placeholder="email@ejemplo.com" style={{ flex: 1, fontSize: 12 }} />
                         <select value={invite.rol} onChange={(e) => setInvite({ ...invite, rol: e.target.value })} style={{ fontSize: 12 }}>
-                          <option value="productor">Productor</option>
+                          <option value="gestor">Gestor de finca</option>
                           <option value="tecnico">Técnico</option>
                         </select>
                         <button className="btn-sm" onClick={() => sendInvite(f.id)} disabled={inviting}>➕</button>
                         <button className="btn-sm" onClick={() => setInvite(null)}>✕</button>
                       </div>
                     ) : (
-                      <button className="btn-sm" style={{ fontSize: 12 }} onClick={() => setInvite({ fincaId: f.id, email: "", rol: "productor" })}>
+                      <button className="btn-sm" style={{ fontSize: 12 }} onClick={() => setInvite({ fincaId: f.id, email: "", rol: "gestor" })}>
                         ➕ Invitar usuario
                       </button>
                     )}

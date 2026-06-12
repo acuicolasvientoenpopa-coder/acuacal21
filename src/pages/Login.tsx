@@ -12,7 +12,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nombre, setNombre] = useState("");
-  const [rol, setRol] = useState("productor");
+  const [rol, setRol] = useState("gestor");
   const [acepto, setAcepto] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -86,7 +86,7 @@ export default function Login() {
               <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
                 {t("rolLabel")}
                 <select value={rol} onChange={(e) => setRol(e.target.value)} style={{ width: "100%" }}>
-                  <option value="productor">{t("rolProductor")}</option>
+                  <option value="gestor">{t("rolGestor")}</option>
                   <option value="tecnico">{t("rolTecnico")}</option>
                 </select>
               </label>

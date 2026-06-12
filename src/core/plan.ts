@@ -1,10 +1,10 @@
 export type Plan = "free" | "pro" | "enterprise";
-export type Rol = "productor" | "tecnico" | "admin";
+export type Rol = "gestor" | "tecnico" | "admin";
 
 export const PLAN_LIMITS: Record<Plan, { maxFincas: number; maxEstanques: number; canExport: boolean; canUseGeo: boolean; roles: Rol[] }> = {
-  free: { maxFincas: 1, maxEstanques: 3, canExport: false, canUseGeo: false, roles: ["productor"] },
-  pro: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, canUseGeo: true, roles: ["productor", "tecnico"] },
-  enterprise: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, canUseGeo: true, roles: ["admin", "productor", "tecnico"] },
+  free: { maxFincas: 1, maxEstanques: 3, canExport: false, canUseGeo: false, roles: ["gestor"] },
+  pro: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, canUseGeo: true, roles: ["gestor", "tecnico"] },
+  enterprise: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, canUseGeo: true, roles: ["admin", "gestor", "tecnico"] },
 };
 
 export const PLANES: { id: Plan; label: string; precio: string; desc: string; features: string[] }[] = [

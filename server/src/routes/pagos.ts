@@ -16,9 +16,9 @@ const PRICE_IDS: Record<string, string> = {
 };
 
 const ROLES_BY_PLAN: Record<string, string[]> = {
-  free: ["productor"],
-  pro: ["productor", "tecnico"],
-  enterprise: ["admin", "productor", "tecnico"],
+  free: ["gestor"],
+  pro: ["gestor", "tecnico"],
+  enterprise: ["admin", "gestor", "tecnico"],
 };
 
 function getAdminClient() {
@@ -133,7 +133,7 @@ pagosRouter.post("/webhook", async (req: Request, res: Response) => {
 });
 
 const rolSchema = z.object({
-  rol: z.enum(["productor", "tecnico", "admin"]),
+  rol: z.enum(["gestor", "tecnico", "admin"]),
 });
 
 pagosRouter.post("/rol", requireAuth, async (req: AuthRequest, res: Response) => {
@@ -149,7 +149,7 @@ pagosRouter.post("/rol", requireAuth, async (req: AuthRequest, res: Response) =>
     const { data: userData } = await admin.auth.admin.getUserById(uid);
     const meta = userData?.user?.user_metadata || {};
     const currentPlan = (meta.plan as string) || "free";
-    const allowed = ROLES_BY_PLAN[currentPlan] || ["productor"];
+    const allowed = ROLES_BY_PLAN[currentPlan] || ["gestor"];
 
     if (!allowed.includes(parsed.data.rol)) {
       res.status(403).json({ error: `Rol no disponible en el plan ${currentPlan}. Roles válidos: ${allowed.join(", ")}` });
