@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const GPS_TIMEOUT = 15000;
-const MAX_ACCURACY = 10;
+const GPS_TIMEOUT = 60000;
+const MAX_ACCURACY = 30;
 
 export interface GeoPosition {
   latitude: number;

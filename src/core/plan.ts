@@ -1,10 +1,10 @@
 export type Plan = "free" | "pro" | "enterprise";
 export type Rol = "productor" | "tecnico" | "admin";
 
-export const PLAN_LIMITS: Record<Plan, { maxFincas: number; maxEstanques: number; canExport: boolean; roles: Rol[] }> = {
-  free: { maxFincas: 1, maxEstanques: 3, canExport: false, roles: ["productor"] },
-  pro: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, roles: ["productor", "tecnico"] },
-  enterprise: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, roles: ["admin", "productor", "tecnico"] },
+export const PLAN_LIMITS: Record<Plan, { maxFincas: number; maxEstanques: number; canExport: boolean; canUseGeo: boolean; roles: Rol[] }> = {
+  free: { maxFincas: 1, maxEstanques: 3, canExport: false, canUseGeo: false, roles: ["productor"] },
+  pro: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, canUseGeo: true, roles: ["productor", "tecnico"] },
+  enterprise: { maxFincas: Infinity, maxEstanques: Infinity, canExport: true, canUseGeo: true, roles: ["admin", "productor", "tecnico"] },
 };
 
 export const PLANES: { id: Plan; label: string; precio: string; desc: string; features: string[] }[] = [
@@ -15,6 +15,10 @@ export const PLANES: { id: Plan; label: string; precio: string; desc: string; fe
 
 export function canExport(plan: Plan): boolean {
   return PLAN_LIMITS[plan].canExport;
+}
+
+export function canUseGeo(plan: Plan): boolean {
+  return PLAN_LIMITS[plan].canUseGeo;
 }
 
 export function limiteFincas(plan: Plan): number {

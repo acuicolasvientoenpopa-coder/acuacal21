@@ -6,7 +6,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { saveEstanque, getSyncCount, getPendientes, markSynced, type EstanqueGeo, type PuntoGeo } from "@/services/geo";
 import { useAuth } from "@/store/auth";
-import { calcAreaPoligono } from "@/core";
+import { canUseGeo, calcAreaPoligono } from "@/core";
+import { exportGeoPDF, type GeoPondPDFData } from "@/utils/pdf";
 import "leaflet/dist/leaflet.css";
 
 const EARTH_RADIUS = 6378137;
@@ -72,7 +73,8 @@ export default function GeoPond() {
   const [searchParams] = useSearchParams();
   const fincaId = searchParams.get("fincaId") || undefined;
   const returnTo = searchParams.get("returnTo") || undefined;
-  const { token, apiUrl } = useAuth();
+  const { token, apiUrl, plan } = useAuth();
+  const mapRef = useRef<HTMLDivElement>(null);
 
   const { position, error: gpsError, watching, accuracyWarn, startWatching, stopWatching } = useGeolocation();
 
@@ -83,30 +85,36 @@ export default function GeoPond() {
   const [mensaje, setMensaje] = useState("");
   const [syncCount, setSyncCount] = useState(0);
 
+  const isPro = plan && canUseGeo(plan);
+
+  useEffect(() => {
+    if (!isPro) navigate("/planes");
+  }, [isPro, navigate]);
+
   const areaM2 = calcPolygonArea(puntos);
   const prof = parseFloat(profundidad) || 0;
   const volumenM3 = areaM2 > 0 && prof > 0 ? areaM2 * prof : null;
 
   useEffect(() => {
+    if (!token) return;
     startWatching();
     checkSyncCount();
-    window.addEventListener("online", handleOnline);
+    const h = async () => {
+      await sincronizar();
+      await checkSyncCount();
+    };
+    window.addEventListener("online", h);
     return () => {
       stopWatching();
-      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("online", h);
     };
-  }, []);
+  }, [token, startWatching, stopWatching]);
 
   async function checkSyncCount() {
     try {
       const n = await getSyncCount();
       setSyncCount(n);
     } catch {}
-  }
-
-  async function handleOnline() {
-    await sincronizar();
-    await checkSyncCount();
   }
 
   async function sincronizar() {
@@ -200,6 +208,19 @@ export default function GeoPond() {
     setMensaje("");
   }
 
+  const generarReporte = useCallback(async () => {
+    const data: GeoPondPDFData = {
+      nombre: nombre.trim() || `Estanque ${new Date().toLocaleDateString()}`,
+      coordenadas: puntos,
+      areaM2,
+      profundidad: prof || undefined,
+      volumenM3: volumenM3 ?? undefined,
+      fechaCaptura: new Date().toISOString(),
+      mapElement: mapRef.current,
+    };
+    await exportGeoPDF(data, t as (k: string) => string);
+  }, [nombre, puntos, areaM2, prof, volumenM3, t]);
+
   const coordsMap = puntos.map((p) => [p.lat, p.lng] as [number, number]);
   const poligonoCerrado = [...coordsMap, coordsMap[0] || [0, 0]];
   const puedeCapturar = watching && position !== null;
@@ -232,7 +253,7 @@ export default function GeoPond() {
 
       {!saved ? (
         <div style={{ flex: 1, display: "flex", gap: 10, minHeight: 0, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 280, position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)" }}>
+          <div ref={mapRef} style={{ flex: 1, minWidth: 280, position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)" }}>
             <MapContainer center={[9.9, -84.3]} zoom={15} style={{ height: "100%", width: "100%" }}>
               <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <LocalizacionActual pos={position} />
@@ -278,7 +299,7 @@ export default function GeoPond() {
             <button
               className="btn-primary"
               onClick={capturarPunto}
-              disabled={!puedeCapturar || accuracyWarn}
+              disabled={!puedeCapturar}
               style={{ fontSize: 15, padding: "14px 0", fontWeight: 700, minHeight: 56 }}
             >
               📍 {puntos.length === 0 ? t("gpsCapturar") : `${t("gpsCapturar")} #${puntos.length + 1}`}
@@ -356,6 +377,9 @@ export default function GeoPond() {
                 🏠 {t("fincas")}
               </button>
             )}
+            <button className="btn-primary" onClick={generarReporte} style={{ minHeight: 48, background: "var(--accent2)" }}>
+              📄 {t("gpsReporte")}
+            </button>
           </div>
         </div>
       )}

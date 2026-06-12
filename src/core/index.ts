@@ -46,5 +46,5 @@ export type {
 export { PRODUCTO_DEFAULT, CATEGORIAS } from "./inventario-types";
 export type { Producto, MovimientoInventario, CategoriaProducto } from "./inventario-types";
 
-export { PLAN_LIMITS, PLANES, canExport, limiteFincas, limiteEstanques, excedeLimiteFincas, excedeLimiteEstanques, rolValido } from "./plan";
+export { PLAN_LIMITS, PLANES, canExport, canUseGeo, limiteFincas, limiteEstanques, excedeLimiteFincas, excedeLimiteEstanques, rolValido } from "./plan";
 export type { Plan, Rol } from "./plan";

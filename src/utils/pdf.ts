@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 type RecordRow = {
   fecha: string;
@@ -388,4 +389,129 @@ export function exportVetPDF(data: VetPDFData, _t: (k: string) => string): void 
   }
 
   doc.save("reporte_veterinario.pdf");
+}
+
+export interface GeoPondPDFData {
+  nombre: string;
+  coordenadas: { lat: number; lng: number }[];
+  areaM2: number;
+  profundidad?: number;
+  volumenM3?: number;
+  fechaCaptura: string;
+  mapElement?: HTMLElement | null;
+}
+
+export async function exportGeoPDF(data: GeoPondPDFData, _t: (k: string) => string): Promise<void> {
+  const tr = (k: string) => _t(k) || k;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" }) as any;
+  const margin = 16;
+  const pageW = doc.internal.pageSize.getWidth();
+  const usableW = pageW - margin * 2;
+  let y = margin;
+
+  doc.setFillColor(10, 22, 40);
+  doc.rect(0, 0, pageW, 45, "F");
+  doc.setTextColor(0, 200, 150);
+  doc.setFontSize(20);
+  doc.text("AcuiCal", margin, 18);
+  doc.setTextColor(200, 200, 200);
+  doc.setFontSize(10);
+  doc.text(tr("geoTitle"), margin, 28);
+  doc.text(new Date(data.fechaCaptura).toLocaleString(), margin, 38);
+
+  y = 56;
+  doc.setTextColor(0, 200, 150);
+  doc.setFontSize(12);
+  doc.text(tr("gpsNombre"), margin, y);
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(11);
+  doc.text(data.nombre, margin + 80, y);
+
+  y += 10;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  doc.setTextColor(0, 200, 150);
+  doc.setFontSize(12);
+  doc.text(tr("geoCoordenadas"), margin, y);
+  y += 8;
+
+  doc.setFillColor(10, 22, 40);
+  doc.rect(margin, y, usableW, 7, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.text("#", margin + 2, y + 5);
+  doc.text(tr("gpsLatitud"), margin + 14, y + 5);
+  doc.text(tr("gpsLongitud"), margin + 80, y + 5);
+  y += 9;
+
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(8);
+  data.coordenadas.forEach((p, i) => {
+    if (y > 270) { doc.addPage(); y = margin; }
+    doc.text(String(i + 1), margin + 2, y + 4);
+    doc.text(p.lat.toFixed(6), margin + 14, y + 4);
+    doc.text(p.lng.toFixed(6), margin + 80, y + 4);
+    doc.setDrawColor(230, 230, 230);
+    doc.line(margin, y + 5, pageW - margin, y + 5);
+    y += 7;
+  });
+
+  y += 4;
+  const areaHa = data.areaM2 / 10000;
+  doc.setFillColor(240, 250, 245);
+  doc.roundedRect(margin, y, usableW, 50, 4, 4, "F");
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(10);
+  let x = margin + 8;
+  doc.text(tr("gpsArea2") + ": " + data.areaM2.toFixed(1) + " m²", x, y + 10);
+  doc.text("(" + areaHa.toFixed(4) + " ha)", x + 55, y + 10);
+  if (data.profundidad) doc.text(tr("profundidad") + ": " + data.profundidad.toFixed(2) + " m", x, y + 22);
+  if (data.volumenM3) {
+    doc.text(tr("gpsVolumen") + ": " + data.volumenM3.toFixed(1) + " m³", x, y + 34);
+    doc.text("(" + (data.volumenM3 * 1000).toLocaleString() + " L)", x + 55, y + 34);
+  }
+
+  y += 60;
+
+  if (data.mapElement) {
+    try {
+      const canvas = await html2canvas(data.mapElement, {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: "#ffffff",
+        width: data.mapElement.clientWidth,
+        height: data.mapElement.clientHeight,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const imgW = usableW;
+      const imgH = (canvas.height / canvas.width) * imgW;
+      if (imgH > 140) {
+        const scale = 140 / imgH;
+        doc.addImage(imgData, "PNG", margin, y, imgW * scale, 140);
+        y += 148;
+      } else {
+        doc.addImage(imgData, "PNG", margin, y, imgW, imgH);
+        y += imgH + 8;
+      }
+    } catch {
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(9);
+      doc.text(tr("geoMapaNoDisponible"), margin, y + 10);
+      y += 16;
+    }
+  }
+
+  if (y > 250) { doc.addPage(); y = margin; }
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y, pageW - margin, y);
+  y += 6;
+
+  doc.setTextColor(100, 100, 100);
+  doc.setFontSize(7);
+  const firma = `${tr("exportDate")}: ${new Date().toISOString()} | ${tr("geoCoordenadas")}: ${data.coordenadas.length} puntos | Hash: ${btoa(data.coordenadas.map(p => p.lat.toFixed(6) + p.lng.toFixed(6)).join("")).slice(0, 16)}`;
+  doc.text(firma, margin, y + 3);
+
+  doc.save("reporte_geo_acuical.pdf");
 }
