@@ -76,7 +76,7 @@
 - **Gating de features** por plan via `plan.ts` + `user.user_metadata`
 
 ### Infraestructura
-- Frontend en Netlify (SPA con _redirects)
+- Frontend en Cloudflare Pages (SPA con _redirects)
 - Backend en Railway (Node + Express)
 - Base de datos en Supabase PostgreSQL
 - SMTP Resend configurado (pendiente dominio verificado)
@@ -152,4 +152,4 @@
 3. Comprar dominio + verificar en Resend
 4. Activar confirmación de email en Supabase Auth
 5. ~~Migrar Zootécnico y Parámetros a API~~ ✅
-6. Desplegar cambios a Railway + Netlify
+6. Desplegar cambios a Railway + Cloudflare Pages

@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/core";
 import { toast } from "@/components/Toast";
 import { exportBitacoraPDF } from "@/utils/pdf";
 import { useLookups } from "@/store/lookups";
-import { enqueue, scheduleProcess, getQueueLength } from "@/services/sync";
+import { createApi } from "@/services/api";
+import { getQueueLength, scheduleProcess } from "@/services/sync";
+import { API_URL } from "@/utils/config";
 
 const RECORDS_KEY = "acuical_bitacora";
 
@@ -51,7 +53,7 @@ function dbToRecord(r: any): RecordData {
 
 export default function Bitacora() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const { species: allSpecies, estanques } = useLookups();
   const [records, setRecords] = useState<RecordData[]>(loadLocal);
   const [showForm, setShowForm] = useState(false);
@@ -66,36 +68,17 @@ export default function Bitacora() {
     return records.slice(start, start + pageSize);
   }, [records, page, pageSize]);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const isMutation = opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method);
-    let res: Response;
-    try {
-      res = await fetch(apiUrl + path, {
-        ...opts,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-      });
-    } catch {
-      if (isMutation) {
-        let body: unknown;
-        try { body = JSON.parse(opts!.body as string); } catch {}
-        await enqueue({ method: opts!.method as "POST" | "PUT" | "DELETE", path, body });
-      }
-      throw new Error("Sin conexión");
-    }
-    if (!res.ok) {
-      throw new Error(await res.text());
-    }
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    api("/bitacora").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/bitacora").then((data: any[]) => {
       const mapped = data.map(dbToRecord);
       setRecords(mapped);
       localStorage.setItem(RECORDS_KEY, JSON.stringify(mapped));
     }).catch(() => setRecords(loadLocal()));
-    if (apiUrl && token) getQueueLength().then(len => { if (len > 0) scheduleProcess(apiUrl, token); });
-  }, [api, apiUrl, token]);
+    if (token) getQueueLength().then(len => { if (len > 0) scheduleProcess(API_URL, token); });
+  }, [client, token]);
 
   useEffect(() => {
     localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
@@ -168,7 +151,7 @@ export default function Bitacora() {
     if (rec.especie) payload.especieId = rec.especie;
     setSaving(true);
     try {
-      const created = await api("/bitacora", { method: "POST", body: JSON.stringify(payload) });
+      const created = await client?.post<any>("/bitacora", payload);
       rec.id = created.id;
     } catch {} finally { setSaving(false); }
     setRecords([rec, ...records]);
@@ -176,7 +159,7 @@ export default function Bitacora() {
   };
 
   const remove = async (id: string) => {
-    try { await api(`/bitacora/${id}`, { method: "DELETE" }); } catch { }
+    try { await client?.del(`/bitacora/${id}`); } catch { }
     setRecords(records.filter((r) => r.id !== id));
   };
 

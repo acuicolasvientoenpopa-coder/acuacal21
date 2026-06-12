@@ -44,9 +44,8 @@ h1 { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 4px; 
   </div>
 
   <div class="links">
-    <a class="btn btn-secondary" href="https://acuacla2112.netlify.app" target="_blank">🌐 Abrir App</a>
-    <a class="btn btn-secondary" href="https://acuacla2112.netlify.app/admin" target="_blank">⚙️ Admin</a>
-    <a class="btn btn-secondary" href="https://app.netlify.com/sites/acuacla2112" target="_blank">📊 Netlify</a>
+    <a class="btn btn-secondary" href="https://acuacal21.pages.dev" target="_blank">🌐 Abrir App</a>
+    <a class="btn btn-secondary" href="https://acuacal21.pages.dev/admin" target="_blank">⚙️ Admin</a>
   </div>
 
   <div class="output" id="output">Panel listo. Hacé clic en un botón para empezar.</div>
@@ -92,7 +91,7 @@ async function deploy() {
     if (data.commit) log(data.commit, data.commit.includes('nothing to commit') ? 'info' : 'ok');
     if (data.push) log(data.push, 'ok');
     if (!data.ok) log('❌ Deploy falló en paso: ' + (data.step || 'unknown'), 'err');
-    else log('✅ Deploy completado. Netlify compilando... (~2 min)', 'ok');
+    else log('✅ Deploy completado. Cloudflare Pages compilando... (~2 min)', 'ok');
     loadStatus();
   } catch (e) {
     log('❌ Error de conexión: ' + e.message, 'err');

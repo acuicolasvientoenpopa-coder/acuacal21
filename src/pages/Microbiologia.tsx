@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { toast } from "@/components/Toast";
 import { useLookups } from "@/store/lookups";
-import { enqueue, scheduleProcess } from "@/services/sync";
+import { createApi } from "@/services/api";
 
 export const ANTIBIOTICOS = [
   "Oxitetraciclina", "Florfenicol", "Enrofloxacina", "Sulfadiazina + Trimetoprima",
@@ -54,7 +54,7 @@ function medicacionVacia(): Medicacion {
 }
 
 function exportCultivoPDF(c: Cultivo) {
-  const lines = ["AquaCalc - Reporte de Cultivo", "", "Fecha: " + c.fecha, "Estanque: " + c.estanqueNombre,
+  const lines = ["AcuiCal - Reporte de Cultivo", "", "Fecha: " + c.fecha, "Estanque: " + c.estanqueNombre,
     "Especie: " + c.especie, "Muestra: " + c.tipoMuestra + (c.organo ? " - " + c.organo : ""),
     "Resultado: " + c.resultado.toUpperCase(), "Agente: " + (c.agente || "—"), "Carga: " + (c.carga || ""), "",
     "--- Antibiograma ---"];
@@ -71,7 +71,7 @@ function exportCultivoPDF(c: Cultivo) {
 
 export default function Microbiologia() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const { species: allSpecies, estanques } = useLookups();
   const [tab, setTab] = useState<"cultivos" | "medicacion">("cultivos");
   const [cultivos, setCultivos] = useState<Cultivo[]>([]);
@@ -85,25 +85,11 @@ export default function Microbiologia() {
   const [filtroEst, setFiltroEst] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) {
-      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
-        let body: unknown;
-        try { body = JSON.parse(opts.body as string); } catch {}
-        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
-      }
-      throw new Error(await res.text());
-    }
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    if (token) scheduleProcess(apiUrl, token);
-    api("/microbiologia").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/microbiologia").then((data: any[]) => {
       const cults: Cultivo[] = []; const meds: Medicacion[] = [];
       for (const r of data) {
         try {
@@ -120,7 +106,7 @@ export default function Microbiologia() {
       try { setCultivos(JSON.parse(localStorage.getItem(CULTIVOS_KEY) || "[]")); } catch {}
       try { setMedicacion(JSON.parse(localStorage.getItem(MEDICACION_KEY) || "[]")); } catch {}
     });
-  }, [api]);
+  }, [client]);
 
   useEffect(() => {
     localStorage.setItem(CULTIVOS_KEY, JSON.stringify(cultivos));
@@ -150,10 +136,11 @@ export default function Microbiologia() {
     setSaving(true);
     try {
       if (editCultivo) {
-        await api(`/microbiologia/${payload.id}`, { method: "PUT", body: JSON.stringify({ resultado: cf.resultado, notas: JSON.stringify(payload), fecha: cf.fecha }) });
+        const result = await client?.mutate("PUT", `/microbiologia/${payload.id}`, { resultado: cf.resultado, notas: JSON.stringify(payload), fecha: cf.fecha });
+        if (result?.ok) payload.id = editCultivo.id;
       } else {
-        const created = await api("/microbiologia", { method: "POST", body: JSON.stringify({ resultado: cf.resultado, notas: JSON.stringify(payload), fecha: cf.fecha }) });
-        if (created?.id) payload.id = created.id;
+        const result = await client?.mutate("POST", "/microbiologia", { resultado: cf.resultado, notas: JSON.stringify(payload), fecha: cf.fecha });
+        if (result?.ok && result.data?.id) payload.id = result.data.id;
       }
     } catch {} finally { setSaving(false); }
     const updated = editCultivo ? cultivos.map((c) => c.id === editCultivo.id ? payload : c) : [...cultivos, payload];
@@ -163,7 +150,7 @@ export default function Microbiologia() {
   };
 
   const deleteCultivo = async (id: string) => {
-    try { await api(`/microbiologia/${id}`, { method: "DELETE" }); } catch {}
+    try { await client?.del(`/microbiologia/${id}`); } catch {}
     setCultivos(cultivos.filter((c) => c.id !== id));
     toast("Cultivo eliminado", "info");
   };
@@ -180,10 +167,11 @@ export default function Microbiologia() {
     setSaving(true);
     try {
       if (editMed) {
-        await api(`/microbiologia/${payload.id}`, { method: "PUT", body: JSON.stringify({ resultado: "medicacion", notas: JSON.stringify(payload), fecha: mf.fechaInicio }) });
+        const result = await client?.mutate("PUT", `/microbiologia/${payload.id}`, { resultado: "medicacion", notas: JSON.stringify(payload), fecha: mf.fechaInicio });
+        if (result?.ok) payload.id = editMed.id;
       } else {
-        const created = await api("/microbiologia", { method: "POST", body: JSON.stringify({ resultado: "medicacion", notas: JSON.stringify(payload), fecha: mf.fechaInicio }) });
-        if (created?.id) payload.id = created.id;
+        const result = await client?.mutate("POST", "/microbiologia", { resultado: "medicacion", notas: JSON.stringify(payload), fecha: mf.fechaInicio });
+        if (result?.ok && result.data?.id) payload.id = result.data.id;
       }
     } catch {} finally { setSaving(false); }
     const updated = editMed ? medicacion.map((m) => (m.id === editMed.id ? payload : m)) : [...medicacion, payload];
@@ -193,7 +181,7 @@ export default function Microbiologia() {
   };
 
   const deleteMed = async (id: string) => {
-    try { await api(`/microbiologia/${id}`, { method: "DELETE" }); } catch {}
+    try { await client?.del(`/microbiologia/${id}`); } catch {}
     setMedicacion(medicacion.filter((m) => m.id !== id));
     toast("Medicación eliminada", "info");
   };
@@ -228,55 +216,37 @@ export default function Microbiologia() {
         </div>
       </div>
 
-      <div className="mini-tabs" style={{ marginBottom: 16 }}>
-        <button className={"mini-tab" + (tab === "cultivos" ? " active" : "")} onClick={() => setTab("cultivos")}>🧫 {t("microCultivos")} ({cultivos.length})</button>
-        <button className={"mini-tab" + (tab === "medicacion" ? " active" : "")} onClick={() => setTab("medicacion")}>💊 {t("microMedicacion")} ({medicacion.length})</button>
+      <div className="tab-bar" style={{ marginBottom: 16 }}>
+        <button className={`tab${tab === "cultivos" ? " active" : ""}`} onClick={() => setTab("cultivos")}>🧫 {t("microCultivos")}</button>
+        <button className={`tab${tab === "medicacion" ? " active" : ""}`} onClick={() => setTab("medicacion")}>💊 {t("microMedicacion")}</button>
       </div>
-
-      {medicacion.length > 0 && (
-        <div className="card" style={{ marginBottom: 16, borderColor: "var(--accent3)" }}>
-          <div className="card-title">📋 {t("microUltimoTratamiento")}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            {medicacion.filter((m) => { const r = diasRetiro(m); return r !== null && r > 0; }).slice(0, 5).map((m) => (
-              <div key={m.id} className="vet-tag" style={{ background: "var(--surface2)", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)" }}>
-                <strong style={{ fontSize: 13 }}>{m.estanqueNombre}</strong>
-                <span style={{ fontSize: 11, color: "var(--text2)", display: "block" }}>{m.producto}</span>
-                <span style={{ fontSize: 11, color: "var(--accent3)" }}>{t("microRetiroActivo")}: {diasRetiro(m)} {t("microDiasRestantes")}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {tab === "cultivos" && (
         <div>
-          <button className="btn-primary btn-sm" style={{ marginBottom: 12 }} onClick={() => openCultivo()}>＋ {t("microNuevoCultivo")}</button>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <button className="btn-primary btn-sm" onClick={() => openCultivo()}>＋ {t("microNuevoCultivo")}</button>
+          </div>
           {filtradosC.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">🧫</div><p>{t("microSinCultivos")}</p></div>
           ) : (
-            <div className="card">
+            <div className="species-list">
               {filtradosC.map((c) => (
-                <div key={c.id} style={{ borderBottom: "1px solid var(--border)", padding: "12px 0" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <strong>{c.estanqueNombre}</strong>
-                      <span style={{ fontSize: 12, color: "var(--text2)", marginLeft: 8 }}>{c.fecha}</span>
-                      <span className={"vet-tag " + (c.resultado === "positiva" ? "riesgo-rojo" : "riesgo-verde")} style={{ marginLeft: 8, fontSize: 11 }}>{c.resultado === "positiva" ? t("microPositiva") : t("microNegativa")}</span>
-                    </div>
+                <div key={c.id} className="card">
+                  <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>🧫 {c.fecha} — {c.estanqueNombre}</span>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="btn-sm" onClick={() => openCultivo(c)}>✏️</button>
-                      <button className="btn-sm" onClick={() => deleteCultivo(c.id)}>🗑️</button>
-                      <button className="btn-sm" onClick={() => { exportCultivoPDF(c); toast("PDF descargado", "info"); }}>📄</button>
+                      <button className="btn-sm" style={{ color: "var(--danger)" }} onClick={() => deleteCultivo(c.id)}>🗑️</button>
                     </div>
                   </div>
-                  {c.agente && <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 4 }}>{c.agente} — {c.carga}</div>}
-                  {c.antibiograma.length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-                      {c.antibiograma.filter((a) => a.sensibilidad === "R").slice(0, 3).map((a) => (
-                        <span key={a.antibiotico} className="vet-tag" style={{ fontSize: 10, background: "rgba(220,60,50,0.15)", color: "var(--danger)" }}>{a.antibiotico}: R</span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="log-field"><div className="log-field-label">{t("especie")}</div><div className="log-field-value">{c.especie}</div></div>
+                  <div className="log-field"><div className="log-field-label">Muestra</div><div className="log-field-value">{c.tipoMuestra}{c.organo ? ` (${c.organo})` : ""}</div></div>
+                  <div className="log-field"><div className="log-field-label">{t("microResultado")}</div><div className="log-field-value"><span className={`badge ${c.resultado === "positiva" ? "badge-red" : "badge-green"}`}>{c.resultado}</span></div></div>
+                  {c.resultado === "positiva" && <div className="log-field"><div className="log-field-label">Agente</div><div className="log-field-value">{c.agente || "—"} {c.carga ? `(${c.carga})` : ""}</div></div>}
+                  {c.antibiograma.length > 0 && <div className="log-field"><div className="log-field-label">Antibiograma</div><div className="log-field-value" style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{c.antibiograma.filter((a) => a.sensibilidad !== "S").map((a) => <span key={a.antibiotico} className={`badge ${a.sensibilidad === "R" ? "badge-red" : "badge-yellow"}`}>{a.antibiotico} ({a.sensibilidad})</span>)}</div></div>}
+                  <div className="card-actions" style={{ marginTop: 8 }}>
+                    <button className="btn-sm" onClick={() => exportCultivoPDF(c)}>📄 PDF</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -286,31 +256,30 @@ export default function Microbiologia() {
 
       {tab === "medicacion" && (
         <div>
-          <button className="btn-primary btn-sm" style={{ marginBottom: 12 }} onClick={() => openMed()}>＋ {t("microNuevaMedicacion")}</button>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <button className="btn-primary btn-sm" onClick={() => openMed()}>＋ {t("microNuevaMedicacion")}</button>
+          </div>
           {filtradosM.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">💊</div><p>{t("microSinMedicacion")}</p></div>
           ) : (
-            <div className="card">
-              {filtradosM.map((m) => {
-                const rest = diasRetiro(m);
-                return (
-                  <div key={m.id} style={{ borderBottom: "1px solid var(--border)", padding: "12px 0" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <strong>{m.estanqueNombre}</strong>
-                        <span style={{ fontSize: 12, color: "var(--text2)", marginLeft: 8 }}>{m.producto}</span>
-                        <span className="vet-tag" style={{ fontSize: 11, background: estadoColor(m.estado) + "22", color: estadoColor(m.estado), border: "1px solid " + estadoColor(m.estado), marginLeft: 8 }}>{estadoLabel(m.estado)}</span>
-                        {rest !== null && rest > 0 && <span className="vet-tag" style={{ fontSize: 11, background: "rgba(220,60,50,0.12)", color: "var(--danger)", marginLeft: 6 }}>⏳ {rest} {t("microDiasRestantes")}</span>}
-                      </div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button className="btn-sm" onClick={() => openMed(m)}>✏️</button>
-                        <button className="btn-sm" onClick={() => deleteMed(m.id)}>🗑️</button>
-                      </div>
+            <div className="species-list">
+              {filtradosM.map((m) => (
+                <div key={m.id} className="card">
+                  <div className="card-title" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>💊 {m.producto} — {m.estanqueNombre}</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn-sm" onClick={() => openMed(m)}>✏️</button>
+                      <button className="btn-sm" style={{ color: "var(--danger)" }} onClick={() => deleteMed(m.id)}>🗑️</button>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 4 }}>{m.fechaInicio} → {m.fechaFin || "—"} | {m.via} | {m.dosis} | {t("microResponsable")}: {m.responsable || "—"}</div>
                   </div>
-                );
-              })}
+                  <div className="log-field"><div className="log-field-label">Período</div><div className="log-field-value">{m.fechaInicio} → {m.fechaFin || "—"}</div></div>
+                  <div className="log-field"><div className="log-field-label">{t("microDosis")}</div><div className="log-field-value">{m.dosis} — {m.via}</div></div>
+                  <div className="log-field"><div className="log-field-label">{t("microEstado")}</div><div className="log-field-value"><span className="badge" style={{ background: estadoColor(m.estado), color: "#fff" }}>{estadoLabel(m.estado)}</span></div></div>
+                  {m.retiroDias > 0 && diasRetiro(m) !== null && (
+                    <div className="log-field"><div className="log-field-label">{t("microRetiro")}</div><div className="log-field-value">{diasRetiro(m)} días restantes</div></div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -318,62 +287,62 @@ export default function Microbiologia() {
 
       {showCultivo && (
         <div className="modal-overlay" onClick={() => setShowCultivo(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h3>{editCultivo ? t("microEditarCultivo") : t("microNuevoCultivo")}</h3><button className="modal-close" onClick={() => setShowCultivo(false)}>✕</button></div>
+          <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">🧫 {editCultivo ? "Editar" : "Nuevo"} Cultivo</div>
             <div className="form-grid">
-              <label>{t("microFecha")}<input type="date" value={cf.fecha} onChange={(e) => setCf({ ...cf, fecha: e.target.value })} /></label>
-              <label>{t("microEstanque")}<select value={cf.estanqueNombre} onChange={(e) => setCf({ ...cf, estanqueNombre: e.target.value })}><option value="">{t("seleccionar")}</option>{estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</select></label>
-              <label>{t("microEspecie")}<select value={cf.especie} onChange={(e) => setCf({ ...cf, especie: e.target.value })}><option value="">{t("seleccionar")}</option>{allSpecies.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
-              <label>{t("microTipoMuestra")}<select value={cf.tipoMuestra} onChange={(e) => setCf({ ...cf, tipoMuestra: e.target.value })}><option value="">—</option>{TIPOS_MUESTRA.map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
-              <label>{t("microOrgano")}<input value={cf.organo} onChange={(e) => setCf({ ...cf, organo: e.target.value })} placeholder="Ej: Branquias" /></label>
-              <label>{t("microResultado")}<select value={cf.resultado} onChange={(e) => setCf({ ...cf, resultado: e.target.value as "positiva" | "negativa" })}><option value="positiva">{t("microPositiva")}</option><option value="negativa">{t("microNegativa")}</option></select></label>
-              <label>{t("microAgente")}<input value={cf.agente} onChange={(e) => setCf({ ...cf, agente: e.target.value })} placeholder="Ej: Aeromonas hydrophila" /></label>
-              <label>{t("microCarga")}<input value={cf.carga} onChange={(e) => setCf({ ...cf, carga: e.target.value })} placeholder="Ej: +++ / UFC" /></label>
+              <label>Fecha<input type="date" value={cf.fecha} onChange={(e) => setCf({ ...cf, fecha: e.target.value })} /></label>
+              <label>Estanque<select value={cf.estanqueNombre} onChange={(e) => setCf({ ...cf, estanqueNombre: e.target.value })}><option value="">Seleccionar</option>{estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</select></label>
+              <label>Especie<select value={cf.especie} onChange={(e) => setCf({ ...cf, especie: e.target.value })}><option value="">Seleccionar</option>{allSpecies.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
+              <label>Tipo muestra<select value={cf.tipoMuestra} onChange={(e) => setCf({ ...cf, tipoMuestra: e.target.value })}><option value="">Seleccionar</option>{TIPOS_MUESTRA.map((t) => <option key={t} value={t}>{t}</option>)}</select></label>
+              <label>Órgano<input value={cf.organo} onChange={(e) => setCf({ ...cf, organo: e.target.value })} placeholder="Ej: branquias" /></label>
+              <label>Resultado<select value={cf.resultado} onChange={(e) => setCf({ ...cf, resultado: e.target.value as any })}><option value="positiva">Positiva</option><option value="negativa">Negativa</option></select></label>
+              {cf.resultado === "positiva" && <label>Agente<input value={cf.agente} onChange={(e) => setCf({ ...cf, agente: e.target.value })} placeholder="Ej: Aeromonas hydrophila" /></label>}
+              {cf.resultado === "positiva" && <label>Carga<input value={cf.carga} onChange={(e) => setCf({ ...cf, carga: e.target.value })} placeholder="Ej: 10^5 UFC/mL" /></label>}
             </div>
-            <div style={{ marginTop: 16 }}>
-              <div className="card-title">{t("microAntibiograma")}</div>
-              <div style={{ overflowX: "auto" }}>
-                <table className="zoo-table" style={{ fontSize: 12 }}>
-                  <thead><tr><th>{t("microAntibiotico")}</th><th>{t("microSensible")}</th><th>{t("microIntermedio")}</th><th>{t("microResistente")}</th></tr></thead>
-                  <tbody>
-                    {cf.antibiograma.map((a, i) => (
-                      <tr key={a.antibiotico}>
-                        <td>{a.antibiotico}</td>
-                        {(["S", "I", "R"] as const).map((val) => (
-                          <td key={val} style={{ textAlign: "center" }}>
-                            <input type="radio" name={"ab_" + i} checked={cf.antibiograma[i].sensibilidad === val}
-                              onChange={() => { const ab = [...cf.antibiograma]; ab[i] = { ...ab[i], sensibilidad: val }; setCf({ ...cf, antibiograma: ab }); }} />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div className="card-subtitle" style={{ margin: "16px 0 8px" }}>Antibiograma</div>
+            <div className="form-grid">
+              {cf.antibiograma.map((a, i) => (
+                <label key={a.antibiotico} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 12, flex: 1 }}>{a.antibiotico}</span>
+                  <select value={a.sensibilidad} onChange={(e) => {
+                    const next = [...cf.antibiograma];
+                    next[i] = { ...next[i], sensibilidad: e.target.value as any };
+                    setCf({ ...cf, antibiograma: next });
+                  }} style={{ width: 60, fontSize: 11 }}>
+                    <option value="S">S</option><option value="I">I</option><option value="R">R</option>
+                  </select>
+                </label>
+              ))}
             </div>
-            <label style={{ marginTop: 12, display: "block" }}>{t("microObservaciones")}<textarea value={cf.observaciones} onChange={(e) => setCf({ ...cf, observaciones: e.target.value })} rows={2} /></label>
-            <div className="modal-actions"><button className="btn-primary" onClick={saveCultivo} disabled={saving}>{saving ? t("saving") : t("save")}</button><button className="btn-secondary" onClick={() => setShowCultivo(false)}>{t("cancel")}</button></div>
+            <label style={{ marginTop: 12 }}>Observaciones<textarea value={cf.observaciones} onChange={(e) => setCf({ ...cf, observaciones: e.target.value })} rows={3} /></label>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowCultivo(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={saveCultivo} disabled={saving}>{saving ? "Guardando..." : "💾 Guardar"}</button>
+            </div>
           </div>
         </div>
       )}
 
       {showMed && (
         <div className="modal-overlay" onClick={() => setShowMed(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h3>{editMed ? "Editar" : t("microNuevaMedicacion")}</h3><button className="modal-close" onClick={() => setShowMed(false)}>✕</button></div>
+          <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">💊 {editMed ? "Editar" : "Nueva"} Medicación</div>
             <div className="form-grid">
-              <label>{t("microEstanque")}<select value={mf.estanqueNombre} onChange={(e) => setMf({ ...mf, estanqueNombre: e.target.value })}><option value="">{t("seleccionar")}</option>{estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</select></label>
-              <label>{t("microProducto")}<input value={mf.producto} onChange={(e) => setMf({ ...mf, producto: e.target.value })} placeholder="Ej: Oxitetraciclina" /></label>
-              <label>{t("microFechaInicio")}<input type="date" value={mf.fechaInicio} onChange={(e) => setMf({ ...mf, fechaInicio: e.target.value })} /></label>
-              <label>{t("microFechaFin")}<input type="date" value={mf.fechaFin} onChange={(e) => setMf({ ...mf, fechaFin: e.target.value })} /></label>
-              <label>{t("microDosis")}<input value={mf.dosis} onChange={(e) => setMf({ ...mf, dosis: e.target.value })} placeholder="Ej: 50 mg/kg" /></label>
-              <label>{t("microVia")}<select value={mf.via} onChange={(e) => setMf({ ...mf, via: e.target.value })}><option value="">—</option>{VIAS_ADMIN.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
-              <label>{t("microDuracion")}<input type="number" value={mf.duracion || ""} onChange={(e) => setMf({ ...mf, duracion: Number(e.target.value) })} placeholder="0" /></label>
-              <label>{t("microRetiro")}<input type="number" value={mf.retiroDias || ""} onChange={(e) => setMf({ ...mf, retiroDias: Number(e.target.value) })} placeholder="0" /></label>
-              <label>{t("microResponsable")}<input value={mf.responsable} onChange={(e) => setMf({ ...mf, responsable: e.target.value })} placeholder="Nombre" /></label>
-              <label>{t("microEstado")}<select value={mf.estado} onChange={(e) => setMf({ ...mf, estado: e.target.value as "en_curso" | "completado" | "suspendido" })}><option value="en_curso">{t("microEnCurso")}</option><option value="completado">{t("microCompletado")}</option><option value="suspendido">{t("microSuspendido")}</option></select></label>
+              <label>Estanque<select value={mf.estanqueNombre} onChange={(e) => setMf({ ...mf, estanqueNombre: e.target.value })}><option value="">Seleccionar</option>{estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}</select></label>
+              <label>Producto<input value={mf.producto} onChange={(e) => setMf({ ...mf, producto: e.target.value })} placeholder="Ej: Oxitetraciclina" /></label>
+              <label>Fecha inicio<input type="date" value={mf.fechaInicio} onChange={(e) => setMf({ ...mf, fechaInicio: e.target.value })} /></label>
+              <label>Fecha fin<input type="date" value={mf.fechaFin} onChange={(e) => setMf({ ...mf, fechaFin: e.target.value })} /></label>
+              <label>Dosis<input value={mf.dosis} onChange={(e) => setMf({ ...mf, dosis: e.target.value })} placeholder="Ej: 5 g/100 kg" /></label>
+              <label>Vía<select value={mf.via} onChange={(e) => setMf({ ...mf, via: e.target.value })}><option value="">Seleccionar</option>{VIAS_ADMIN.map((v) => <option key={v} value={v}>{v}</option>)}</select></label>
+              <label>Duración (días)<input type="number" value={mf.duracion || ""} onChange={(e) => setMf({ ...mf, duracion: Number(e.target.value) })} /></label>
+              <label>Retiro (días)<input type="number" value={mf.retiroDias || ""} onChange={(e) => setMf({ ...mf, retiroDias: Number(e.target.value) })} /></label>
+              <label>Responsable<input value={mf.responsable} onChange={(e) => setMf({ ...mf, responsable: e.target.value })} /></label>
+              <label>Estado<select value={mf.estado} onChange={(e) => setMf({ ...mf, estado: e.target.value as any })}><option value="en_curso">En curso</option><option value="completado">Completado</option><option value="suspendido">Suspendido</option></select></label>
             </div>
-            <div className="modal-actions"><button className="btn-primary" onClick={saveMed} disabled={saving}>{saving ? t("saving") : t("save")}</button><button className="btn-secondary" onClick={() => setShowMed(false)}>{t("cancel")}</button></div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowMed(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={saveMed} disabled={saving}>{saving ? "Guardando..." : "💾 Guardar"}</button>
+            </div>
           </div>
         </div>
       )}

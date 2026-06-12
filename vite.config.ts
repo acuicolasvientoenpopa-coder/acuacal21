@@ -11,8 +11,8 @@ export default defineConfig({
     injectRegister: 'auto',
     includeAssets: ['favicon.svg', 'icons/*.svg'],
     manifest: {
-      name: 'AquaCalc',
-      short_name: 'AquaCalc',
+      name: 'AcuiCal',
+      short_name: 'AcuiCal',
       description: 'Gestión acuícola para pequeños y medianos productores',
       theme_color: '#0a1628',
       background_color: '#0a1628',

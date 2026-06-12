@@ -13,7 +13,7 @@ SaaS de gestión acuícola para productores pequeños y medianos de LATAM. Offli
 
 ## Estado Actual
 
-- **Frontend**: React 19 + TypeScript 6 + Vite 8 — deployado en Netlify
+- **Frontend**: React 19 + TypeScript 6 + Vite 8 — deployado en Cloudflare Pages
 - **Backend**: Express + TypeScript + Prisma — deployado en Railway
 - **Base de datos**: PostgreSQL en Supabase
 - **Autenticación**: Supabase Auth (JWT, persistSession)
@@ -23,7 +23,7 @@ SaaS de gestión acuícola para productores pequeños y medianos de LATAM. Offli
 - **Build**: `tsc -b && vite build` — compila y pasa
 
 ### URLs
-- Frontend: https://acuacla2112.netlify.app
+- Frontend: https://acuacal21.pages.dev
 - Backend API: https://acuacal21-production.up.railway.app/api
 - Backend health: https://acuacal21-production.up.railway.app/api/health → `{"status":"ok","version":"1.0.0"}`
 - Supabase project: `smvjffbeshxcfltjoolm`
@@ -111,7 +111,7 @@ acucal2.1/
 │   └── .env
 │
 ├── public/
-│   └── _redirects                # SPA fallback para Netlify
+│   └── _redirects                # SPA fallback para Cloudflare Pages
 ├── dist/                         # build de producción
 ├── README.md
 ├── CONTEXT.md                    # este archivo
@@ -185,7 +185,7 @@ acucal2.1/
 - Enums: Idioma (es/en/pt), Rol (admin/productor/tecnico), TipoMovimiento (entrada/salida), CategoriaProducto (alimento/medicamento/equipo/insumo/otro)
 
 ### Infraestructura
-- Frontend: Netlify (SPA con `_redirects` para React Router)
+- Frontend: Cloudflare Pages (SPA con `_redirects` para React Router)
 - Backend: Railway (express, Node)
 - Base de datos: Supabase PostgreSQL
 - Auth: Supabase Auth (JWT, persistSession, autoRefreshToken)

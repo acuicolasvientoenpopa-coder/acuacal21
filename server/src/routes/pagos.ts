@@ -8,7 +8,7 @@ export const pagosRouter = Router();
 const ONVO_API = "https://api.onvopay.com/v1";
 const ONVO_SECRET_KEY = process.env.ONVO_SECRET_KEY ?? "";
 const ONVO_WEBHOOK_SECRET = process.env.ONVO_WEBHOOK_SECRET ?? "";
-const FRONTEND_URL = process.env.CORS_ORIGIN ?? "https://acuacla2112.netlify.app";
+const FRONTEND_URL = process.env.CORS_ORIGIN ?? "https://acuacal21.pages.dev";
 
 const PRICE_IDS: Record<string, string> = {
   pro_monthly: process.env.ONVO_PRICE_PRO_MONTHLY ?? "",

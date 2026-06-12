@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import {
@@ -7,7 +7,7 @@ import {
 import { calcularRiesgo } from "./riskCalculator";
 import type { RiskResult } from "./riskCalculator";
 import { exportVetPDF } from "@/utils/pdf";
-import { enqueue, scheduleProcess } from "@/services/sync";
+import { createApi } from "@/services/api";
 
 type FormData = { estanque: string; alimentacion: string[]; comportamiento: string[]; sintomas: string[]; agua: string[]; imagenes: string[]; };
 type ArrKeys = "alimentacion" | "comportamiento" | "sintomas" | "agua" | "imagenes";
@@ -53,7 +53,7 @@ function getPondos(): { id: string; label: string }[] {
 
 export default function VeterinaryReportWizard() {
   const { t, lang } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [result, setResult] = useState<{ diagnosticos: { diagnosis: string; weight: number }[]; riesgo: RiskResult } | null>(null);
@@ -64,25 +64,11 @@ export default function VeterinaryReportWizard() {
   const [reports, setReports] = useState<SavedReport[]>(loadLocal);
   const [viewingReport, setViewingReport] = useState<SavedReport | null>(null);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) {
-      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
-        let body: unknown;
-        try { body = JSON.parse(opts.body as string); } catch {}
-        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
-      }
-      throw new Error(await res.text());
-    }
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    if (token) scheduleProcess(apiUrl, token);
-    api("/veterinaria").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/veterinaria").then((data: any[]) => {
       const mapped = data.map((r: any) => {
         let base: any = { id: r.id, fecha: r.fecha?.slice(0, 10) || "", riesgo: r.riesgo || "verde" };
         try { const p = JSON.parse(r.notas || "{}"); return { ...base, ...p }; } catch { return base; }
@@ -92,7 +78,7 @@ export default function VeterinaryReportWizard() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
       }
     }).catch(() => setReports(loadLocal()));
-  }, [api]);
+  }, [client]);
 
   const createPond = () => {
     const name = newPondName.trim();
@@ -157,19 +143,16 @@ export default function VeterinaryReportWizard() {
       setReports(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       try {
-        await api("/veterinaria", {
-          method: "POST",
-          body: JSON.stringify({
-            diagnostico: report.resumen.slice(0, 200),
-            riesgo: report.riesgo,
-            notas: JSON.stringify(report),
-            fecha: new Date().toISOString(),
-          }),
+        await client?.post("/veterinaria", {
+          diagnostico: report.resumen.slice(0, 200),
+          riesgo: report.riesgo,
+          notas: JSON.stringify(report),
+          fecha: new Date().toISOString(),
         });
       } catch {}
     }
     setForm(EMPTY_FORM); setStep(0); setResult(null);
-  }, [result, form, pondos, t, lang, reports, api]);
+  }, [result, form, pondos, t, lang, reports, client]);
 
   const isSummaryStep = step === 5;
   const pct = ((step + 1) / STEPS.length) * 100;
@@ -203,7 +186,7 @@ export default function VeterinaryReportWizard() {
   const removeImage = (index: number) => { setForm((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, i) => i !== index) })); };
 
   const deleteReport = async (id: string) => {
-    try { await api(`/veterinaria/${id}`, { method: "DELETE" }); } catch {}
+    try { await client?.del(`/veterinaria/${id}`); } catch {}
     const updated = reports.filter((r) => r.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setReports(updated);

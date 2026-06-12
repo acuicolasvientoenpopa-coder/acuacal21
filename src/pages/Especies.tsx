@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ESPECIES_DEFAULT } from "@/core";
 import type { Species, SpeciesParams } from "@/core";
 import { useTranslation } from "@/store/language";
 import { useAuth } from "@/store/auth";
-import { enqueue, scheduleProcess } from "@/services/sync";
+import { createApi } from "@/services/api";
 
 const CUSTOM_KEY = "acuical_custom_species";
 
@@ -34,38 +34,23 @@ function loadLocal(): Species[] {
 
 export default function Especies() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const [custom, setCustom] = useState<Species[]>([]);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Species | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    if (!apiUrl) throw new Error("API no disponible");
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) {
-      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
-        let body: unknown;
-        try { body = JSON.parse(opts.body as string); } catch {}
-        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
-      }
-      throw new Error(await res.text());
-    }
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    if (token && apiUrl) scheduleProcess(apiUrl, token);
-    api("/especies").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/especies").then((data: any[]) => {
       const mapped = data.filter((e: any) => e.esPersonal !== false).map(dbToSpecies);
       setCustom(mapped);
       localStorage.setItem(CUSTOM_KEY, JSON.stringify(mapped));
     }).catch(() => setCustom(loadLocal()));
-  }, [api]);
+  }, [client]);
 
   useEffect(() => {
     localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom));
@@ -92,12 +77,21 @@ export default function Especies() {
     setSaving(true);
     try {
       if (edit) {
-        const updated = await api(`/especies/${edit.id}`, { method: "PUT", body: JSON.stringify(payload) });
-        setCustom(custom.map((c) => c.id === edit.id ? dbToSpecies(updated) : c));
+        const result = await client?.mutate("PUT", `/especies/${edit.id}`, payload);
+        if (result?.ok) {
+          setCustom(custom.map((c) => c.id === edit.id ? { ...edit, nombre: nombre.trim(), sci: sci.trim(), emoji, params } : c));
+        } else {
+          setCustom(custom.map((c) => c.id === edit.id ? { ...edit, nombre: nombre.trim(), sci: sci.trim(), emoji, params } : c));
+        }
       } else {
-        const created = await api("/especies", { method: "POST", body: JSON.stringify(payload) });
-        const s = dbToSpecies(created);
-        if (s.id) setCustom([...custom, s]);
+        const result = await client?.mutate("POST", "/especies", payload);
+        if (result?.ok && result.data?.id) {
+          const s: Species = { id: result.data.id, nombre: nombre.trim(), sci: sci.trim(), emoji, custom: true, params };
+          setCustom([...custom, s]);
+        } else {
+          const s: Species = { id: `custom_${Date.now()}`, nombre: nombre.trim(), sci: sci.trim(), emoji, custom: true, params };
+          setCustom([...custom, s]);
+        }
       }
     } catch {
       if (edit) {
@@ -112,7 +106,7 @@ export default function Especies() {
   };
 
   const remove = async (id: string) => {
-    try { await api(`/especies/${id}`, { method: "DELETE" }); } catch { }
+    try { await client?.del(`/especies/${id}`); } catch { }
     setCustom(custom.filter((c) => c.id !== id));
   };
 

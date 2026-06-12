@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useNavigate } from "react-router-dom";
 import { excedeLimiteFincas, excedeLimiteEstanques } from "@/core";
-import { enqueue, scheduleProcess } from "@/services/sync";
+import { createApi } from "@/services/api";
 
 const LS_KEY = "acuical_fincas";
 
@@ -25,7 +25,7 @@ function saveLocal(fs: Finca[]) {
 
 export default function Fincas() {
   const { t } = useTranslation();
-  const { token, apiUrl, user, plan } = useAuth();
+  const { token, user, plan } = useAuth();
   const navigate = useNavigate();
   const [list, setList] = useState<Finca[]>(loadLocal);
   const [show, setShow] = useState(false);
@@ -40,26 +40,11 @@ export default function Fincas() {
   const [invite, setInvite] = useState<{ fincaId: string; email: string; rol: string } | null>(null);
   const [inviting, setInviting] = useState(false);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    if (!apiUrl) throw new Error("API no disponible");
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) {
-      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
-        let body: unknown;
-        try { body = JSON.parse(opts.body as string); } catch {}
-        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
-      }
-      throw new Error(await res.text());
-    }
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    if (token && apiUrl) scheduleProcess(apiUrl, token);
-    api("/fincas").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/fincas").then((data) => {
       const mapped = data.map((f: any) => ({
         id: f.id,
         nombre: f.nombre,
@@ -71,11 +56,12 @@ export default function Fincas() {
       saveLocal(mapped);
       mapped.forEach((f) => fetchUsers(f.id));
     }).catch(() => setList(loadLocal()));
-  }, [api]);
+  }, [client]);
 
   const fetchUsers = async (fincaId: string) => {
+    if (!client) return;
     try {
-      const data = await api(`/fincas/${fincaId}/users`);
+      const data = await client.get<any[]>(`/fincas/${fincaId}/users`);
       setUsers((prev) => ({ ...prev, [fincaId]: data }));
     } catch {}
   };
@@ -92,29 +78,35 @@ export default function Fincas() {
     setSaving(true);
     try {
       if (edit) {
-        const updated = await api(`/fincas/${edit.id}`, { method: "PUT", body: JSON.stringify(payload) });
-        setList(list.map((x) => x.id === edit.id ? { ...edit, nombre: updated.nombre, ubicacion: updated.ubicacion ?? "" } : x));
+        const result = await client?.mutate("PUT", `/fincas/${edit.id}`, payload);
+        if (result?.ok) {
+          setList(list.map((x) => x.id === edit.id ? { ...edit, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim() } : x));
+        } else {
+          setList(list.map((x) => (x.id === edit.id ? { ...edit, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim() } : x)));
+        }
       } else {
-        const created = await api("/fincas", { method: "POST", body: JSON.stringify(payload) });
+        const created = await client?.post<any>("/fincas", payload);
         const newF: Finca = {
           id: created.id, nombre: created.nombre, ubicacion: created.ubicacion ?? "",
           descripcion: "", estanques: [created.nombre],
         };
-        await api(`/fincas/${created.id}/estanques`, { method: "POST", body: JSON.stringify({ nombre: created.nombre }) });
+        await client?.post(`/fincas/${created.id}/estanques`, { nombre: created.nombre });
         setList([...list, newF]);
         fetchUsers(newF.id);
       }
     } catch {
-      const f: Finca = edit
-        ? { ...edit, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim() }
-        : { id: `f_${Date.now()}`, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim(), estanques: [form.nombre.trim()] };
-      setList(edit ? list.map((x) => (x.id === edit.id ? f : x)) : [...list, f]);
+      if (edit) {
+        setList(list.map((x) => (x.id === edit.id ? { ...edit, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim() } : x)));
+      } else {
+        const f: Finca = { id: `f_${Date.now()}`, nombre: form.nombre.trim(), ubicacion: form.ubicacion.trim(), descripcion: form.descripcion.trim(), estanques: [form.nombre.trim()] };
+        setList([...list, f]);
+      }
     } finally { setSaving(false); }
     setShow(false);
   };
 
   const remove = async (id: string) => {
-    try { await api(`/fincas/${id}`, { method: "DELETE" }); } catch { /* ignore */ }
+    try { await client?.del(`/fincas/${id}`); } catch { /* ignore */ }
     setList(list.filter((x) => x.id !== id));
   };
 
@@ -123,7 +115,7 @@ export default function Fincas() {
     if (!v) return;
     const finca = list.find((f) => f.id === fincaId);
     if (finca && excedeLimiteEstanques(plan, finca.estanques.length)) { setError(t("limiteEstanques")); setNewEst(null); return; }
-    try { await api(`/fincas/${fincaId}/estanques`, { method: "POST", body: JSON.stringify({ nombre: v }) }); } catch { /* ignore */ }
+    try { await client?.post(`/fincas/${fincaId}/estanques`, { nombre: v }); } catch { /* ignore */ }
     setList(list.map((f) => f.id === fincaId ? { ...f, estanques: [...f.estanques, v] } : f));
     setNewEst(null);
   };
@@ -143,7 +135,7 @@ export default function Fincas() {
     if (!invite || !invite.email.trim()) return;
     setInviting(true);
     try {
-      await api(`/fincas/${fincaId}/users`, { method: "POST", body: JSON.stringify({ email: invite.email.trim(), rol: invite.rol }) });
+      await client?.post(`/fincas/${fincaId}/users`, { email: invite.email.trim(), rol: invite.rol });
       setInvite(null);
       fetchUsers(fincaId);
     } catch (err: any) {
@@ -153,7 +145,7 @@ export default function Fincas() {
 
   const removeUser = async (fincaId: string, userId: string) => {
     try {
-      await api(`/fincas/${fincaId}/users/${userId}`, { method: "DELETE" });
+      await client?.del(`/fincas/${fincaId}/users/${userId}`);
       fetchUsers(fincaId);
     } catch (err: any) {
       setError(err.message || "Error al eliminar usuario");

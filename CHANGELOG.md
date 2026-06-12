@@ -53,7 +53,7 @@ Sincronizar toda la documentación del proyecto con el estado real del código d
 ### Cambios realizados
 1. Creado CONTEXT.md con estructura completa: qué es, estado, arquitectura, funcionalidades, API endpoints, DB schema, flujo auth, pendientes, convenciones, comandos
 2. Documentación alineada con el código real: 10 tablas DB, 8 routers, 26 endpoints, 15 páginas frontend, 8 con API, 4 solo localStorage
-3. Documentadas decisiones recientes: Supabase, Express+Prisma, Netlify+Railway, Lemon Squeezy vs Stripe
+3. Documentadas decisiones recientes: Supabase, Express+Prisma, Railway, Lemon Squeezy vs Stripe
 
 ---
 

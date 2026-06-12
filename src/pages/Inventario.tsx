@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useCurrency } from "@/store/currency";
@@ -6,7 +6,7 @@ import { useInventario } from "@/store/inventario";
 import { toast } from "@/components/Toast";
 import { PRODUCTO_DEFAULT, CATEGORIAS } from "@/core/inventario-types";
 import type { Producto, MovimientoInventario } from "@/core/inventario-types";
-import { enqueue, scheduleProcess } from "@/services/sync";
+import { createApi } from "@/services/api";
 
 function apiToProducto(r: any): Producto {
   return {
@@ -23,36 +23,22 @@ function productoToApi(p: Producto) {
 
 export default function Inventario() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const { fmt } = useCurrency();
   const { productos, movimientos, alertas, valorTotalInventario, saveProducto, deleteProducto, saveMovimiento, reload } = useInventario();
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) {
-      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
-        let body: unknown;
-        try { body = JSON.parse(opts.body as string); } catch {}
-        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
-      }
-      throw new Error(await res.text());
-    }
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    if (token) scheduleProcess(apiUrl, token);
+    if (!client) return;
     Promise.all([
-      api("/inventario/productos").catch(() => null),
-      api("/inventario/movimientos").catch(() => null),
+      client.get<any[]>("/inventario/productos").catch(() => null),
+      client.get<any[]>("/inventario/movimientos").catch(() => null),
     ]).then(([prods, movs]) => {
-      if (prods?.length > 0) {
+      if (prods && prods.length > 0) {
         prods.forEach((p: any) => saveProducto(apiToProducto(p)));
       }
-      if (movs?.length > 0) {
+      if (movs && movs.length > 0) {
         movs.forEach((m: any) => {
           saveMovimiento({
             id: m.id, productoId: m.productoId || "", tipo: m.tipo || "entrada",
@@ -64,7 +50,7 @@ export default function Inventario() {
       }
       reload();
     });
-  }, [api, saveProducto, saveMovimiento, reload]);
+  }, [client, saveProducto, saveMovimiento, reload]);
 
   const [tab, setTab] = useState<"productos" | "movimientos" | "alertas">("productos");
   const [showProdForm, setShowProdForm] = useState(false);
@@ -89,9 +75,10 @@ export default function Inventario() {
     saveProducto(prod);
     try {
       if (editProd) {
-        await api(`/inventario/productos/${prod.id}`, { method: "PUT", body: JSON.stringify(productoToApi(prod)) });
+        const result = await client?.mutate("PUT", `/inventario/productos/${prod.id}`, productoToApi(prod));
+        if (result?.ok) { /* already saved locally */ }
       } else {
-        const created = await api("/inventario/productos", { method: "POST", body: JSON.stringify(productoToApi(prod)) });
+        const created = await client?.post<any>("/inventario/productos", productoToApi(prod));
         if (created?.id) {
           deleteProducto(prod.id);
           saveProducto(apiToProducto(created));
@@ -104,7 +91,7 @@ export default function Inventario() {
 
   const delProd = async (id: string) => {
     deleteProducto(id);
-    try { await api(`/inventario/productos/${id}`, { method: "DELETE" }); } catch {}
+    try { await client?.del(`/inventario/productos/${id}`); } catch {}
     toast("Producto eliminado", "info");
   };
 
@@ -115,10 +102,7 @@ export default function Inventario() {
     const mov = { ...mf, id: `inv_mov_${Date.now()}`, costoTotal: mf.cantidad * prod.precioUnitario, createdAt: new Date().toISOString() };
     saveMovimiento(mov);
     try {
-      await api("/inventario/movimientos", {
-        method: "POST",
-        body: JSON.stringify({ tipo: mov.tipo, cantidad: mov.cantidad, productoId: mov.productoId, fecha: mov.fecha }),
-      });
+      await client?.post("/inventario/movimientos", { tipo: mov.tipo, cantidad: mov.cantidad, productoId: mov.productoId, fecha: mov.fecha });
     } catch {}
     setShowMovForm(false);
     toast("Movimiento registrado", "success");
@@ -197,17 +181,18 @@ export default function Inventario() {
                   <div key={m.id} style={{ borderBottom: "1px solid var(--border)", padding: "10px 0", fontSize: 13 }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <div>
-                        <span style={{ fontWeight: 600 }}>{prod?.nombre || m.productoId}</span>
-                        <span className={"vet-tag " + (m.tipo === "entrada" ? "riesgo-verde" : "riesgo-rojo")} style={{ fontSize: 11, marginLeft: 8 }}>
-                          {m.tipo === "entrada" ? "📥 " + t("invEntrada") : "📤 " + t("invSalida")}
-                        </span>
+                        <strong>{prod?.nombre || m.productoId}</strong>
+                        <span className={`badge ${m.tipo === "entrada" ? "badge-green" : "badge-red"}`} style={{ marginLeft: 8, fontSize: 10 }}>{m.tipo === "entrada" ? "Entrada" : "Salida"}</span>
                       </div>
-                      <span style={{ color: "var(--text2)", fontSize: 12 }}>{m.fecha}</span>
+                      <div>
+                        <span style={{ fontWeight: 700, color: m.tipo === "entrada" ? "var(--accent)" : "var(--danger)" }}>
+                          {m.tipo === "entrada" ? "+" : "-"}{m.cantidad}
+                        </span>
+                        <span style={{ marginLeft: 8, fontSize: 11, color: "var(--text3)" }}>{m.fecha}</span>
+                      </div>
                     </div>
-                    <div style={{ color: "var(--text2)", fontSize: 12, marginTop: 2 }}>
-                      {m.cantidad} {prod?.unidad || "u"} × {fmt(prod?.precioUnitario || 0)} = {fmt(m.costoTotal)}
-                      {m.referencia && <span style={{ marginLeft: 12 }}>📎 {m.referencia}</span>}
-                    </div>
+                    {m.responsable && <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>👤 {m.responsable}</div>}
+                    {m.notas && <div style={{ fontSize: 11, color: "var(--text3)", fontStyle: "italic", marginTop: 2 }}>{m.notas}</div>}
                   </div>
                 );
               })}
@@ -219,16 +204,16 @@ export default function Inventario() {
       {tab === "alertas" && (
         <div>
           {alertas.length === 0 ? (
-            <div className="card"><div className="empty-state"><div className="empty-icon">✅</div><p>{t("invAlertasVacias")}</p></div></div>
+            <div className="empty-state"><div className="empty-icon">✅</div><p>Sin alertas de stock</p></div>
           ) : (
             <div className="card">
               {alertas.map((p) => (
-                <div key={p.id} style={{ borderBottom: "1px solid var(--border)", padding: "12px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={p.id} style={{ borderBottom: "1px solid var(--border)", padding: "10px 0", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <strong style={{ color: "var(--danger)" }}>⚠️ {p.nombre}</strong>
-                    <div style={{ fontSize: 12, color: "var(--text2)" }}>{t("invStockActual")}: <strong>{p.stockActual}</strong> {p.unidad} · {t("invStockMinimo")}: {p.stockMinimo} {p.unidad}</div>
+                    <strong>{p.nombre}</strong>
+                    <div style={{ fontSize: 12, color: "var(--text2)" }}>{t("invStockActual")}: {p.stockActual} / {p.stockMinimo}</div>
                   </div>
-                  <button className="btn-sm" onClick={() => { setTab("movimientos"); setMf({ ...mf, productoId: p.id }); setShowMovForm(true); }}>➕ {t("invEntrada")}</button>
+                  <button className="btn-sm" onClick={() => { setPf({ ...p }); setShowProdForm(true); setEditProd(p); }}>✏️</button>
                 </div>
               ))}
             </div>
@@ -239,19 +224,22 @@ export default function Inventario() {
       {showProdForm && (
         <div className="modal-overlay" onClick={() => setShowProdForm(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h3>{editProd ? "✏️ " + t("invEditarProducto") : "📦 " + t("invNuevoProducto")}</h3><button className="modal-close" onClick={() => setShowProdForm(false)}>✕</button></div>
+            <div className="modal-title">📦 {editProd ? "Editar" : "Nuevo"} Producto</div>
             <div className="form-grid">
-              <label>{t("invNombre")}<input value={pf.nombre} onChange={(e) => setPf({ ...pf, nombre: e.target.value })} /></label>
+              <label>{t("invNombre")}<input value={pf.nombre} onChange={(e) => setPf({ ...pf, nombre: e.target.value })} placeholder="Ej: Alimento Tilapia 40%" /></label>
               <label>{t("invCategoria")}<select value={pf.categoria} onChange={(e) => setPf({ ...pf, categoria: e.target.value as any })}>{CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
-              <label>{t("invUnidad")}<input value={pf.unidad} onChange={(e) => setPf({ ...pf, unidad: e.target.value })} /></label>
-              <label>{t("invPresentacion")}<input value={pf.presentacion} onChange={(e) => setPf({ ...pf, presentacion: e.target.value })} /></label>
-              <label>{t("invPrecioUnitario")}<input type="number" value={pf.precioUnitario || ""} onChange={(e) => setPf({ ...pf, precioUnitario: Number(e.target.value) })} /></label>
-              <label>{t("invStockActual")}<input type="number" value={pf.stockActual || ""} onChange={(e) => setPf({ ...pf, stockActual: Number(e.target.value) })} /></label>
-              <label>{t("invStockMinimo")}<input type="number" value={pf.stockMinimo || ""} onChange={(e) => setPf({ ...pf, stockMinimo: Number(e.target.value) })} /></label>
-              <label>{t("invProveedor")}<input value={pf.proveedor} onChange={(e) => setPf({ ...pf, proveedor: e.target.value })} /></label>
-              <label style={{ gridColumn: "1 / -1" }}>{t("invNotas")}<textarea value={pf.notas} onChange={(e) => setPf({ ...pf, notas: e.target.value })} rows={2} /></label>
+              <label>{t("invUnidad")}<input value={pf.unidad} onChange={(e) => setPf({ ...pf, unidad: e.target.value })} placeholder="Ej: kg" /></label>
+              <label>{t("invPresentacion")}<input value={pf.presentacion} onChange={(e) => setPf({ ...pf, presentacion: e.target.value })} placeholder="Ej: saco 40kg" /></label>
+              <label>{t("invPrecioUnitario")}<input type="number" value={pf.precioUnitario || ""} onChange={(e) => setPf({ ...pf, precioUnitario: Number(e.target.value) })} placeholder="0" /></label>
+              <label>{t("invStockActual")}<input type="number" value={pf.stockActual || ""} onChange={(e) => setPf({ ...pf, stockActual: Number(e.target.value) })} placeholder="0" /></label>
+              <label>{t("invStockMinimo")}<input type="number" value={pf.stockMinimo || ""} onChange={(e) => setPf({ ...pf, stockMinimo: Number(e.target.value) })} placeholder="0" /></label>
+              <label>{t("invProveedor")}<input value={pf.proveedor} onChange={(e) => setPf({ ...pf, proveedor: e.target.value })} placeholder="Ej: Acuícola S.A." /></label>
+              <label style={{ gridColumn: "1 / -1" }}>{t("invNotas")}<textarea value={pf.notas} onChange={(e) => setPf({ ...pf, notas: e.target.value })} /></label>
             </div>
-            <div className="modal-actions"><button className="btn-primary" onClick={saveProd}>{t("save")}</button><button className="btn-secondary" onClick={() => setShowProdForm(false)}>{t("cancel")}</button></div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowProdForm(false)}>{t("cancelar")}</button>
+              <button className="btn-primary" onClick={saveProd}>💾 {t("guardar")}</button>
+            </div>
           </div>
         </div>
       )}
@@ -259,17 +247,21 @@ export default function Inventario() {
       {showMovForm && (
         <div className="modal-overlay" onClick={() => setShowMovForm(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h3>🔄 {t("invNuevoMovimiento")}</h3><button className="modal-close" onClick={() => setShowMovForm(false)}>✕</button></div>
+            <div className="modal-title">🔄 {t("invNuevoMovimiento")}</div>
             <div className="form-grid">
-              <label>{t("invProducto")}<select value={mf.productoId} onChange={(e) => setMf({ ...mf, productoId: e.target.value })}><option value="">{t("seleccionar")}</option>{productos.map((p) => <option key={p.id} value={p.id}>{p.nombre} (stock: {p.stockActual} {p.unidad})</option>)}</select></label>
-              <label>{t("invTipo")}<select value={mf.tipo} onChange={(e) => setMf({ ...mf, tipo: e.target.value as "entrada" | "salida" })}><option value="entrada">📥 {t("invEntrada")}</option><option value="salida">📤 {t("invSalida")}</option></select></label>
-              <label>{t("invCantidad")}<input type="number" value={mf.cantidad || ""} onChange={(e) => setMf({ ...mf, cantidad: Number(e.target.value) })} /></label>
-              <label>{t("invFecha")}<input type="date" value={mf.fecha} onChange={(e) => setMf({ ...mf, fecha: e.target.value })} /></label>
-              <label>{t("invReferencia")}<input value={mf.referencia} onChange={(e) => setMf({ ...mf, referencia: e.target.value })} placeholder="Ej: Compra #123" /></label>
+              <label>{t("invProducto")}<select value={mf.productoId} onChange={(e) => setMf({ ...mf, productoId: e.target.value })}><option value="">Seleccionar</option>{productos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></label>
+              <label>{t("invTipo")}<select value={mf.tipo} onChange={(e) => setMf({ ...mf, tipo: e.target.value as any })}><option value="entrada">Entrada</option><option value="salida">Salida</option></select></label>
+              <label>{t("invCantidad")}<input type="number" value={mf.cantidad || ""} onChange={(e) => setMf({ ...mf, cantidad: Number(e.target.value) })} placeholder="0" /></label>
+              <label>Fecha<input type="date" value={mf.fecha} onChange={(e) => setMf({ ...mf, fecha: e.target.value })} /></label>
               <label>{t("invResponsable")}<input value={mf.responsable} onChange={(e) => setMf({ ...mf, responsable: e.target.value })} /></label>
-              <label style={{ gridColumn: "1 / -1" }}>{t("invNotas")}<textarea value={mf.notas} onChange={(e) => setMf({ ...mf, notas: e.target.value })} rows={2} /></label>
+              <label>{t("invReferencia")}<input value={mf.referencia} onChange={(e) => setMf({ ...mf, referencia: e.target.value })} placeholder="Factura #" /></label>
+              <label>Finca <input value={mf.fincaId} onChange={(e) => setMf({ ...mf, fincaId: e.target.value })} /></label>
+              <label style={{ gridColumn: "1 / -1" }}>{t("invNotas")}<textarea value={mf.notas} onChange={(e) => setMf({ ...mf, notas: e.target.value })} /></label>
             </div>
-            <div className="modal-actions"><button className="btn-primary" onClick={saveMov}>{t("save")}</button><button className="btn-secondary" onClick={() => setShowMovForm(false)}>{t("cancel")}</button></div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowMovForm(false)}>{t("cancelar")}</button>
+              <button className="btn-primary" onClick={saveMov}>💾 {t("guardar")}</button>
+            </div>
           </div>
         </div>
       )}

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "@/store/language";
 import { useCurrency } from "@/store/currency";
 import { useAuth } from "@/store/auth";
 import { Link } from "react-router-dom";
 import { NAV_LINKS } from "@/data/navLinks";
+import { createApi } from "@/services/api";
 
 let dashboardCache: { data: Stats; timestamp: number } | null = null;
 const CACHE_TTL = 30000;
@@ -25,15 +26,17 @@ type Stats = {
 export default function Dashboard() {
   const { t } = useTranslation();
   const { fmt } = useCurrency();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const mountedRef = useRef(true);
 
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
+
   useEffect(() => {
     mountedRef.current = true;
-    if (!token) { setLoading(false); return; }
+    if (!client) { setLoading(false); return; }
 
     const now = Date.now();
     if (dashboardCache && now - dashboardCache.timestamp < CACHE_TTL) {
@@ -43,10 +46,8 @@ export default function Dashboard() {
     }
 
     setLoading(true);
-    const ctrl = new AbortController();
-    fetch(`${apiUrl}/dashboard/stats`, { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((data: Stats) => { if (mountedRef.current) { setStats(data); dashboardCache = { data, timestamp: Date.now() }; } })
+    client.get<Stats>("/dashboard/stats")
+      .then((data) => { if (mountedRef.current) { setStats(data); dashboardCache = { data, timestamp: Date.now() }; } })
       .catch(() => {
         if (!mountedRef.current) return;
         const fin = JSON.parse(localStorage.getItem("acuical_finanzas") || "[]");
@@ -72,8 +73,8 @@ export default function Dashboard() {
         });
       })
       .finally(() => { if (mountedRef.current) setLoading(false); });
-    return () => { mountedRef.current = false; ctrl.abort(); };
-  }, [token, apiUrl]);
+    return () => { mountedRef.current = false; };
+  }, [client]);
 
   const handleExport = async () => {
     setExporting(true);

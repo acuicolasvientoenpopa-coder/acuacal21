@@ -39,7 +39,7 @@
 - [x] CRUD inventario vía API
 - [x] CRUD microbiología vía API
 - [x] CRUD veterinaria vía API
-- [x] Frontend deployado en Netlify
+- [x] Frontend deployado en Cloudflare Pages
 - [x] Backend deployado en Railway
 - [x] Página Términos y Condiciones
 - [x] Checkbox "Acepto Términos" en registro

@@ -22,7 +22,7 @@ AcuiCal es un SaaS acuícola con React 19 + TypeScript 6.0 + Vite 8 (frontend), 
 - **i18n**: ES (base), EN, PT — ~430 claves cada uno
 - **Tests**: 25 tests vitest para core (calcular, calcRacion)
 - **Build**: `tsc -b && vite build` — ambos pasan
-- **Deploy**: Frontend en Netlify, Backend en Railway
+- **Deploy**: Frontend en Cloudflare Pages, Backend en Railway
 - **SMTP**: Resend configurado, no puede enviar sin dominio verificado
 
 ---
@@ -63,7 +63,7 @@ acucal2.1/
 | PWA | vite-plugin-pwa | Instalable mobile, precaching automático |
 | i18n | Context + objeto plano | Sin dependencias, liviano |
 | CSS | CSS plano (index.css) | Sin runtime, control total |
-| Despliegue frontend | Netlify | SPA hosting gratuito con _redirects |
+| Despliegue frontend | Cloudflare Pages | SPA hosting gratuito con _redirects |
 | Despliegue backend | Railway | Node hosting gratuito con Dockerfile |
 
 ---

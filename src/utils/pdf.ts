@@ -45,7 +45,7 @@ export function exportBitacoraPDF(records: RecordRow[], _t: (k: string) => strin
   const drawPageHeader = () => {
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text("AquaCalc - " + tr("bitacoraTitle"), margin, y);
+    doc.text("AcuiCal - " + tr("bitacoraTitle"), margin, y);
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text(tr("exportDate") + ": " + new Date().toLocaleDateString() + "  |  " + tr("entradas") + ": " + records.length, margin, y + 4);
@@ -165,7 +165,7 @@ export function exportZootecnicoPDF(records: ZooRow[], filtro: string, paramLabe
   const drawPageHeader = () => {
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text("AquaCalc - " + "Zootécnico", margin, y);
+    doc.text("AcuiCal - " + "Zootécnico", margin, y);
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     let extra = " | " + "Parámetro: " + paramLabel;

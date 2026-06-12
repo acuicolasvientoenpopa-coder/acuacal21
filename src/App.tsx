@@ -29,7 +29,7 @@ const GeoPond = lazy(() => import("@/pages/GeoPond"));
 const MedirEstanque = lazy(() => import("@/pages/MedirEstanque"));
 const Planes = lazy(() => import("@/pages/Planes"));
 
-const PUBLIC_PATHS = ["/calc", "/formulas", "/geo", "/medir-estanque"];
+const PUBLIC_PATHS = ["/calc", "/formulas", "/geo", "/medir-estanque", "/admin"];
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

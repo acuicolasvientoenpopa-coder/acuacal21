@@ -5,7 +5,7 @@
 AcuiCal es el primer producto del ecosistema **Acuícolas Viento en Popa**. Diseñado para productores acuícolas pequeños y medianos de LATAM.
 
 **Estado**: MVP funcional con backend + auth. [Ver estado completo →](PROJECT_STATUS.md)  
-**Frontend**: https://acuacla2112.netlify.app  
+**Frontend**: https://acuacal21.pages.dev  
 **Backend API**: https://acuacal21-production.up.railway.app/api
 
 ---
@@ -73,7 +73,7 @@ npm run build    # tsc
 
 ## Despliegue
 
-Frontend en Netlify (`dist/` con `_redirects` para SPA fallback).  
+Frontend en Cloudflare Pages (`dist/` con `_redirects` para SPA fallback).  
 Backend en Railway (Node, Express, TypeScript).  
 Base de datos en Supabase PostgreSQL (conexión directa bloqueada, API REST).
 

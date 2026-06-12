@@ -170,7 +170,7 @@ export default function Calculator() {
   return (
     <div className="calculator">
       <header className="calc-header">
-        <h1>AquaCalc</h1>
+        <h1>AcuiCal</h1>
         <p>{t("calculadoraSub")}</p>
       </header>
 

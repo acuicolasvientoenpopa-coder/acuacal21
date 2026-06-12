@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/store/auth";
 import { toast } from "@/components/Toast";
 import { PLANES } from "@/core";
-import { api } from "@/services/api";
+import { createApi } from "@/services/api";
 
 export default function Planes() {
   const { plan, token } = useAuth();
@@ -12,7 +12,7 @@ export default function Planes() {
     if (!token) { toast("Debés iniciar sesión", "error"); return; }
     setLoading(priceId);
     try {
-      const res = await api(token).post("/pagos/checkout", { priceId });
+      const res = await createApi(token).post<{ url: string }>("/pagos/checkout", { priceId });
       window.location.href = res.url;
     } catch (err: any) {
       toast(err.message || "Error al iniciar pago", "error");

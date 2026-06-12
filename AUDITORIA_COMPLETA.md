@@ -3,7 +3,7 @@
 > Fecha: 2026-06-10
 > Auditar: ia
 > Repositorio: silent-meadow (AcuiCal 2.1)
-> Frontend: https://acuacla2112.netlify.app
+> Frontend: https://acuacal21.pages.dev
 > Backend: https://acuacal21-production.up.railway.app/api
 
 ---
@@ -89,7 +89,7 @@ AcuiCal 2.1
 │   └── 31 endpoints total (4 públicos, 27 protegidos)
 │
 ├── Infraestructura
-│   ├── Frontend: Netlify (SPA, _redirects)
+│   ├── Frontend: Cloudflare Pages (SPA, _redirects)
 │   ├── Backend: Railway (Express)
 │   ├── DB: Supabase PostgreSQL
 │   ├── Auth: Supabase Auth (JWT, persistSession)

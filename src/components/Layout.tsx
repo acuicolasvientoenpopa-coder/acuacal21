@@ -109,7 +109,7 @@ export default function Layout() {
         <div className="app-logo">
           <span className="app-logo-icon">🐟</span>
           <div>
-            <h1>AquaCalc</h1>
+            <h1>AcuiCal</h1>
             <span className="app-logo-sub">{t("calculadoraSub").toUpperCase()}</span>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function Layout() {
       <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
         <div className="sidebar-header">
           <span className="sidebar-logo">🐟</span>
-          <span className="sidebar-title">AquaCalc</span>
+          <span className="sidebar-title">AcuiCal</span>
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>
         <nav className="sidebar-nav">

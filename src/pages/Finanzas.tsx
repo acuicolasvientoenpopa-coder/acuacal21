@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useLookups } from "@/store/lookups";
@@ -6,7 +6,7 @@ import { useCurrency } from "@/store/currency";
 import { toast } from "@/components/Toast";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useSaveIndicator } from "@/store/saveIndicator";
-import { enqueue, scheduleProcess } from "@/services/sync";
+import { createApi } from "@/services/api";
 
 const STORAGE_KEY = "acuical_finanzas";
 
@@ -50,7 +50,7 @@ const CATS = [
 
 export default function Finanzas() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const { estanques, reload: reloadLookups } = useLookups();
   const { fmt, currency, code } = useCurrency();
   const [records, setRecords] = useState<FinRecord[]>(loadLocal);
@@ -60,25 +60,11 @@ export default function Finanzas() {
   const saveState = useSaveIndicator([records]);
   const [saving, setSaving] = useState(false);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) {
-      if (opts?.method && ["POST", "PUT", "DELETE"].includes(opts.method)) {
-        let body: unknown;
-        try { body = JSON.parse(opts.body as string); } catch {}
-        enqueue({ method: opts.method as "POST" | "PUT" | "DELETE", path, body });
-      }
-      throw new Error(await res.text());
-    }
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    if (token) scheduleProcess(apiUrl, token);
-    api("/finanzas").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/finanzas").then((data: any[]) => {
       const parsed = data
         .filter((r: any) => r.tipo === "fin_record")
         .map((r: any) => {
@@ -88,7 +74,7 @@ export default function Finanzas() {
       setRecords(parsed.length > 0 ? parsed : loadLocal());
       if (parsed.length > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
     }).catch(() => setRecords(loadLocal()));
-  }, [api]);
+  }, [client]);
 
   useEffect(() => {
     const h = (e: StorageEvent) => {
@@ -105,17 +91,15 @@ export default function Finanzas() {
     setSaving(true);
     setRecords(data);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (!client) { setSaving(false); return; }
     for (const rec of data) {
       try {
-        await api("/finanzas", {
-          method: "POST",
-          body: JSON.stringify({
-            tipo: "fin_record",
-            descripcion: JSON.stringify(rec),
-            monto: 0,
-            fecha: new Date().toISOString(),
-            fincaId: rec.fincaId || "unknown",
-          }),
+        await client.post("/finanzas", {
+          tipo: "fin_record",
+          descripcion: JSON.stringify(rec),
+          monto: 0,
+          fecha: new Date().toISOString(),
+          fincaId: rec.fincaId || "unknown",
         });
       } catch { break; }
     }
