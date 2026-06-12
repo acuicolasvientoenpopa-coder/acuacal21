@@ -7,7 +7,7 @@ export default defineConfig({
   base: "/",
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
-    injectRegister: null,
+    injectRegister: 'auto',
     includeAssets: ['favicon.svg', 'icons/*.svg'],
     manifest: {
       name: 'AquaCalc',
@@ -31,6 +31,9 @@ export default defineConfig({
       ],
     },
     workbox: {
+      skipWaiting: true,
+      clientsClaim: true,
+      globPatterns: ['**/*.{js,css,html,svg,png,ico,json}'],
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/[a-z]\.tile\.openstreetmap\.org\/.*$/i,
