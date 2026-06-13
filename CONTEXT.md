@@ -1,7 +1,7 @@
 # CONTEXT.md — AcuiCal
 
 > Contexto completo del proyecto para continuidad de desarrollo por IA.
-> Creado: 2026-06-10.
+> Creado: 2026-06-10. Actualizado: 2026-06-12.
 
 ---
 
@@ -20,10 +20,12 @@ SaaS de gestión acuícola para productores pequeños y medianos de LATAM. Offli
 - **Persistencia**: Híbrida — API primaria + localStorage como fallback/cache
 - **PWA**: vite-plugin-pwa con service worker + Workbox
 - **Tests**: 33 tests vitest para core (calcular, calcRacion, plan)
+- **Roles**: admin (soporte interno), gestor (dueño finca), tecnico (empleado)
+- **Admin Panel**: 5 tabs profesionales, accesible en /admin, requiere rol "admin" + PIN
 - **Build**: `tsc -b && vite build` — compila y pasa
 
 ### URLs
-- Frontend: https://acuacal21.pages.dev
+- Frontend (app): https://app.acuical.com
 - Backend API: https://acuacal21-production.up.railway.app/api
 - Backend health: https://acuacal21-production.up.railway.app/api/health → `{"status":"ok","version":"1.0.0"}`
 - Supabase project: `smvjffbeshxcfltjoolm`
@@ -147,11 +149,11 @@ acucal2.1/
 | Inventario (productos, movimientos, alertas) | ✅ | API + localStorage |
 | Wizard veterinario (diagnóstico sanitario) | ✅ | API + localStorage |
 | Dashboard con resumen global | ✅ | API + localStorage |
-| Master Panel (admin, editor localStorage) | ✅ | localStorage |
+| Admin Panel (5 tabs: Overview, Usuarios, Suscripciones, Sistema, Herramientas) | ✅ | localStorage |
 | Mapa de arquitectura | ✅ | localStorage |
-| Login / Register con Supabase Auth | ✅ | API (Supabase) |
+| Login / Register con Supabase Auth + step indicators | ✅ | API (Supabase) |
 | Términos y Condiciones | ✅ | Estático |
-| i18n ES/EN/PT (~430 claves) | ✅ | Contexto |
+| i18n ES/EN/PT (~494 claves) | ✅ | Contexto |
 | PWA (instalable, service worker) | ✅ | N/A |
 | Exportación PDF (jsPDF) | ✅ | N/A |
 | Exportación Excel (SheetJS) | ✅ | N/A |
@@ -160,8 +162,10 @@ acucal2.1/
 | Tutorial interactivo (5 pasos) | ✅ | localStorage |
 | Sidebar responsive + hamburger menu | ✅ | Contexto |
 | Indicador de guardado + toast | ✅ | Contexto |
+| UI polish: cards hover lift + glow, dash-card gradient border | ✅ | N/A |
+| Planes con selector de rol (Pro/Enterprise) | ✅ | N/A |
 
-### Backend (9 routers, 30+ endpoints)
+### Backend (14 routers, 30+ endpoints)
 | Router | Endpoints | Auth |
 |--------|-----------|------|
 | `auth.ts` | 3 POST (register, login, logout) | ❌ |
@@ -177,19 +181,19 @@ acucal2.1/
 | `geo.ts` | 1 (POST /estanques) | ✅ JWT |
 | `pagos.ts` | 3 (checkout, webhook, subscription) | ✅ JWT |
 | `feedback.ts` | 1 (POST) | ❌ |
-| `admin.ts` | 3 (GET users, stats, subscriptions) | ✅ JWT + owner
+| `admin.ts` | 3 (GET users, stats, subscriptions) | ✅ JWT + admin
 
 ### Base de datos (10 tablas PostgreSQL en Supabase)
 - User, Finca, Estanque, Especie, Bitacora, Finanza, Inventario, MovimientoInventario, Microbiologia, Veterinaria
 - RLS habilitado con `auth.role() = 'authenticated'`
-- Enums: Idioma (es/en/pt), Rol (admin/productor/tecnico), TipoMovimiento (entrada/salida), CategoriaProducto (alimento/medicamento/equipo/insumo/otro)
+- Enums: Idioma (es/en/pt), Rol (admin/gestor/tecnico), TipoMovimiento (entrada/salida), CategoriaProducto (alimento/medicamento/equipo/insumo/otro)
 
 ### Infraestructura
 - Frontend: Cloudflare Pages (SPA con `_redirects` para React Router)
 - Backend: Railway (express, Node)
 - Base de datos: Supabase PostgreSQL
 - Auth: Supabase Auth (JWT, persistSession, autoRefreshToken)
-- SMTP configurado: Resend (smtp.resend.com:465) — no puede enviar sin dominio verificado
+- SMTP configurado: Resend (smtp.resend.com:465) — dominio acuical.com verificado ✅
 
 ---
 
@@ -198,7 +202,7 @@ acucal2.1/
 1. `AuthProvider` en `App.tsx` envuelve toda la app
 2. Al montar, lee sesión existente de Supabase (`getSession`)
 3. Escucha cambios de auth (`onAuthStateChange`) para mantener user/token actualizados
-4. `Login.tsx`: formulario con toggle login/register, checkbox "Acepto Términos"
+4. `Login.tsx`: formulario con toggle login/register, step indicators visuales en registro, checkbox "Acepto Términos"
 5. `register()`: llama a `supabase.auth.signUp()` + POST `/api/auth/register` para crear perfil en DB
 6. `login()`: llama a `supabase.auth.signInWithPassword()`
 7. `ProtectedRoute`: redirige a `/login` si no hay `user`
@@ -231,9 +235,9 @@ acucal2.1/
 
 ## Pendientes para MVP Vendible
 
-1. **Pagos**: ONVO Pay. Planes Free/Pro ($29)/Enterprise ($99). Código listo, falta crear productos en dashboard ONVO y configurar webhook + keys en Railway.
-2. **Dominio**: comprar (~$8/yr Cloudflare) para URL marcada y emails transaccionales
-3. **Multi-usuario**: roles admin/productor/tecnico con gating de permisos
+1. **Pagos**: ONVO Pay. Planes Free/Pro ($20)/Enterprise ($50). Código listo, falta crear productos en dashboard ONVO y configurar webhook + keys en Railway.
+2. **Dominio**: comprar (~$8/yr Cloudflare) para URL marcada y emails transaccionales — ✅ COMPLETADO (acuical.com)
+3. **Multi-usuario**: roles admin/gestor/tecnico con gating de permisos
 4. **Sync offline**: cola de cambios localStorage → API con reconciliación
 5. **Dashboard + Parametros + Zootécnico**: migrar a API (hoy solo localStorage) — ✅ COMPLETADO
 6. **CI/CD**: GitHub Actions (typecheck + test + build)

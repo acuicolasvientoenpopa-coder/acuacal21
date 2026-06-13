@@ -9,8 +9,8 @@ export const PLAN_LIMITS: Record<Plan, { maxFincas: number; maxEstanques: number
 
 export const PLANES: { id: Plan; label: string; precio: string; desc: string; features: string[] }[] = [
   { id: "free", label: "Free", precio: "$0", desc: "Para empezar", features: ["1 finca", "3 estanques", "Cálculos básicos", "Bitácora manual"] },
-  { id: "pro", label: "Pro", precio: "$29/mes", desc: "Para productores activos", features: ["Fincas ilimitadas", "Estanques ilimitados", "Exportación PDF y Excel", "Microbiología y veterinaria", "Finanzas por ciclo", "Soporte prioritario"] },
-  { id: "enterprise", label: "Enterprise", precio: "$99/mes", desc: "Para operaciones grandes", features: ["Todo lo de Pro", "Multi-usuario por finca", "Reportes avanzados", "API dedicada", "Soporte 24/7", "Onboarding personalizado"] },
+  { id: "pro", label: "Pro", precio: "$20/mes", desc: "Para productores activos", features: ["Fincas ilimitadas", "Estanques ilimitados", "Exportación PDF y Excel", "Microbiología y veterinaria", "Finanzas por ciclo", "Soporte prioritario"] },
+  { id: "enterprise", label: "Enterprise", precio: "$50/mes", desc: "Para operaciones grandes", features: ["Todo lo de Pro", "Multi-usuario por finca", "Reportes avanzados", "API dedicada", "Soporte 24/7", "Onboarding personalizado"] },
 ];
 
 export function canExport(plan: Plan): boolean {

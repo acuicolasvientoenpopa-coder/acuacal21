@@ -105,8 +105,19 @@ export default function Dashboard() {
 
       {loading && <div className="loading-overlay"><div className="loading-spinner" /></div>}
 
+      <div className="dashboard-grid">
+        {NAV_LINKS.filter((l) => l.to !== "/").map((l) => (
+          <Link key={l.to} to={l.to} className="dash-card">
+            <div className="dash-card-icon">{l.emoji}</div>
+            <div className="dash-card-title">{t(l.key as any)}</div>
+            <div className="dash-card-desc">{t(l.key as any)}</div>
+            <div className="dash-card-count">{moduleCounts[l.key as keyof typeof moduleCounts] ?? ""}</div>
+          </Link>
+        ))}
+      </div>
+
       {stats.totalGastos > 0 && (
-        <div className="card" style={{ borderColor: "var(--accent)", marginBottom: 16 }}>
+        <div className="card glow-accent" style={{ marginTop: 16 }}>
           <div className="card-title">💰 {t("finanzasResumen")}</div>
           <div className="results-grid">
             <div className="result-card highlight">
@@ -121,7 +132,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="card" style={{ borderColor: "var(--accent3)", marginBottom: 16 }}>
+      <div className="card glow-blue">
         <Link to="/inventario" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="card-title">📦 {t("inventarioTitle")}</div>
           <div className="results-grid">
@@ -135,17 +146,6 @@ export default function Dashboard() {
             </div>
           </div>
         </Link>
-      </div>
-
-      <div className="dashboard-grid">
-        {NAV_LINKS.filter((l) => l.to !== "/").map((l) => (
-          <Link key={l.to} to={l.to} className="dash-card">
-            <div className="dash-card-icon">{l.emoji}</div>
-            <div className="dash-card-title">{t(l.key as any)}</div>
-            <div className="dash-card-desc">{t(l.key as any)}</div>
-            <div className="dash-card-count">{moduleCounts[l.key as keyof typeof moduleCounts] ?? ""}</div>
-          </Link>
-        ))}
       </div>
     </div>
   );

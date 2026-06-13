@@ -1,14 +1,14 @@
 # PROJECT STATUS — AcuiCal
 
-> Última actualización: 2026-06-11
+> Última actualización: 2026-06-12
 
 ---
 
 ## Nivel de Madurez
 
-**MVP con seguridad, calidad, pagos ONVO Pay y CI/CD** — Backend con rate limiting, Zod, helmet. Frontend con code splitting nativo (pdf.js separado). Integración ONVO Pay lista (requiere config manual). 10 páginas en API + 2 solo localStorage.
+**MVP con seguridad, calidad, pagos ONVO Pay, CI/CD, Admin Panel y UI/UX refinada** — Backend con rate limiting, Zod, helmet. Frontend con code splitting nativo (pdf.js separado). Integración ONVO Pay lista (requiere config manual). 10 páginas en API. Admin Panel con 5 tabs. Todos los módulos offline-first con híbrido API + localStorage.
 
-**Avance estimado: ~85% del camino a SaaS vendible.**
+**Avance estimado: ~90% del camino a SaaS vendible.**
 
 ---
 
@@ -34,30 +34,32 @@
 - useSaveIndicator() — indicador de guardado
 
 ### Backend
-- API REST con Express + TypeScript (9 routers, 30+ endpoints)
+- API REST con Express + TypeScript (14 routers, 30+ endpoints)
 - CRUD auth (register, login, logout)
-- CRUD fincas + estanques (con PUT estanque)
+- CRUD fincas + estanques (con PUT estanque, validación roles gestor/admin)
 - CRUD bitácora con joins (Finca, Estanque, Especie) + PUT
 - CRUD especies (personales + públicas)
 - CRUD finanzas (datos como JSON en descripcion)
 - CRUD inventario (productos + movimientos)
 - CRUD microbiología (cultivos + medicación)
 - CRUD veterinaria (reportes)
-- **Pagos ONVO Pay**: checkout, webhook, subscription status
+- **Admin API**: GET /api/admin/users, /stats, /subscriptions (verifica rol "admin" via Supabase Admin API)
+- **Pagos ONVO Pay**: checkout, webhook, subscription status, **POST /api/pagos/rol** (cambio de rol)
+- **Webhook**: updateUserPlan() con merge de user_metadata (no sobrescribe)
 - **Seguridad**: CORS origen específico, helmet CSP, rate limiting (100 global, 10 auth), Zod validation en todos los POST/PUT, sin spread de req.body
 - Middleware JWT + error handler
 
 ### Base de datos (Supabase PostgreSQL)
 - 11 tablas: User, Finca, Estanque, Especie, Bitacora, Finanza, Inventario, MovimientoInventario, Microbiologia, Veterinaria, **Subscription**
 - RLS con auth.role() = 'authenticated'
-- Enums: Idioma (es/en/pt), Rol (admin/productor/tecnico), TipoMovimiento (entrada/salida), CategoriaProducto (alimento/medicamento/equipo/insumo/otro)
+- Enums: Idioma (es/en/pt), Rol (admin/gestor/tecnico), TipoMovimiento (entrada/salida), CategoriaProducto (alimento/medicamento/equipo/insumo/otro)
 - Índices SQL generados (11 índices)
 - RLS policies SQL generadas
 
 ### Frontend
 - 16 páginas (14 protegidas + Login + Términos)
 - AuthProvider con sesión persistente (Supabase)
-- Login/Register con checkbox "Acepto Términos", i18n completo, loading states
+- Login/Register con checkbox "Acepto Términos", step indicators en registro, i18n completo, loading states
 - ProtectedRoute + logout
 - 10 páginas migradas a API con fallback localStorage:
   - Fincas, Bitácora, Especies, Finanzas, Inventario, Microbiología, Veterinaria, **Dashboard**, **Zootécnico**, **Parámetros**
@@ -72,8 +74,10 @@
 - **ErrorBoundary** con captura de errores React
 - **Lazy loading** + Suspense en todas las páginas (code splitting nativo)
 - **Loading states** en todos los formularios CRUD
-- **Página Planes** con cards Free/Pro/Enterprise + botón upgrade
+- **Página Planes** con cards Free/Pro/Enterprise + selector de rol para planes pagos + botón upgrade
 - **Gating de features** por plan via `plan.ts` + `user.user_metadata`
+- **UI/UX refinada**: cards con hover lift + glow, dash-card con gradiente top border, Dashboard reordenado por importancia
+- **Admin Panel** rediseñado: 5 tabs (Overview con health checks, Usuarios, Suscripciones, Sistema con sync queue + network log, Herramientas con debug data + localStorage editor)
 
 ### Infraestructura
 - Frontend en Cloudflare Pages (SPA con _redirects)
@@ -95,9 +99,10 @@
 - [ ] Probar flujo completo checkout → webhook → upgrade
 
 ### Dominio
-- [ ] Comprar dominio (~$8/yr Cloudflare)
-- [ ] Configurar DNS para frontend y backend
-- [ ] Verificar dominio en Resend para emails transaccionales
+- [x] Comprar dominio — ✅ acuical.com
+- [x] Configurar DNS (acuical.com → landing, app.acuical.com → app) — ✅
+- [x] Verificar dominio en Resend para emails transaccionales — ✅ acuical.com verificado
+- [x] Activar confirmación de email en Supabase Auth — ✅ SMTP + confirm sign up ON
 
 ### Base de datos (pendiente ejecución)
 - [ ] Ejecutar RLS policies en Supabase SQL Editor
@@ -115,13 +120,14 @@
 - [ ] Indicador de sync
 
 ### Multi-usuario
-- [ ] Roles y permisos (admin, productor, técnico)
+- [x] Roles y permisos (admin, gestor, técnico) — implementado
 - [ ] Aislamiento de datos por tenant
 - [ ] Colaboración en fincas compartidas
 
 ### Mejoras post-MVP
-- [ ] Activar confirmación de email en Supabase Auth
+- [ ] Activar confirmación de email en Supabase Auth (requiere dominio verificado en Resend)
 - [ ] Migrar xlsx → exceljs (✅ completado)
+- [ ] CI/CD: GitHub Actions typecheck + test + build (✅ completado)
 
 ---
 

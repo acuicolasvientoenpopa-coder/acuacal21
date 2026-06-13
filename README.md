@@ -5,7 +5,7 @@
 AcuiCal es el primer producto del ecosistema **Acuícolas Viento en Popa**. Diseñado para productores acuícolas pequeños y medianos de LATAM.
 
 **Estado**: MVP funcional con backend + auth. [Ver estado completo →](PROJECT_STATUS.md)  
-**Frontend**: https://acuacal21.pages.dev  
+**Frontend (app)**: https://app.acuical.com  
 **Backend API**: https://acuacal21-production.up.railway.app/api
 
 ---

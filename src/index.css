@@ -633,12 +633,19 @@ textarea:focus {
   padding: 20px;
   margin-bottom: 16px;
   box-shadow: var(--shadow);
-  transition: box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .card:hover {
+  transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
+  border-color: var(--accent2);
 }
+
+.card.glow-accent { border-color: var(--accent); box-shadow: var(--glow-accent); }
+.card.glow-accent:hover { box-shadow: 0 4px 24px rgba(0,200,150,0.2); }
+.card.glow-blue { border-color: var(--accent2); box-shadow: var(--glow-blue); }
+.card.glow-blue:hover { box-shadow: 0 4px 24px rgba(0,153,255,0.2); }
 
 .card-title {
   font-size: 11px;
@@ -2311,19 +2318,35 @@ p {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
-  transition: all 0.2s;
+  transition: all 0.25s;
   cursor: pointer;
   text-decoration: none;
   color: inherit;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dash-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  opacity: 0;
+  transition: opacity 0.25s;
 }
 
 .dash-card:hover {
-  border-color: var(--accent2);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  border-color: transparent;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+}
+
+.dash-card:hover::before {
+  opacity: 1;
 }
 
 .dash-card-icon {
@@ -2342,10 +2365,11 @@ p {
 }
 
 .dash-card-count {
-  font-size: 11px;
-  color: var(--text3);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent2);
   margin-top: auto;
-  padding-top: 6px;
+  padding-top: 8px;
   border-top: 1px solid var(--border);
 }
 

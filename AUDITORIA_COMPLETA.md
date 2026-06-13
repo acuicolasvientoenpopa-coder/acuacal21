@@ -3,7 +3,7 @@
 > Fecha: 2026-06-10
 > Auditar: ia
 > Repositorio: silent-meadow (AcuiCal 2.1)
-> Frontend: https://acuacal21.pages.dev
+> Frontend (app): https://app.acuical.com
 > Backend: https://acuacal21-production.up.railway.app/api
 
 ---
@@ -549,7 +549,7 @@ El test *espera* que sea `Infinity`, pero en producción esto causaría que la U
 - Sin exportación PDF/Excel
 - Sin multi-usuario
 
-#### PLAN PRO — $29/mes (Conversión, 15% de usuarios)
+#### PLAN PRO — $20/mes (Conversión, 15% de usuarios)
 - Fincas ilimitadas, estanques ilimitados
 - Bitácora completa con historial ilimitado
 - Exportación PDF/Excel
@@ -557,7 +557,7 @@ El test *espera* que sea `Infinity`, pero en producción esto causaría que la U
 - Multi-usuario (1 admin + 2 técnicos)
 - Prioridad en soporte
 
-#### PLAN ENTERPRISE — $99/mes (Monetización, 5% de usuarios)
+#### PLAN ENTERPRISE — $50/mes (Monetización, 5% de usuarios)
 - Todo lo de Pro
 - Usuarios ilimitados
 - API access
@@ -589,7 +589,7 @@ El test *espera* que sea `Infinity`, pero en producción esto causaría que la U
 - **Facilidad**: 4/10. Nicho muy específico, pocos competidores directos, necesidad real.
 - **Dificultad**: LATAM tiene baja penetración de pagos digitales y desconfianza en SaaS.
 - **Canales**: WhatsApp, ferias acuícolas, extensionistas de gobierno, FAO.
-- **Pricing**: $29/mes es bajo para productores que manejan $10K+ en ciclo.
+- **Pricing**: $20/mes es bajo para productores que manejan $10K+ en ciclo.
 
 ### Funciones que generan más valor → Deben ser PREMIUM
 1. Exportación PDF/Excel (necesitan reportes para bancos/gobierno)

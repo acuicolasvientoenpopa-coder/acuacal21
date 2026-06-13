@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-06-12 — Dominio acuical.com comprado + UI/UX polish + Login + Admin Panel redesign + rol gestor + clean Netlify
+
+### Objetivo
+Refinar UI/UX, adquirir dominio acuical.com, renombrar rol productor → gestor, limpiar referencias Netlify, rediseñar Admin Panel, proteger admin vía rol.
+
+### Archivos modificados
+- `src/index.css` — Cards con hover lift (translateY + glow), .dash-card con gradiente top border, clases .glow-accent/.glow-blue
+- `src/pages/Dashboard.tsx` — Reordenado: módulos primero, finanzas/inventario después con glow classes
+- `src/pages/Login.tsx` — Step indicators (1-2-3) en registro, layout más limpio
+- `src/core/i18n.ts` — clave rolGestor (antes rolProductor) en ES/EN/PT
+- `src/core/plan.ts` — Rol actualizado a "gestor", defaults actualizados
+- `src/core/index.ts` — Export Rol actualizado
+- `src/pages/Planes.tsx` — Selector de rol para planes Pro/Enterprise
+- `src/store/auth.tsx` — Default rol "gestor"
+- `src/utils/config.ts` — FRONTEND_URL actualizado a https://app.acuical.com
+- `src/pages/Admin.tsx` — Rediseñado: 5 tabs (Overview, Usuarios, Suscripciones, Sistema, Herramientas), requiere rol "admin" + PIN
+- `server/src/routes/admin.ts` — Verifica rol "admin" via Supabase Admin API
+- `server/src/routes/pagos.ts` — updateUserPlan() con merge metadata, endpoint POST /api/pagos/rol, ROLES_BY_PLAN actualizado
+- `server/src/routes/fincas.ts` — Validación con "gestor"
+- `server/src/index.ts` — CORS origin actualizado
+
+### Cambios realizados
+1. **CSS polish**: cards con hover lift (translateY(-3px) + glow), dash-card con gradiente top border, clases glow-accent y glow-blue
+2. **Dashboard reorganizado**: módulos funcionales primero en grid, finanzas e inventario abajo con styling diferenciado
+3. **Login mejorado**: indicador paso a paso (1-2-3) en modo registro, mejor espaciado y layout
+4. **Rol productor → gestor**: renombrado en types, defaults, selectores, i18n (ES/EN/PT), server routes
+5. **Admin Panel rediseñado**: 5 tabs profesionales, usa Supabase Admin API para verificar rol "admin" + PIN
+6. **Netlify eliminado**: todas las referencias a Netlify eliminadas de código y documentación
+7. **Webhook fix**: updateUserPlan() hace merge de user_metadata en vez de sobrescribir
+8. **Selector de rol en Planes.tsx**: visible solo para planes Pro/Enterprise
+9. **Dominio acuical.com adquirido**: FRONTEND_URL actualizado, CORS default actualizado, docs actualizados
+
+---
+
 ## 2026-06-11 — Dashboard migrado a API + endpoint agregado + Parámetros a API + code splitting pdf.js
 
 ### Objetivo

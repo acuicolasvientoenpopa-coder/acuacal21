@@ -107,7 +107,7 @@ acucal2.1/
 
 Configurar Lemon Squeezy para pagos. Se necesita:
 1. Crear cuenta en https://lemonsqueezy.com
-2. Definir productos/planes (Free, Professional $29/mes, Enterprise $99/mes)
+2. Definir productos/planes (Free, Professional $20/mes, Enterprise $50/mes)
 3. Implementar checkout en frontend
 4. Configurar webhooks para actualizar estado de suscripción
 5. Proteger rutas según plan del usuario

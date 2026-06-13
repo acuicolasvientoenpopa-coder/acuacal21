@@ -46,19 +46,34 @@ export default function Login() {
 
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
-      <div className="card" style={{ maxWidth: 400, width: "100%" }}>
-        <div style={{ fontSize: 48, textAlign: "center", marginBottom: 12 }}>🐟</div>
-        <h3 style={{ fontSize: 20, fontWeight: 800, textAlign: "center", marginBottom: 4 }}>
+      <div className="card" style={{ maxWidth: 420, width: "100%", padding: "28px 24px" }}>
+        <div style={{ fontSize: 44, textAlign: "center", marginBottom: 8, opacity: 0.85 }}>🐟</div>
+        <h3 style={{ fontSize: 22, fontWeight: 800, textAlign: "center", marginBottom: 2 }}>
           {t(titleKey)}
         </h3>
-        <p style={{ fontSize: 12, color: "var(--text2)", textAlign: "center", marginBottom: 20 }}>
+        <p style={{ fontSize: 13, color: "var(--text2)", textAlign: "center", marginBottom: 20 }}>
           {t("loginSubtitle")}
         </p>
 
-        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 16 }}>
+        {mode === "register" && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20 }}>
+            {[{ step: 1, label: t("name") }, { step: 2, label: t("rolLabel") }, { step: 3, label: t("emailLabel") }].map((s, i) => (
+              <div key={s.step} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 11, fontWeight: 700, background: "var(--accent)", color: "#0a1628",
+                }}>{s.step}</div>
+                <span style={{ fontSize: 11, color: "var(--text2)" }}>{s.label}</span>
+                {i < 2 && <div style={{ width: 20, height: 1, background: "var(--border)" }} />}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 4, marginBottom: 16 }}>
           {(["es", "en", "pt"] as Idioma[]).map((id) => (
             <button key={id} onClick={() => setLang(id)}
-              style={{ padding: "4px 10px", fontSize: 12, borderRadius: 6, border: lang === id ? "2px solid var(--accent)" : "1px solid var(--border)", background: lang === id ? "var(--accent)" : "transparent", color: lang === id ? "#fff" : "var(--text)", cursor: "pointer", fontWeight: lang === id ? 700 : 400 }}>
+              style={{ padding: "4px 10px", fontSize: 11, borderRadius: 6, border: lang === id ? "2px solid var(--accent)" : "1px solid var(--border)", background: lang === id ? "var(--accent)" : "transparent", color: lang === id ? "#fff" : "var(--text)", cursor: "pointer", fontWeight: lang === id ? 700 : 400 }}>
               {id === "es" ? "🇪🇸 ES" : id === "en" ? "🇺🇸 EN" : "🇧🇷 PT"}
             </button>
           ))}
@@ -71,49 +86,49 @@ export default function Login() {
         )}
 
         {emailSent ? (
-          <div style={{ background: "rgba(46,213,115,0.1)", border: "1px solid var(--success)", borderRadius: 8, padding: "12px", fontSize: 13, color: "var(--success)", marginBottom: 16, textAlign: "center" }}>
+          <div style={{ background: "rgba(46,213,115,0.1)", border: "1px solid var(--accent)", borderRadius: 8, padding: "12px", fontSize: 13, color: "var(--accent)", marginBottom: 16, textAlign: "center" }}>
             {t("checkEmail")}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {mode === "register" && (
-              <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
-                {t("name")}
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 5 }}>
+                <span>{t("name")}</span>
                 <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder={t("namePlaceholder")} required />
               </label>
             )}
             {mode === "register" && (
-              <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
-                {t("rolLabel")}
-                <select value={rol} onChange={(e) => setRol(e.target.value)} style={{ width: "100%" }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 5 }}>
+                <span>{t("rolLabel")}</span>
+                <select value={rol} onChange={(e) => setRol(e.target.value)}>
                   <option value="gestor">{t("rolGestor")}</option>
                   <option value="tecnico">{t("rolTecnico")}</option>
                 </select>
               </label>
             )}
-            <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
-              {t("emailLabel")}
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 5 }}>
+              <span>{t("emailLabel")}</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} required />
             </label>
             {mode !== "forgot" && (
-              <label style={{ fontSize: 11, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 4 }}>
-                {t("passwordLabel")}
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)", display: "flex", flexDirection: "column", gap: 5 }}>
+                <span>{t("passwordLabel")}</span>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("passwordPlaceholder")} required minLength={6} />
               </label>
             )}
             {mode === "register" && (
-              <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} style={{ accentColor: "var(--accent)" }} />
+              <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "8px 0" }}>
+                <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} style={{ accentColor: "var(--accent)", width: 16, height: 16 }} />
                 <span>{t("acceptTerms")} <Link to="/terminos" style={{ color: "var(--accent)" }} target="_blank">{t("termsAndConditions")}</Link></span>
               </label>
             )}
-            <button className="btn-primary" disabled={loading} style={{ width: "100%", marginTop: 8 }}>
+            <button className="btn-primary" disabled={loading} style={{ width: "100%", marginTop: 4 }}>
               {loading ? t("loadingText") : mode === "forgot" ? t("sendLink") : mode === "register" ? t("registerButton") : t("loginButton")}
             </button>
           </form>
         )}
 
-        <p style={{ fontSize: 12, color: "var(--text2)", textAlign: "center", marginTop: 16 }}>
+        <div style={{ fontSize: 12, color: "var(--text2)", textAlign: "center", marginTop: 18 }}>
           {mode === "forgot" ? (
             <button onClick={() => { setMode("login"); setError(""); setEmailSent(false); }}
               style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontWeight: 600, fontSize: 12 }}>
@@ -137,7 +152,7 @@ export default function Login() {
               )}
             </>
           )}
-        </p>
+        </div>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ const PORT = process.env.PORT ?? 3001;
 
 const corsOrigin = process.env.CORS_ORIGIN;
 if (!corsOrigin) {
-  console.warn("⚠️  CORS_ORIGIN no definido. Usando https://acuacal21.pages.dev");
+  console.warn("⚠️  CORS_ORIGIN no definido. Usando https://app.acuical.com");
 }
 
 app.use(helmet({
@@ -38,7 +38,7 @@ app.use(helmet({
   },
 }));
 
-app.use(cors({ origin: corsOrigin ?? "https://acuacal21.pages.dev" }));
+app.use(cors({ origin: corsOrigin ?? "https://app.acuical.com" }));
 
 const limiter = rateLimit({
   windowMs: 60 * 1000,

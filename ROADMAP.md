@@ -61,7 +61,7 @@
 **Objetivo**: Conseguir 1 productor real dispuesto a pagar.
 
 ### Requerido
-- [ ] Plan Professional ($29/mes): fincas ilimitadas, multi-estanque, exportaciones
+- [ ] Plan Professional ($20/mes): fincas ilimitadas, multi-estanque, exportaciones
 - [ ] Lemon Squeezy Checkout + Webhooks
 - [ ] Portal de cliente (datos de facturación, historial de pagos)
 - [ ] Onboarding guiado para nuevo usuario
