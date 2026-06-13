@@ -24,11 +24,9 @@ const Finanzas = lazy(() => import("@/pages/Finanzas"));
 const Inventario = lazy(() => import("@/pages/Inventario"));
 const VeterinaryReportWizard = lazy(() => import("@/pages/veterinary/VeterinaryReportWizard"));
 const Admin = lazy(() => import("@/pages/Admin"));
-const Mapa = lazy(() => import("@/pages/Mapa"));
-const MedirEstanque = lazy(() => import("@/pages/MedirEstanque"));
 const Planes = lazy(() => import("@/pages/Planes"));
 
-const PUBLIC_PATHS = ["/calc", "/formulas", "/medir-estanque", "/admin"];
+const PUBLIC_PATHS = ["/calc", "/formulas", "/admin"];
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -70,8 +68,6 @@ export default function App() {
                     <Route path="vet" element={<ProtectedRoute><SuspenseWrapper><VeterinaryReportWizard /></SuspenseWrapper></ProtectedRoute>} />
                     <Route path="inventario" element={<ProtectedRoute><SuspenseWrapper><Inventario /></SuspenseWrapper></ProtectedRoute>} />
                     <Route path="admin" element={<ProtectedRoute><SuspenseWrapper><Admin /></SuspenseWrapper></ProtectedRoute>} />
-                    <Route path="mapa" element={<ProtectedRoute><SuspenseWrapper><Mapa /></SuspenseWrapper></ProtectedRoute>} />
-                    <Route path="medir-estanque" element={<ProtectedRoute><SuspenseWrapper><MedirEstanque /></SuspenseWrapper></ProtectedRoute>} />
                     <Route path="planes" element={<ProtectedRoute><SuspenseWrapper><Planes /></SuspenseWrapper></ProtectedRoute>} />
                   </Route>
                 </Routes>

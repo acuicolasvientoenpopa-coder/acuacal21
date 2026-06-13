@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
-import { useNavigate } from "react-router-dom";
+
 import { excedeLimiteFincas, excedeLimiteEstanques } from "@/core";
 import { createApi } from "@/services/api";
 
@@ -26,7 +26,6 @@ function saveLocal(fs: Finca[]) {
 export default function Fincas() {
   const { t } = useTranslation();
   const { token, user, plan } = useAuth();
-  const navigate = useNavigate();
   const [list, setList] = useState<Finca[]>(loadLocal);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Finca | null>(null);
@@ -229,9 +228,6 @@ export default function Fincas() {
                   <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                     <button className="btn-sm" style={{ fontSize: 12 }} onClick={() => { setShowCreateMode(null); setNewEst({ fincaId: f.id, value: "" }); }}>
                       📝 {t("gpsManual") || "Manual"}
-                    </button>
-                    <button className="btn-sm" style={{ fontSize: 12 }} onClick={() => navigate(`/geo?fincaId=${f.id}&returnTo=/fincas`)}>
-                      🗺️ {t("gpsDesdeFinca") || "GPS"}
                     </button>
                     <button className="btn-sm" onClick={() => setShowCreateMode(null)}>✕</button>
                   </div>
