@@ -72,7 +72,9 @@ adminRouter.get("/stats", async (req: AuthRequest, res: Response) => {
         const p = (u.user_metadata?.plan as string) || "free";
         planCounts[p] = (planCounts[p] || 0) + 1;
       }
-    } catch {}
+    } catch (e: any) {
+      console.error("[ADMIN] Error listando usuarios:", e?.message || e);
+    }
   }
 
   res.json({

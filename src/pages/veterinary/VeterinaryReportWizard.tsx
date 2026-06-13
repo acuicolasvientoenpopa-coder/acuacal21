@@ -7,6 +7,7 @@ import {
 import { calcularRiesgo } from "./riskCalculator";
 import type { RiskResult } from "./riskCalculator";
 import { exportVetPDF } from "@/utils/pdf";
+import { toast } from "@/components/Toast";
 import { createApi } from "@/services/api";
 
 type FormData = { estanque: string; alimentacion: string[]; comportamiento: string[]; sintomas: string[]; agua: string[]; imagenes: string[]; };
@@ -149,7 +150,7 @@ export default function VeterinaryReportWizard() {
           notas: JSON.stringify(report),
           fecha: new Date().toISOString(),
         });
-      } catch {}
+      } catch (e: any) { console.error("[VeterinaryReportWizard] Error:", e?.message || e); toast("Error de sincronización", "error"); }
     }
     setForm(EMPTY_FORM); setStep(0); setResult(null);
   }, [result, form, pondos, t, lang, reports, client]);
@@ -186,7 +187,7 @@ export default function VeterinaryReportWizard() {
   const removeImage = (index: number) => { setForm((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, i) => i !== index) })); };
 
   const deleteReport = async (id: string) => {
-    try { await client?.del(`/veterinaria/${id}`); } catch {}
+    try { await client?.del(`/veterinaria/${id}`); } catch (e: any) { console.error("[VeterinaryReportWizard] Error:", e?.message || e); }
     const updated = reports.filter((r) => r.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setReports(updated);

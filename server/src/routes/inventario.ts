@@ -1,6 +1,8 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
+import { createEventLog, markEventSuccess, markEventFailed, verifyRecordExists } from "../services/eventLog.js";
+import { generateRequestId, checkRequestIdempotent } from "../services/idempotency.js";
 
 export const inventarioRouter = Router();
 
@@ -12,7 +14,7 @@ const productoSchema = z.object({
   cantidad: z.number().min(0).optional(),
   minimo: z.number().min(0).optional(),
   precio: z.number().min(0).optional(),
-  fincaId: z.string().optional(),
+  fincaId: z.string().min(1, "fincaId requerido"),
 });
 
 const movimientoSchema = z.object({
@@ -41,13 +43,38 @@ inventarioRouter.post("/productos", async (req: AuthRequest, res: Response) => {
     return;
   }
 
+  const requestId = generateRequestId();
+  const { isDuplicate } = await checkRequestIdempotent(requestId, req.userId!, "Inventario");
+  if (isDuplicate) {
+    res.status(409).json({ error: "Operación duplicada" });
+    return;
+  }
+
+  const eventId = requestId;
+  await createEventLog({ id: eventId, type: "INVENTARIO", action: "CREATE", userId: req.userId!, payload: parsed.data });
+
   const { data, error } = await req.supabase!
     .from("Inventario")
     .insert({ ...parsed.data, categoria: parsed.data.categoria ?? "otro", cantidad: parsed.data.cantidad ?? 0, minimo: parsed.data.minimo ?? 0, userId: req.userId })
     .select()
     .single();
 
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    console.error(`[INVENTARIO] Error creando producto:`, error.message);
+    await markEventFailed(eventId, error.message);
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  const verified = await verifyRecordExists("Inventario", data.id, req.userId!);
+  if (!verified) {
+    console.error(`[INVENTARIO] Post-write verification FAILED for producto ${data.id}`);
+    await markEventFailed(eventId, "Post-write verification failed");
+    res.status(500).json({ error: "Error de verificación post-escritura" });
+    return;
+  }
+
+  await markEventSuccess(eventId);
   res.status(201).json(data);
 });
 
@@ -67,7 +94,11 @@ inventarioRouter.put("/productos/:id", async (req: AuthRequest, res: Response) =
     .select()
     .single();
 
-  if (error) { res.status(404).json({ error: "Producto no encontrado" }); return; }
+  if (error) {
+    console.error(`[INVENTARIO] Error actualizando producto ${id}:`, error.message);
+    res.status(404).json({ error: "Producto no encontrado" });
+    return;
+  }
   res.json(data);
 });
 
@@ -80,7 +111,11 @@ inventarioRouter.delete("/productos/:id", async (req: AuthRequest, res: Response
     .eq("id", id)
     .eq("userId", req.userId);
 
-  if (error) { res.status(404).json({ error: "Producto no encontrado" }); return; }
+  if (error) {
+    console.error(`[INVENTARIO] Error eliminando producto ${id}:`, error.message);
+    res.status(404).json({ error: "Producto no encontrado" });
+    return;
+  }
   res.json({ message: "Producto eliminado" });
 });
 
@@ -88,9 +123,14 @@ inventarioRouter.get("/movimientos", async (req: AuthRequest, res: Response) => 
   const { data, error } = await req.supabase!
     .from("MovimientoInventario")
     .select("*, Inventario(*)")
+    .eq("Inventario.userId", req.userId)
     .order("fecha", { ascending: false });
 
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    console.error(`[INVENTARIO] Error obteniendo movimientos:`, error.message);
+    res.status(500).json({ error: error.message });
+    return;
+  }
   res.json(data);
 });
 
@@ -101,12 +141,37 @@ inventarioRouter.post("/movimientos", async (req: AuthRequest, res: Response) =>
     return;
   }
 
+  const requestId = generateRequestId();
+  const { isDuplicate } = await checkRequestIdempotent(requestId, req.userId!, "MovimientoInventario");
+  if (isDuplicate) {
+    res.status(409).json({ error: "Operación duplicada" });
+    return;
+  }
+
+  const eventId = requestId;
+  await createEventLog({ id: eventId, type: "INVENTARIO", action: "CREATE", userId: req.userId!, payload: parsed.data });
+
   const { data, error } = await req.supabase!
     .from("MovimientoInventario")
     .insert({ ...parsed.data, fecha: parsed.data.fecha ?? new Date().toISOString() })
     .select("*, Inventario(*)")
     .single();
 
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    console.error(`[INVENTARIO] Error creando movimiento:`, error.message);
+    await markEventFailed(eventId, error.message);
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  const verified = await verifyRecordExists("MovimientoInventario", data.id, req.userId!);
+  if (!verified) {
+    console.error(`[INVENTARIO] Post-write verification FAILED for movimiento ${data.id}`);
+    await markEventFailed(eventId, "Post-write verification failed");
+    res.status(500).json({ error: "Error de verificación post-escritura" });
+    return;
+  }
+
+  await markEventSuccess(eventId);
   res.status(201).json(data);
 });

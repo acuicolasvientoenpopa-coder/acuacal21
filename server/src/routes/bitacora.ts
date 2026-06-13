@@ -1,6 +1,8 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
+import { createEventLog, markEventSuccess, markEventFailed, verifyRecordExists } from "../services/eventLog.js";
+import { generateRequestId, checkRequestIdempotent } from "../services/idempotency.js";
 
 export const bitacoraRouter = Router();
 
@@ -8,6 +10,7 @@ bitacoraRouter.use(requireAuth);
 
 const bitacoraSchema = z.object({
   fecha: z.string().optional(),
+  fincaId: z.string().min(1, "fincaId requerido"),
   oxigeno: z.number().min(0).max(50).optional(),
   temperatura: z.number().min(-10).max(60).optional(),
   ph: z.number().min(0).max(14).optional(),
@@ -38,13 +41,38 @@ bitacoraRouter.post("/", async (req: AuthRequest, res: Response) => {
     return;
   }
 
+  const requestId = generateRequestId();
+  const { isDuplicate } = await checkRequestIdempotent(requestId, req.userId!, "Bitacora");
+  if (isDuplicate) {
+    res.status(409).json({ error: "Operación duplicada" });
+    return;
+  }
+
+  const eventId = requestId;
+  await createEventLog({ id: eventId, type: "BITACORA", action: "CREATE", userId: req.userId!, payload: parsed.data });
+
   const { data, error } = await req.supabase!
     .from("Bitacora")
     .insert({ ...parsed.data, userId: req.userId })
     .select("*, Finca(*), Estanque(*), Especie(*)")
     .single();
 
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    console.error(`[BITACORA] Error creando registro:`, error.message);
+    await markEventFailed(eventId, error.message);
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  const verified = await verifyRecordExists("Bitacora", data.id, req.userId!);
+  if (!verified) {
+    console.error(`[BITACORA] Post-write verification FAILED for ${data.id}`);
+    await markEventFailed(eventId, "Post-write verification failed");
+    res.status(500).json({ error: "Error de verificación post-escritura" });
+    return;
+  }
+
+  await markEventSuccess(eventId);
   res.status(201).json(data);
 });
 

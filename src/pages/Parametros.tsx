@@ -3,6 +3,7 @@ import { ESPECIES_DEFAULT } from "@/core";
 import type { SpeciesParams } from "@/core";
 import { useTranslation } from "@/store/language";
 import { useAuth } from "@/store/auth";
+import { toast } from "@/components/Toast";
 
 const PARAMS_KEY = "acuical_params_overrides";
 
@@ -77,7 +78,7 @@ export default function Parametros() {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(next),
-      }).catch(() => {});
+      }).catch((e: any) => { toast("Error de sincronización", "error"); console.error("[Parametros] Error:", e?.message || e); });
     }
   };
 
@@ -90,7 +91,7 @@ export default function Parametros() {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(rest),
-      }).catch(() => {});
+      }).catch((e: any) => { console.error("[Parametros] Error:", e?.message || e); });
     }
   };
 
@@ -102,7 +103,7 @@ export default function Parametros() {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({}),
-      }).catch(() => {});
+      }).catch((e: any) => { console.error("[Parametros] Error:", e?.message || e); });
     }
   };
 

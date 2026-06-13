@@ -81,7 +81,7 @@ export default function Dashboard() {
     try {
       const { exportAllExcel } = await import("@/utils/excel");
       await exportAllExcel();
-    } catch {}
+    } catch (e: any) { console.error("[Dashboard] Error:", e?.message || e); }
     setExporting(false);
   };
 

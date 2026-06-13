@@ -1,6 +1,8 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
+import { createEventLog, markEventSuccess, markEventFailed, verifyRecordExists } from "../services/eventLog.js";
+import { generateRequestId, checkRequestIdempotent } from "../services/idempotency.js";
 
 export const finanzasRouter = Router();
 
@@ -11,7 +13,7 @@ const finanzaSchema = z.object({
   monto: z.number().min(0),
   descripcion: z.any().optional(),
   fecha: z.string().optional(),
-  fincaId: z.string().min(1),
+  fincaId: z.string().uuid(),
 });
 
 finanzasRouter.get("/", async (req: AuthRequest, res: Response) => {
@@ -34,6 +36,17 @@ finanzasRouter.post("/", async (req: AuthRequest, res: Response) => {
     res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
     return;
   }
+
+  const requestId = generateRequestId();
+  const { isDuplicate } = await checkRequestIdempotent(requestId, req.userId!, "Finanza");
+  if (isDuplicate) {
+    res.status(409).json({ error: "Operación duplicada" });
+    return;
+  }
+
+  const eventId = requestId;
+  await createEventLog({ id: eventId, type: "FINANZA", action: "CREATE", userId: req.userId!, payload: parsed.data });
+
   const body: any = { ...parsed.data, userId: req.userId };
   if (body.descripcion && typeof body.descripcion === "object") {
     body.descripcion = JSON.stringify(body.descripcion);
@@ -45,7 +58,22 @@ finanzasRouter.post("/", async (req: AuthRequest, res: Response) => {
     .select()
     .single();
 
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    console.error(`[FINANZAS] Error creando registro:`, error.message);
+    await markEventFailed(eventId, error.message);
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  const verified = await verifyRecordExists("Finanza", data.id, req.userId!);
+  if (!verified) {
+    console.error(`[FINANZAS] Post-write verification FAILED for ${data.id}`);
+    await markEventFailed(eventId, "Post-write verification failed");
+    res.status(500).json({ error: "Error de verificación post-escritura" });
+    return;
+  }
+
+  await markEventSuccess(eventId);
   res.status(201).json(data);
 });
 

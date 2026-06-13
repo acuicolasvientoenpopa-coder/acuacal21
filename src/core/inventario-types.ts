@@ -9,6 +9,7 @@ export interface Producto {
   precioUnitario: number;
   stockActual: number;
   stockMinimo: number;
+  fincaId: string;
   proveedor: string;
   notas: string;
   createdAt: string;
@@ -38,6 +39,7 @@ export const PRODUCTO_DEFAULT = (): Producto => ({
   precioUnitario: 0,
   stockActual: 0,
   stockMinimo: 0,
+  fincaId: "",
   proveedor: "",
   notas: "",
   createdAt: "",

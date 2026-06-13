@@ -2,12 +2,14 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
+import { checkAndMarkEventIdempotent, markProcessedEventDone } from "../services/idempotency.js";
+import { createEventLog, markEventSuccess, markEventFailed, verifyRecordExists } from "../services/eventLog.js";
 
 export const pagosRouter = Router();
 
 const ONVO_API = "https://api.onvopay.com/v1";
 const ONVO_SECRET_KEY = process.env.ONVO_SECRET_KEY ?? "";
-const ONVO_WEBHOOK_SECRET = process.env.ONVO_WEBHOOK_SECRET ?? "";
+const ONVO_WEBHOOK_SECRET = process.env.ONVO_WEBHOOK_SECRET;
 const FRONTEND_URL = process.env.CORS_ORIGIN ?? "https://app.acuical.com";
 
 const PRICE_IDS: Record<string, string> = {
@@ -45,6 +47,14 @@ async function onvoPost(path: string, body: unknown) {
   return res.json();
 }
 
+async function onvoGet(path: string) {
+  const res = await fetch(`${ONVO_API}${path}`, {
+    headers: { Authorization: `Bearer ${ONVO_SECRET_KEY}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 const checkoutSchema = z.object({
   priceId: z.enum(["pro_monthly", "enterprise_monthly"]),
 });
@@ -76,58 +86,127 @@ pagosRouter.post("/checkout", requireAuth, async (req: AuthRequest, res: Respons
 
     res.json({ url: session.url, id: session.id });
   } catch (err: any) {
-    console.error("Error creando checkout:", err);
+    console.error("[CHECKOUT] Error creando checkout:", err);
     res.status(500).json({ error: err.message || "Error al crear sesión de pago" });
   }
 });
 
+async function updateUserPlan(userId: string, plan: string, subData?: any) {
+  const admin = getAdminClient();
+
+  const payload: any = {
+    userId,
+    plan,
+    status: "active",
+    onvoSubscriptionId: subData?.id ?? "",
+    onvoCustomerId: subData?.customer ?? "",
+    currentPeriodStart: subData?.current_period_start
+      ? new Date(subData.current_period_start * 1000).toISOString()
+      : new Date().toISOString(),
+    currentPeriodEnd: subData?.current_period_end
+      ? new Date(subData.current_period_end * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+
+  const { error: upsertErr } = await admin.from("Subscription").upsert(payload, {
+    onConflict: "userId",
+    ignoreDuplicates: false,
+  });
+
+  if (upsertErr) {
+    console.error(`[PAGOS] Error upserting Subscription for user ${userId}:`, upsertErr);
+    throw new Error(`Subscription upsert failed: ${upsertErr.message}`);
+  }
+
+  const verified = await verifyRecordExists("Subscription", payload.onvoSubscriptionId || "", userId);
+  if (!verified) {
+    const { data: fallbackCheck } = await admin.from("Subscription")
+      .select("id, plan").eq("userId", userId).eq("plan", plan).maybeSingle();
+    if (!fallbackCheck) {
+      console.error(`[PAGOS] Post-write verification FAILED for user ${userId}, plan ${plan}`);
+      throw new Error("Subscription verification failed after write");
+    }
+  }
+
+  const { data: existing } = await admin.auth.admin.getUserById(userId);
+  const currentMeta = existing?.user?.user_metadata || {};
+  await admin.auth.admin.updateUserById(userId, {
+    user_metadata: { ...currentMeta, plan },
+  });
+
+  console.log(`[PAGOS] Subscription activada: user=${userId} plan=${plan}`);
+}
+
 pagosRouter.post("/webhook", async (req: Request, res: Response) => {
   const secret = req.headers["x-webhook-secret"] as string;
-  if (!secret || secret !== ONVO_WEBHOOK_SECRET) {
+  if (!secret || !ONVO_WEBHOOK_SECRET || secret !== ONVO_WEBHOOK_SECRET) {
+    console.error("[WEBHOOK] Unauthorized webhook attempt");
     res.status(401).json({ error: "No autorizado" });
     return;
   }
 
   const event: any = req.body;
-  console.log("Webhook recibido:", event.type);
+  const eventId: string = event.id || "";
+  console.log(`[WEBHOOK] Evento recibido: ${eventId} type=${event.type}`);
 
-  async function updateUserPlan(userId: string, plan: string) {
-    const admin = getAdminClient();
-    const { data: existing } = await admin.auth.admin.getUserById(userId);
-    const currentMeta = existing?.user?.user_metadata || {};
-    await admin.auth.admin.updateUserById(userId, {
-      user_metadata: { ...currentMeta, plan },
-    });
+  if (!eventId) {
+    console.error("[WEBHOOK] Event sin id, rechazado");
+    res.status(400).json({ error: "Event missing id" });
+    return;
+  }
+
+  const { alreadyProcessed, error: idempError } = await checkAndMarkEventIdempotent(eventId, "onvo");
+  if (idempError) {
+    console.error(`[WEBHOOK] Error de idempotencia para ${eventId}:`, idempError);
+    res.status(500).json({ error: "Error de idempotencia" });
+    return;
+  }
+  if (alreadyProcessed) {
+    console.log(`[WEBHOOK] Evento duplicado ignorado: ${eventId}`);
+    res.json({ received: true, duplicate: true });
+    return;
   }
 
   try {
     if (event.type === "checkout-session.succeeded") {
-      const { metadata } = event.data;
+      const obj = event.data?.object ?? event.data;
+      const metadata = obj?.metadata ?? {};
       if (metadata?.userId && metadata?.plan) {
-        await updateUserPlan(metadata.userId, metadata.plan);
-        console.log(`Plan actualizado a ${metadata.plan} para usuario ${metadata.userId}`);
+        const session = await onvoGet(`/checkout/sessions/${obj.id}`);
+        if (!session || session.payment_status !== "paid") {
+          console.error(`[WEBHOOK] Sesión inválida: ${obj.id}`);
+          await markProcessedEventDone(eventId, "failed", "Invalid session");
+          res.status(400).json({ error: "Invalid session" });
+          return;
+        }
+        await updateUserPlan(metadata.userId, metadata.plan, obj);
+        console.log(`[WEBHOOK] Plan activado: ${metadata.plan} user=${metadata.userId} event=${eventId}`);
       }
     }
 
     if (event.type === "subscription.renewal.succeeded") {
-      const { metadata } = event.data;
+      const obj = event.data?.object ?? event.data;
+      const metadata = obj?.metadata ?? {};
       if (metadata?.userId && metadata?.plan) {
-        await updateUserPlan(metadata.userId, metadata.plan);
-        console.log(`Suscripción renovada: ${metadata.plan} para usuario ${metadata.userId}`);
+        await updateUserPlan(metadata.userId, metadata.plan, obj);
+        console.log(`[WEBHOOK] Suscripción renovada: ${metadata.plan} user=${metadata.userId} event=${eventId}`);
       }
     }
 
     if (event.type === "subscription.renewal.failed") {
-      const { metadata } = event.data;
+      const obj = event.data?.object ?? event.data;
+      const metadata = obj?.metadata ?? {};
       if (metadata?.userId) {
-        console.log(`Renovación fallida para usuario ${metadata.userId}`);
-        await updateUserPlan(metadata.userId, "free");
+        console.log(`[WEBHOOK] Renovación fallida user=${metadata.userId} event=${eventId}`);
+        await updateUserPlan(metadata.userId, "free", obj);
       }
     }
 
+    await markProcessedEventDone(eventId, "success");
     res.json({ received: true });
   } catch (err: any) {
-    console.error("Error procesando webhook:", err);
+    console.error(`[WEBHOOK] Error procesando evento ${eventId}:`, err);
+    await markProcessedEventDone(eventId, "failed", err.message || "Unknown error");
     res.status(500).json({ error: "Error procesando webhook" });
   }
 });
@@ -162,6 +241,7 @@ pagosRouter.post("/rol", requireAuth, async (req: AuthRequest, res: Response) =>
 
     res.json({ rol: parsed.data.rol });
   } catch (err: any) {
+    console.error("[PAGOS] Error al actualizar rol:", err);
     res.status(500).json({ error: err.message || "Error al actualizar rol" });
   }
 });

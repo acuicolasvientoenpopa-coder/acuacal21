@@ -35,8 +35,8 @@ feedbackRouter.post("/", async (req: Request, res: Response) => {
       rating: rating || null,
       page: page || null,
     });
-  } catch {
-    // If table doesn't exist yet, just log it
+  } catch (e: any) {
+    console.error("[FEEDBACK] Error guardando feedback:", e?.message || e);
   }
 
   res.json({ ok: true });

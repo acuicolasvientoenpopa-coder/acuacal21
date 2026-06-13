@@ -7,24 +7,27 @@ import { toast } from "@/components/Toast";
 import { PRODUCTO_DEFAULT, CATEGORIAS } from "@/core/inventario-types";
 import type { Producto, MovimientoInventario } from "@/core/inventario-types";
 import { createApi } from "@/services/api";
+import { useLookups } from "@/store/lookups";
 
 function apiToProducto(r: any): Producto {
   return {
     id: r.id, nombre: r.nombre, categoria: r.categoria || "alimento",
     unidad: "", presentacion: "", precioUnitario: r.precio || 0,
     stockActual: r.cantidad || 0, stockMinimo: r.minimo || 0,
-    proveedor: "", notas: "", createdAt: r.createdAt || "", updatedAt: r.updatedAt || "",
+    fincaId: r.fincaId || "", proveedor: "", notas: "",
+    createdAt: r.createdAt || "", updatedAt: r.updatedAt || "",
   };
 }
 
 function productoToApi(p: Producto) {
-  return { nombre: p.nombre, categoria: p.categoria, cantidad: p.stockActual, minimo: p.stockMinimo, precio: p.precioUnitario };
+  return { nombre: p.nombre, categoria: p.categoria, cantidad: p.stockActual, minimo: p.stockMinimo, precio: p.precioUnitario, fincaId: p.fincaId };
 }
 
 export default function Inventario() {
   const { t } = useTranslation();
   const { token } = useAuth();
   const { fmt } = useCurrency();
+  const { fincas } = useLookups();
   const { productos, movimientos, alertas, valorTotalInventario, saveProducto, deleteProducto, saveMovimiento, reload } = useInventario();
 
   const client = useMemo(() => token ? createApi(token) : null, [token]);
@@ -68,6 +71,7 @@ export default function Inventario() {
 
   const saveProd = async () => {
     if (!pf.nombre.trim()) { toast("El nombre es obligatorio", "error"); return; }
+    if (!pf.fincaId) { toast("Seleccioná una finca", "error"); return; }
     const now = new Date().toISOString();
     const prod = editProd
       ? { ...pf, id: pf.id, updatedAt: now }
@@ -84,14 +88,14 @@ export default function Inventario() {
           saveProducto(apiToProducto(created));
         }
       }
-    } catch {}
+    } catch (e: any) { console.error("[Inventario] Error:", e?.message || e); }
     setShowProdForm(false);
     toast(editProd ? "Producto actualizado" : "Producto creado", "success");
   };
 
   const delProd = async (id: string) => {
     deleteProducto(id);
-    try { await client?.del(`/inventario/productos/${id}`); } catch {}
+    try { await client?.del(`/inventario/productos/${id}`); } catch (e: any) { console.error("[Inventario] Error:", e?.message || e); }
     toast("Producto eliminado", "info");
   };
 
@@ -103,7 +107,7 @@ export default function Inventario() {
     saveMovimiento(mov);
     try {
       await client?.post("/inventario/movimientos", { tipo: mov.tipo, cantidad: mov.cantidad, productoId: mov.productoId, fecha: mov.fecha });
-    } catch {}
+    } catch (e: any) { console.error("[Inventario] Error:", e?.message || e); }
     setShowMovForm(false);
     toast("Movimiento registrado", "success");
   };
@@ -228,6 +232,7 @@ export default function Inventario() {
             <div className="form-grid">
               <label>{t("invNombre")}<input value={pf.nombre} onChange={(e) => setPf({ ...pf, nombre: e.target.value })} placeholder="Ej: Alimento Tilapia 40%" /></label>
               <label>{t("invCategoria")}<select value={pf.categoria} onChange={(e) => setPf({ ...pf, categoria: e.target.value as any })}>{CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select></label>
+              <label>Finca<select value={pf.fincaId} onChange={(e) => setPf({ ...pf, fincaId: e.target.value })}><option value="">Seleccionar</option>{fincas.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</select></label>
               <label>{t("invUnidad")}<input value={pf.unidad} onChange={(e) => setPf({ ...pf, unidad: e.target.value })} placeholder="Ej: kg" /></label>
               <label>{t("invPresentacion")}<input value={pf.presentacion} onChange={(e) => setPf({ ...pf, presentacion: e.target.value })} placeholder="Ej: saco 40kg" /></label>
               <label>{t("invPrecioUnitario")}<input type="number" value={pf.precioUnitario || ""} onChange={(e) => setPf({ ...pf, precioUnitario: Number(e.target.value) })} placeholder="0" /></label>

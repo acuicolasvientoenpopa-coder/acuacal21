@@ -101,7 +101,7 @@ export default function Finanzas() {
           fecha: new Date().toISOString(),
           fincaId: rec.fincaId || "unknown",
         });
-      } catch { break; }
+      } catch (e: any) { console.error("[Finanzas] Error:", e?.message || e); break; }
     }
     setSaving(false);
   };
@@ -233,7 +233,7 @@ export default function Finanzas() {
           <label>{t("estanque")}
             <select value={form.fincaId} onChange={(e) => {
               const f = estanques.find((es) => es.id === e.target.value);
-              setForm({ ...form, fincaId: e.target.value, fincaNombre: f?.label ?? e.target.value });
+              setForm({ ...form, fincaId: f?.raw?.fincaId ?? e.target.value, fincaNombre: f?.label ?? e.target.value });
             }}>
               <option value="">{t("seleccionar")}</option>
               {estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}

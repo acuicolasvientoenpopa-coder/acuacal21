@@ -142,7 +142,7 @@ export default function Microbiologia() {
         const result = await client?.mutate("POST", "/microbiologia", { resultado: cf.resultado, notas: JSON.stringify(payload), fecha: cf.fecha });
         if (result?.ok && result.data?.id) payload.id = result.data.id;
       }
-    } catch {} finally { setSaving(false); }
+    } catch (e: any) { console.error("[Microbiologia] Error:", e?.message || e); toast("Error al guardar en servidor", "error"); } finally { setSaving(false); }
     const updated = editCultivo ? cultivos.map((c) => c.id === editCultivo.id ? payload : c) : [...cultivos, payload];
     setCultivos(updated);
     setShowCultivo(false);
@@ -150,7 +150,7 @@ export default function Microbiologia() {
   };
 
   const deleteCultivo = async (id: string) => {
-    try { await client?.del(`/microbiologia/${id}`); } catch {}
+    try { await client?.del(`/microbiologia/${id}`); } catch (e: any) { console.error("[Microbiologia] Error:", e?.message || e); }
     setCultivos(cultivos.filter((c) => c.id !== id));
     toast("Cultivo eliminado", "info");
   };
@@ -173,7 +173,7 @@ export default function Microbiologia() {
         const result = await client?.mutate("POST", "/microbiologia", { resultado: "medicacion", notas: JSON.stringify(payload), fecha: mf.fechaInicio });
         if (result?.ok && result.data?.id) payload.id = result.data.id;
       }
-    } catch {} finally { setSaving(false); }
+    } catch (e: any) { console.error("[Microbiologia] Error:", e?.message || e); toast("Error al guardar en servidor", "error"); } finally { setSaving(false); }
     const updated = editMed ? medicacion.map((m) => (m.id === editMed.id ? payload : m)) : [...medicacion, payload];
     setMedicacion(updated);
     setShowMed(false);
@@ -181,7 +181,7 @@ export default function Microbiologia() {
   };
 
   const deleteMed = async (id: string) => {
-    try { await client?.del(`/microbiologia/${id}`); } catch {}
+    try { await client?.del(`/microbiologia/${id}`); } catch (e: any) { console.error("[Microbiologia] Error:", e?.message || e); }
     setMedicacion(medicacion.filter((m) => m.id !== id));
     toast("Medicación eliminada", "info");
   };

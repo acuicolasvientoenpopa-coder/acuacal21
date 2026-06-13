@@ -106,7 +106,7 @@ export default function Especies() {
   };
 
   const remove = async (id: string) => {
-    try { await client?.del(`/especies/${id}`); } catch { }
+    try { await client?.del(`/especies/${id}`); } catch (e: any) { console.error("[Especies] Error:", e?.message || e); }
     setCustom(custom.filter((c) => c.id !== id));
   };
 

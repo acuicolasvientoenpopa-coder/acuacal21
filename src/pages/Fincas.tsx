@@ -63,7 +63,7 @@ export default function Fincas() {
     try {
       const data = await client.get<any[]>(`/fincas/${fincaId}/users`);
       setUsers((prev) => ({ ...prev, [fincaId]: data }));
-    } catch {}
+    } catch (e: any) { console.error("[Fincas] Error:", e?.message || e); }
   };
 
   useEffect(() => { saveLocal(list); }, [list]);
@@ -106,7 +106,7 @@ export default function Fincas() {
   };
 
   const remove = async (id: string) => {
-    try { await client?.del(`/fincas/${id}`); } catch { /* ignore */ }
+    try { await client?.del(`/fincas/${id}`); } catch (e: any) { console.error("[Fincas] Error:", e?.message || e); }
     setList(list.filter((x) => x.id !== id));
   };
 
@@ -115,7 +115,7 @@ export default function Fincas() {
     if (!v) return;
     const finca = list.find((f) => f.id === fincaId);
     if (finca && excedeLimiteEstanques(plan, finca.estanques.length)) { setError(t("limiteEstanques")); setNewEst(null); return; }
-    try { await client?.post(`/fincas/${fincaId}/estanques`, { nombre: v }); } catch { /* ignore */ }
+    try { await client?.post(`/fincas/${fincaId}/estanques`, { nombre: v }); } catch (e: any) { console.error("[Fincas] Error:", e?.message || e); }
     setList(list.map((f) => f.id === fincaId ? { ...f, estanques: [...f.estanques, v] } : f));
     setNewEst(null);
   };

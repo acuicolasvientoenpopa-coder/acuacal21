@@ -147,19 +147,19 @@ export default function Bitacora() {
     if (rec.amonio) payload.amonio = parseFloat(rec.amonio);
     if (rec.salinidad) payload.salinidad = parseFloat(rec.salinidad);
     if (rec.pesoMuestreo) payload.peso = parseFloat(rec.pesoMuestreo);
-    if (rec.estanque) payload.estanqueId = rec.estanque;
+    if (rec.estanque) payload.fincaId = rec.estanque.split("||")[0];
     if (rec.especie) payload.especieId = rec.especie;
     setSaving(true);
     try {
       const created = await client?.post<any>("/bitacora", payload);
       rec.id = created.id;
-    } catch {} finally { setSaving(false); }
+    } catch (e: any) { console.error("[Bitacora] Error:", e?.message || e); toast("Error al guardar en servidor", "error"); } finally { setSaving(false); }
     setRecords([rec, ...records]);
     setShowForm(false);
   };
 
   const remove = async (id: string) => {
-    try { await client?.del(`/bitacora/${id}`); } catch { }
+    try { await client?.del(`/bitacora/${id}`); } catch (e: any) { console.error("[Bitacora] Error:", e?.message || e); }
     setRecords(records.filter((r) => r.id !== id));
   };
 

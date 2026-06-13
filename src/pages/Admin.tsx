@@ -127,7 +127,7 @@ export default function Admin() {
     });
     api("/admin/stats").then(setStats).catch((e) => setLoadError(e.message));
     api("/admin/users").then(setUsers).catch((e) => setLoadError(e.message));
-    api("/admin/subscriptions").then(setSubscriptions).catch(() => {});
+    api("/admin/subscriptions").then(setSubscriptions).catch((e: any) => { console.error("[Admin] Error:", e?.message || e); });
   }, [unlocked, api]);
 
   const handleUnlock = () => {
