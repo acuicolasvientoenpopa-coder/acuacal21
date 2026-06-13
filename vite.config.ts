@@ -7,7 +7,7 @@ export default defineConfig({
   base: "/",
   plugins: [react(), VitePWA({
     registerType: 'autoUpdate',
-    injectRegister: null,
+    injectRegister: 'auto',
     includeAssets: ['favicon.svg'],
     manifest: {
       name: 'AquaCalc',

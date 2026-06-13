@@ -1,32 +1,35 @@
-# CONTEXT.md — AcuiCal
+# CONTEXT.md — AcuiCal / AquaCalc
 
 > Contexto completo del proyecto para continuidad de desarrollo por IA.
-> Creado: 2026-06-10.
+> Actualizado: 2026-06-13 (HEAD en `opencode/witty-engine` = `origin/main`).
 
 ---
 
 ## ¿Qué es AcuiCal?
 
-SaaS de gestión acuícola para productores pequeños y medianos de LATAM. Offline-first, multilingüe (ES/EN/PT), con referencias científicas (FAO, Boyd, Timmons).
+SaaS de gestión acuícola para productores pequeños y medianos de LATAM. Offline-first, multilingüe (ES/EN/PT), con referencias científicas (FAO, Boyd, Timmons). También llamado **AquaCalc** en la UI.
 
 ---
 
-## Estado Actual
+## Estado Actual (HEAD)
 
-- **Frontend**: React 19 + TypeScript 6 + Vite 8 — deployado en Netlify
-- **Backend**: Express + TypeScript + Prisma — deployado en Railway
-- **Base de datos**: PostgreSQL en Supabase
-- **Autenticación**: Supabase Auth (JWT, persistSession)
-- **Persistencia**: Híbrida — API primaria + localStorage como fallback/cache
-- **PWA**: vite-plugin-pwa con service worker + Workbox
-- **Tests**: 25 tests vitest para core (calcular, calcRacion)
-- **Build**: `tsc -b && vite build` — compila y pasa
+| Capa | Stack | Deploy |
+|------|-------|--------|
+| **Frontend** | React 19 + TypeScript 6 + Vite 8 | Netlify (`acuacla2112.netlify.app`) |
+| **Backend** | Express + Prisma + Zod | Railway |
+| **BD** | PostgreSQL + RLS | Supabase |
+| **Auth** | Supabase Auth (JWT, persistSession, autoRefreshToken) | Supabase |
+| **Persistencia** | API primaria + localStorage fallback/cache | Híbrida |
+| **PWA** | `vite-plugin-pwa` (injectRegister: null, SW manual) | Service Worker propio |
+| **Tests** | 25 tests vitest en `src/core/__tests__/formulas.test.ts` | Vitest |
+| **Build** | `tsc -b && vite build` | Pasa |
 
-### URLs
-- Frontend: https://acuacla2112.netlify.app
-- Backend API: https://acuacal21-production.up.railway.app/api
-- Backend health: https://acuacal21-production.up.railway.app/api/health → `{"status":"ok","version":"1.0.0"}`
-- Supabase project: `smvjffbeshxcfltjoolm`
+### URLs activas
+- **Frontend:** https://acuacla2112.netlify.app
+- **Backend API:** https://acuacal21-production.up.railway.app/api
+- **Health:** https://acuacal21-production.up.railway.app/api/health → `{"status":"ok","version":"1.0.0"}`
+- **Supabase:** `smvjffbeshxcfltjoolm.supabase.co`
+- **Repo:** `acuicolasvientoenpopa-coder/acuacal21`
 
 ---
 
@@ -34,119 +37,130 @@ SaaS de gestión acuícola para productores pequeños y medianos de LATAM. Offli
 
 ```
 acucal2.1/
-├── src/                          # Frontend React + Vite
-│   ├── core/                     # TypeScript puro (sin React, sin DOM)
-│   │   ├── formulas.ts           # cálculos acuícolas (biomasa, FCR, ración)
-│   │   ├── species.ts            # 7 especies predefinidas + ENERGY_DEFAULTS
-│   │   ├── currencies.ts         # 16 monedas con formato locale
-│   │   ├── i18n.ts               # ~430 claves × 3 idiomas (ES/EN/PT)
-│   │   ├── validators.ts         # validación WQ, formularios, email
-│   │   ├── observations.ts       # 10 observaciones clínicas
-│   │   ├── inventario-types.ts   # tipos Producto, Movimiento, Categoría
-│   │   ├── __tests__/            # 25 tests vitest
-│   │   └── index.ts
-│   ├── store/                    # React Context + hooks
-│   │   ├── auth.tsx              # AuthProvider (Supabase login/register/logout)
-│   │   ├── language.ts           # LanguageProvider + useTranslation
-│   │   ├── currency.ts           # CurrencyProvider + useCurrency
-│   │   ├── theme.ts              # ThemeProvider + useTheme
-│   │   ├── lookups.ts            # useLookups() — fincas, especies, estanques
-│   │   ├── inventario.ts         # useInventario() — CRUD + alertas (localStorage)
-│   │   └── saveIndicator.ts      # useSaveIndicator()
-│   ├── components/               # Componentes compartidos
-│   │   ├── Layout.tsx            # Header + Sidebar + main + logout
-│   │   ├── Sidebar.tsx           # navegación + idioma + moneda + tema
-│   │   ├── GlobalSearch.tsx      # búsqueda en localStorage
-│   │   ├── Toast.tsx             # notificaciones toast
-│   │   └── Tutorial.tsx          # tutorial interactivo 5 pasos
-│   ├── pages/                    # 15 páginas (13 protegidas + login + terminos)
-│   │   ├── Login.tsx             # login/register con checkbox términos
-│   │   ├── Terminos.tsx          # términos y condiciones (público)
-│   │   ├── Dashboard.tsx         # resumen global (localStorage)
-│   │   ├── Calculator.tsx        # calculadora acuícola (local)
-│   │   ├── Bitacora.tsx          # biometría diaria (API + localStorage)
-│   │   ├── Zootecnico.tsx        # seguimiento gráficos (localStorage)
-│   │   ├── Especies.tsx          # CRUD especies (API + localStorage)
-│   │   ├── Fincas.tsx            # CRUD fincas + estanques (API + localStorage)
-│   │   ├── Parametros.tsx        # parámetros WQ (localStorage)
-│   │   ├── Formulas.tsx          # referencias técnicas (estático)
-│   │   ├── Microbiologia.tsx     # registro microbiológico (API + localStorage)
-│   │   ├── Finanzas.tsx          # gestión financiera (API + localStorage)
-│   │   ├── Inventario.tsx        # productos + movimientos (API + localStorage)
-│   │   ├── veterinary/           # wizard diagnóstico sanitario (API + localStorage)
-│   │   └── MasterPage.tsx        # panel admin + editor localStorage
-│   │   └── Mapa.tsx              # mapa arquitectura (solo desde Master)
-│   ├── data/navLinks.ts          # definición navegación
-│   ├── utils/debugData.ts        # datos de prueba
-│   ├── App.tsx                   # router (15 rutas + AuthProvider)
-│   ├── main.tsx                  # entry point + registerSW
-│   └── index.css                 # estilos globales
+├── src/                              # Frontend React + Vite
+│   ├── core/                         # TypeScript puro (sin React, sin DOM)
+│   │   ├── formulas.ts               # cálculos: biomasa, FCR, ración, energía, 6 formas volumen
+│   │   ├── species-defaults.ts       # 7 especies predefinidas + ENERGY_DEFAULTS
+│   │   ├── currencies.ts             # 16 monedas con formato locale
+│   │   ├── i18n.ts                   # ~1364 líneas, 300+ claves × 3 idiomas (ES/EN/PT)
+│   │   ├── validators.ts             # validación WQ, formularios, email
+│   │   ├── observations.ts           # 10 observaciones clínicas
+│   │   ├── inventario-types.ts       # tipos Producto, Movimiento, Categoría
+│   │   ├── plan.ts                   # Plan/Rol: Free/Pro/Enterprise, límites, gates
+│   │   ├── __tests__/                # 25 tests vitest (formulas)
+│   │   └── index.ts                  # barrel export
+│   ├── store/                        # React Context + hooks
+│   │   ├── auth.tsx                  # AuthProvider: login/register/logout/resetPassword, plan/rol
+│   │   ├── language.tsx              # LanguageProvider + useTranslation (contenía fix TS cache)
+│   │   ├── currency.ts               # CurrencyProvider + useCurrency
+│   │   ├── theme.ts                  # ThemeProvider + useTheme
+│   │   ├── lookups.ts                # useLookups() — fincas, especies, estanques (localStorage)
+│   │   ├── inventario.ts             # useInventario() — CRUD + alertas (localStorage)
+│   │   └── saveIndicator.ts          # useSaveIndicator()
+│   ├── components/                   # Componentes compartidos
+│   │   ├── Layout.tsx                # Header + Sidebar + online/offline bar + install prompt
+│   │   ├── Toast.tsx                 # notificaciones toast
+│   │   ├── Tutorial.tsx              # tutorial interactivo 5 pasos
+│   │   ├── GlobalSearch.tsx          # búsqueda en localStorage
+│   │   ├── Profile.tsx               # modal perfil de usuario (nombre, inicial)
+│   │   └── ConfirmModal.tsx          # modal de confirmación reutilizable
+│   ├── pages/                        # 14 páginas en router (+ login/terminos)
+│   │   ├── Login.tsx                 # login/register/forgot password, checkbox términos
+│   │   ├── Terminos.tsx              # términos y condiciones (público)
+│   │   ├── Dashboard.tsx             # resumen global (localStorage + API)
+│   │   ├── Calculator.tsx            # calculadora acuícola con energía (local)
+│   │   ├── Bitacora.tsx              # biometría diaria (API + localStorage)
+│   │   ├── Zootecnico.tsx            # seguimiento gráficos (localStorage)
+│   │   ├── Especies.tsx              # CRUD especies (API + localStorage)
+│   │   ├── Fincas.tsx                # CRUD fincas + estanques con gates plan (API + localStorage)
+│   │   ├── Parametros.tsx            # parámetros WQ (localStorage)
+│   │   ├── Formulas.tsx              # referencias técnicas (estático)
+│   │   ├── Microbiologia.tsx         # registro microbiológico (API + localStorage)
+│   │   ├── Finanzas.tsx              # gestión financiera (API + localStorage)
+│   │   ├── Inventario.tsx            # productos + movimientos (API + localStorage)
+│   │   ├── veterinary/              # wizard diagnóstico sanitario (4 archivos)
+│   │   │   ├── index.ts
+│   │   │   ├── VeterinaryReportWizard.tsx
+│   │   │   ├── riskCalculator.ts
+│   │   │   └── symptomRules.ts
+│   │   ├── Admin.tsx                 # panel admin (reemplaza MasterPage): override plan/rol,
+│   │   │                             #   generar datos prueba, status API, import/export JSON,
+│   │   │                             #   force SW update, clear localStorage
+│   │   ├── MasterPage.tsx            # (legacy, reemplazado por Admin.tsx)
+│   │   ├── GeoPond.tsx               # (legacy, reemplazado por MedirEstanque.tsx)
+│   │   ├── MedirEstanque.tsx         # medir estanque: 6 formas (manual/geo), Leaflet map,
+│   │   │                             #   rectangular/circular/trapezoidal/tanque/triangular/polígono
+│   │   ├── Mapa.tsx                  # mapa arquitectura (solo desde Admin)
+│   │   └── index.ts                  # barrel export
+│   ├── data/navLinks.ts             # definición navegación + medirEstanque link
+│   ├── utils/debugData.ts           # generadores de datos de prueba
+│   ├── services/index.ts            # (vacio — export {})
+│   ├── App.tsx                      # router (16 rutas: 14 protegidas + login + terminos)
+│   ├── main.tsx                     # entry point + service worker registration manual
+│   └── index.css                    # estilos globales, variables CSS tema
 │
-├── server/                       # Backend Express + Prisma
+├── server/                          # Backend Express + Prisma + Zod
 │   ├── src/
-│   │   ├── index.ts              # servidor Express (8 routers)
+│   │   ├── index.ts                 # servidor Express (8 routers + health)
 │   │   ├── middleware/
-│   │   │   ├── auth.ts           # verificación JWT Supabase
-│   │   │   └── errorHandler.ts   # manejo global de errores
-│   │   └── routes/
-│   │       ├── auth.ts           # POST /api/auth/register, /login, /logout
-│   │       ├── fincas.ts         # CRUD /api/fincas + estanques
-│   │       ├── bitacora.ts       # CRUD /api/bitacora
-│   │       ├── especies.ts       # CRUD /api/especies
-│   │       ├── finanzas.ts       # CRUD /api/finanzas
-│   │       ├── inventario.ts     # CRUD /api/inventario/productos + movimientos
-│   │       ├── microbiologia.ts  # CRUD /api/microbiologia
-│   │       └── veterinaria.ts    # CRUD /api/veterinaria
+│   │   │   ├── auth.ts              # verificación JWT Supabase
+│   │   │   └── errorHandler.ts      # manejo global de errores
+│   │   └── routes/                  # 8 routers, 26 endpoints
+│   │       ├── auth.ts              # 3 POST (register, login, logout)
+│   │       ├── fincas.ts            # CRUD fincas + estanques (6 endpoints)
+│   │       ├── bitacora.ts          # CRUD bitácora (3 endpoints)
+│   │       ├── especies.ts          # CRUD especies (4 endpoints)
+│   │       ├── finanzas.ts          # CRUD finanzas (4 endpoints)
+│   │       ├── inventario.ts        # CRUD productos + movimientos (6 endpoints)
+│   │       ├── microbiologia.ts     # CRUD microbiología (4 endpoints)
+│   │       └── veterinaria.ts       # CRUD veterinaria (3 endpoints)
 │   ├── prisma/
-│   │   ├── schema.prisma         # 10 tablas: User, Finca, Estanque, Especie, Bitacora, Finanza, Inventario, MovimientoInventario, Microbiologia, Veterinaria
-│   │   └── migration.sql         # migración SQL generada
+│   │   ├── schema.prisma            # 10 tablas + 4 enums
+│   │   └── migration.sql
 │   ├── package.json
 │   ├── tsconfig.json
-│   └── .env
+│   └── .env.example
 │
+├── tools/                           # Deploy panel local
+│   ├── server.mjs                   # servidor HTTP local (build, deploy, status)
+│   └── index.html                   # UI del deploy panel
+├── .github/workflows/build.yml     # CI: npm ci + npm run build
 ├── public/
-│   └── _redirects                # SPA fallback para Netlify
-├── dist/                         # build de producción
-├── README.md
-├── CONTEXT.md                    # este archivo
-├── AI_CONTEXT.md
-├── PROJECT_STATUS.md
-├── CHANGELOG.md
-├── ROADMAP.md
-├── BUSINESS_PLAN.md
-├── TECHNICAL_DECISIONS.md
-├── VISION.md
-├── TERMS.md
-├── ANALISIS-EXTRACCION.md
-├── package.json
-└── vite.config.ts
+│   ├── _redirects                   # SPA fallback Netlify
+│   ├── _headers                     # headers de seguridad
+│   ├── favicon.svg
+│   └── icons.svg
+├── AcuiCal Panel.bat               # lanzador Windows para deploy panel
+├── deploy.bat                       # script deploy legacy
+└── iniciar.bat
 ```
 
 ---
 
 ## Funcionalidades Implementadas
 
-### Frontend (100% funcional)
+### Frontend
+
 | Feature | Estado | Persistencia |
 |---------|--------|-------------|
-| Calculadora acuícola (biomasa, FCR, rentabilidad, ración) | ✅ | Local |
+| Calculadora acuícola (biomasa, FCR, rentabilidad, ración, energía) | ✅ | Local |
 | Bitácora de biometría con validación WQ | ✅ | API + localStorage |
 | Seguimiento zootécnico con gráficos | ✅ | localStorage |
 | CRUD especies (7 predefinidas + personalizadas) | ✅ | API + localStorage |
-| CRUD fincas + estanques (jerarquía) | ✅ | API + localStorage |
+| CRUD fincas + estanques con gates por plan | ✅ | API + localStorage |
 | Parámetros WQ por especie | ✅ | localStorage |
 | Fórmulas de referencia (FAO, Boyd, Timmons) | ✅ | Estático |
 | Microbiología (cultivos + medicación) | ✅ | API + localStorage |
 | Finanzas por ciclo | ✅ | API + localStorage |
 | Inventario (productos, movimientos, alertas) | ✅ | API + localStorage |
 | Wizard veterinario (diagnóstico sanitario) | ✅ | API + localStorage |
-| Dashboard con resumen global | ✅ | localStorage |
-| Master Panel (admin, editor localStorage) | ✅ | localStorage |
+| Dashboard con resumen global | ✅ | API + localStorage |
+| Admin Panel (override plan/rol, data tools, import/export JSON) | ✅ | localStorage |
 | Mapa de arquitectura | ✅ | localStorage |
-| Login / Register con Supabase Auth | ✅ | API (Supabase) |
+| Login / Register / Forgot Password con Supabase Auth | ✅ | API (Supabase) |
 | Términos y Condiciones | ✅ | Estático |
-| i18n ES/EN/PT (~430 claves) | ✅ | Contexto |
-| PWA (instalable, service worker) | ✅ | N/A |
+| i18n ES/EN/PT (300+ claves) | ✅ | Contexto |
+| PWA (instalable, service worker manual) | ✅ | N/A |
 | Exportación PDF (jsPDF) | ✅ | N/A |
 | Exportación Excel (SheetJS) | ✅ | N/A |
 | Temas dark/light | ✅ | localStorage |
@@ -154,8 +168,19 @@ acucal2.1/
 | Tutorial interactivo (5 pasos) | ✅ | localStorage |
 | Sidebar responsive + hamburger menu | ✅ | Contexto |
 | Indicador de guardado + toast | ✅ | Contexto |
+| Perfil de usuario (modal edición) | ✅ | localStorage |
+| Medir estanque: 6 formas, modo manual/geo, Leaflet | ✅ | Local |
+| Calculadora de volumen (rectangular, circular, trapezoidal, tanque, triangular, polígono) | ✅ | Local |
+| Planes y roles (Free/Pro/Enterprise + productor/técnico/admin) | ✅ | localStorage + API |
+| Reset de contraseña (forgot password flow) | ✅ | Supabase Auth |
+| Estado offline/online en header | ✅ | Navegador |
+| Install prompt PWA (beforeinstallprompt) | ✅ | Navegador |
+| Online/offline bar | ✅ | Navegador |
+| 5 clics logo → admin panel | ✅ | Navegador |
+| Deploy panel local (tools/) | ✅ | Local |
 
 ### Backend (8 routers, 26 endpoints)
+
 | Router | Endpoints | Auth |
 |--------|-----------|------|
 | `auth.ts` | 3 POST (register, login, logout) | ❌ |
@@ -168,16 +193,35 @@ acucal2.1/
 | `veterinaria.ts` | 3 (GET list, POST, DELETE/:id) | ✅ JWT |
 
 ### Base de datos (10 tablas PostgreSQL en Supabase)
-- User, Finca, Estanque, Especie, Bitacora, Finanza, Inventario, MovimientoInventario, Microbiologia, Veterinaria
-- RLS habilitado con `auth.role() = 'authenticated'`
-- Enums: Idioma (es/en/pt), Rol (admin/productor/tecnico), TipoMovimiento (entrada/salida), CategoriaProducto (alimento/medicamento/equipo/insumo/otro)
 
-### Infraestructura
-- Frontend: Netlify (SPA con `_redirects` para React Router)
-- Backend: Railway (express, Node)
-- Base de datos: Supabase PostgreSQL
-- Auth: Supabase Auth (JWT, persistSession, autoRefreshToken)
-- SMTP configurado: Resend (smtp.resend.com:465) — no puede enviar sin dominio verificado
+- **User** (id, email, nombre, idioma, rol, createdAt, updatedAt)
+- **Finca** (id, nombre, ubicacion, userId, createdAt, updatedAt)
+- **Estanque** (id, nombre, fincaId)
+- **Especie** (id, nombre, nombreCientifico, userId, esPersonal, parametros Json?, createdAt, updatedAt)
+- **Bitacora** (id, fecha, userId, fincaId, estanqueId?, especieId?, peso?, cantidad?, temperatura?, oxigeno?, ph?, salinidad?, amonio?, observaciones?, createdAt, updatedAt)
+- **Finanza** (id, tipo, monto, descripcion?, fecha, fincaId, userId, createdAt, updatedAt)
+- **Inventario** (id, nombre, categoria, cantidad, minimo, precio?, fincaId, userId, createdAt, updatedAt)
+- **MovimientoInventario** (id, tipo, cantidad, motivo?, fecha, productoId)
+- **Microbiologia** (id, fecha, resultado, notas?, fincaId, userId, createdAt)
+- **Veterinaria** (id, fecha, diagnostico, riesgo, notas?, fincaId, userId, createdAt)
+
+Enums: `Idioma` (es/en/pt), `Rol` (admin/productor/tecnico), `TipoMovimiento` (entrada/salida), `CategoriaProducto` (alimento/medicamento/equipo/insumo/otro)
+
+RLS habilitado con `auth.role() = 'authenticated'`.
+
+---
+
+## Planes y Roles (core/plan.ts)
+
+| Plan | Max Fincas | Max Estanques | Export | Roles disponibles |
+|------|-----------|--------------|--------|------------------|
+| Free | 1 | 3 | ❌ | productor |
+| Pro | ∞ | ∞ | ✅ | productor, tecnico |
+| Enterprise | ∞ | ∞ | ✅ | admin, productor, tecnico |
+
+El plan y rol se almacenan en `user_metadata` de Supabase, con override vía localStorage (`aquacalc_plan_override`, `aquacalc_rol_override`) desde Admin Panel.
+
+Gates aplicados en: `Fincas.tsx` (límite de fincas/estanques), exportaciones, y próximamente más páginas.
 
 ---
 
@@ -186,11 +230,13 @@ acucal2.1/
 1. `AuthProvider` en `App.tsx` envuelve toda la app
 2. Al montar, lee sesión existente de Supabase (`getSession`)
 3. Escucha cambios de auth (`onAuthStateChange`) para mantener user/token actualizados
-4. `Login.tsx`: formulario con toggle login/register, checkbox "Acepto Términos"
-5. `register()`: llama a `supabase.auth.signUp()` + POST `/api/auth/register` para crear perfil en DB
-6. `login()`: llama a `supabase.auth.signInWithPassword()`
-7. `ProtectedRoute`: redirige a `/login` si no hay `user`
-8. Confirm sign up: **OFF** — registro instantáneo sin verificación email
+4. Sincroniza plan/rol desde `user_metadata` (con override de localStorage)
+5. `Login.tsx`: formulario con 3 modos (login, register, forgot), checkbox "Acepto Términos"
+6. `register()`: `supabase.auth.signUp()` con `data: { nombre, plan: "free", rol: "productor" }` + POST `/api/auth/register`
+7. `login()`: `supabase.auth.signInWithPassword()`
+8. `resetPassword()`: `supabase.auth.resetPasswordForEmail()` con redirect a `/`
+9. `ProtectedRoute`: redirige a `/login` si no hay `user`
+10. Confirm sign up: **OFF** — registro instantáneo sin verificación email
 
 ---
 
@@ -199,7 +245,7 @@ acucal2.1/
 | Página | API | localStorage | Data |
 |--------|:---:|:------------:|------|
 | Login | ✅ Supabase | ❌ | Sesión |
-| Dashboard | ❌ | ✅ | `aquacalc_*` todos |
+| Dashboard | ✅ | ✅ | `aquacalc_*` todos |
 | Calculator | ❌ | Indirecto (lookups) | Cálculos locales |
 | Bitácora | ✅ | ✅ `aquacalc_bitacora` | API primario + localStorage fallback |
 | Zootécnico | ❌ | ✅ `aquacalc_bitacora` | Solo localStorage |
@@ -211,21 +257,10 @@ acucal2.1/
 | Finanzas | ✅ | ✅ `aquacalc_finanzas` | API primario + localStorage fallback |
 | Inventario | ✅ | ✅ `aquacalc_inventario_*` | API primario + localStorage fallback |
 | Veterinaria | ✅ | ✅ `aquacalc_vet_reports` | API primario + localStorage fallback |
-| Master Panel | ❌ | ✅ Todos los `aquacalc_*` | Solo localStorage |
+| Admin Panel | ❌ | ✅ Todos los `aquacalc_*` | Solo localStorage |
+| Medir Estanque | ❌ | ❌ | Local (cálculos) |
 | Mapa | ❌ | ❌ | Estático |
 | Términos | ❌ | ❌ | Estático |
-
----
-
-## Pendientes para MVP Vendible
-
-1. **Pagos**: Lemon Squeezy (Stripe no disponible en Costa Rica). Planes Free/Pro ($29)/Enterprise ($99)
-2. **Dominio**: comprar (~$8/yr Cloudflare) para URL marcada y emails transaccionales
-3. **Multi-usuario**: roles admin/productor/tecnico con gating de permisos
-4. **Sync offline**: cola de cambios localStorage → API con reconciliación
-5. **Dashboard + Parametros + Zootécnico**: migrar a API (hoy solo localStorage)
-6. **CI/CD**: GitHub Actions (typecheck + test + build)
-7. **Code splitting**: reducir chunk size (>500 kB warning actual)
 
 ---
 
@@ -237,20 +272,26 @@ acucal2.1/
 - **Variables UI en español** (finca, estanque, bitácora…)
 - **IDs**: `${prefix}_${Date.now()}`
 - **Estanques**: ID compuesto `fincaId||nombre`
-- **i18n**: claves camelCase, toda string visible usa `t("clave")`, agregar en los 3 idiomas
+- **i18n**: claves camelCase, toda string visible usa `t("clave")`, agregar en los 3 idiomas en `i18n.ts`
 - **CSS**: una sola hoja `index.css`, variables CSS para tema, prefijos semánticos
 - **Build**: `tsc -b && vite build` debe pasar siempre
+- **Paths**: alias `@/` → `src/`
+- **Rol names**: `productor` (no `gestor`) en la rama `witty-engine`/`main` (renombrado a `gestor` en ramas más nuevas)
 
 ---
 
 ## Comandos Útiles
 
 ```bash
-npm run dev              # Frontend dev server
-npm run build            # Frontend build (tsc -b && vite build)
-npm run test             # 25 vitest tests
-cd server && npm run dev # Backend dev server (tsx watch)
-cd server && npm run build # Backend tsc build
+npm run dev                    # Frontend dev server (vite)
+npm run build                  # Frontend build (tsc -b && vite build)
+npm run test                   # 25 vitest tests
+cd server && npm run dev       # Backend dev server (tsx watch)
+cd server && npm run build     # Backend tsc build
+cd server && npm run db:push   # Push schema to DB
+cd server && npm run db:seed   # Seed data
+node tools/server.mjs          # Deploy panel local (http://localhost:3456)
+AcuiCal Panel.bat              # Lanzador Windows deploy panel
 ```
 
 ---
@@ -261,6 +302,27 @@ cd server && npm run build # Backend tsc build
 - Supabase anon key: `sb_publishable_EQRvreJDv4d-wYZmaMY3Bg_x2D3kM_v`
 - DB password: `rmA2F4H0Y3FHmgD2`
 - API URL (frontend): `https://acuacal21-production.up.railway.app/api`
-- Master Panel PIN: `211203`
+- Admin Panel PIN: `211203`
 - Resend SMTP: `smtp.resend.com:465`, key `re_XzQe6JmD_BKRZ6vsV7QdJgGogjpLHz8Mi` (solo puede enviar a owner email)
 - Owner email: `acuicolasvientoenpopa@gmail.com`
+
+---
+
+## Ramas y Estado
+
+| Rama | Base | Commits adelante | Notas |
+|------|------|-----------------|-------|
+| `main` / `origin/main` | — | HEAD | Estado actual documentado aquí |
+| `opencode/silent-meadow` | `56a1ef6` | ~30+ | Contiene: sync queue, Excel lazy load, Dashboard+Parametros API, Admin rediseñado, Netlify removido, planes con precios, ONVO Pay, rename productor→gestor, landing page, webhook |
+
+---
+
+## Notas Técnicas
+
+- **PWA**: `injectRegister: null` en vite config, registro manual en `main.tsx` con `controllerchange` listener para auto-reload
+- **SW**: registrado en `/sw.js`, verificación en visibility change
+- **Deploy panel**: servidor Node local (tools/server.mjs) que ejecuta build + git commit + push, accesible en http://localhost:3456
+- **CI**: GitHub Actions build.yml — `npm ci && npm run build` en push a main
+- **Service layer**: `src/services/index.ts` está vacío (`export {}`)
+- **Lookups**: `useLookups()` en store/lookups.ts lee especies y fincas directamente de localStorage
+- **Formulas**: incluyen cálculo de energía (bombas, aireadores, combustible) y costos reales por recibo
