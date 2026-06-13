@@ -4,6 +4,70 @@
 
 ---
 
+## 2026-06-12 — Dominio acuical.com comprado + UI/UX polish + Login + Admin Panel redesign + rol gestor + clean Netlify
+
+### Objetivo
+Refinar UI/UX, adquirir dominio acuical.com, renombrar rol productor → gestor, limpiar referencias Netlify, rediseñar Admin Panel, proteger admin vía rol.
+
+### Archivos modificados
+- `src/index.css` — Cards con hover lift (translateY + glow), .dash-card con gradiente top border, clases .glow-accent/.glow-blue
+- `src/pages/Dashboard.tsx` — Reordenado: módulos primero, finanzas/inventario después con glow classes
+- `src/pages/Login.tsx` — Step indicators (1-2-3) en registro, layout más limpio
+- `src/core/i18n.ts` — clave rolGestor (antes rolProductor) en ES/EN/PT
+- `src/core/plan.ts` — Rol actualizado a "gestor", defaults actualizados
+- `src/core/index.ts` — Export Rol actualizado
+- `src/pages/Planes.tsx` — Selector de rol para planes Pro/Enterprise
+- `src/store/auth.tsx` — Default rol "gestor"
+- `src/utils/config.ts` — FRONTEND_URL actualizado a https://app.acuical.com
+- `src/pages/Admin.tsx` — Rediseñado: 5 tabs (Overview, Usuarios, Suscripciones, Sistema, Herramientas), requiere rol "admin" + PIN
+- `server/src/routes/admin.ts` — Verifica rol "admin" via Supabase Admin API
+- `server/src/routes/pagos.ts` — updateUserPlan() con merge metadata, endpoint POST /api/pagos/rol, ROLES_BY_PLAN actualizado
+- `server/src/routes/fincas.ts` — Validación con "gestor"
+- `server/src/index.ts` — CORS origin actualizado
+
+### Cambios realizados
+1. **CSS polish**: cards con hover lift (translateY(-3px) + glow), dash-card con gradiente top border, clases glow-accent y glow-blue
+2. **Dashboard reorganizado**: módulos funcionales primero en grid, finanzas e inventario abajo con styling diferenciado
+3. **Login mejorado**: indicador paso a paso (1-2-3) en modo registro, mejor espaciado y layout
+4. **Rol productor → gestor**: renombrado en types, defaults, selectores, i18n (ES/EN/PT), server routes
+5. **Admin Panel rediseñado**: 5 tabs profesionales, usa Supabase Admin API para verificar rol "admin" + PIN
+6. **Netlify eliminado**: todas las referencias a Netlify eliminadas de código y documentación
+7. **Webhook fix**: updateUserPlan() hace merge de user_metadata en vez de sobrescribir
+8. **Selector de rol en Planes.tsx**: visible solo para planes Pro/Enterprise
+9. **Dominio acuical.com adquirido**: FRONTEND_URL actualizado, CORS default actualizado, docs actualizados
+
+---
+
+## 2026-06-11 — Dashboard migrado a API + endpoint agregado + Parámetros a API + code splitting pdf.js
+
+### Objetivo
+Migrar Dashboard de solo localStorage a API, reemplazando 7 fetch() paralelos por un único endpoint agregado.
+
+### Archivos modificados
+- `server/src/routes/dashboard.ts` — Nuevo: `GET /api/dashboard/stats`
+- `server/src/routes/parametros.ts` — Nuevo: `GET/PUT /api/parametros`
+- `server/prisma/migration_parametros.sql` — Nueva: tabla ParametroOverride
+- `server/src/index.ts` — + dashboardRouter, parametrosRouter
+- `src/pages/Dashboard.tsx` — Rewrite: un solo fetch(), fallback localStorage
+- `src/pages/Parametros.tsx` — Rewrite: API + localStorage fallback
+- `src/utils/pdf.ts` — Separado: solo jsPDF (405 kB)
+- `src/utils/excel.ts` — Nuevo: solo ExcelJS (934 kB)
+- `src/pages/Dashboard.tsx` — Import desde excel.ts
+- `src/pages/Finanzas.tsx` — Import desde excel.ts
+- `src/pages/Zootecnico.tsx` — PDF desde pdf.ts, Excel desde excel.ts
+- `CHANGELOG.md` — Este registro
+- `PROJECT_STATUS.md` — Actualizado
+- `CONTEXT.md` — Actualizado
+
+### Cambios realizados
+1. Backend: nuevo endpoint `GET /api/dashboard/stats` que hace 7 consultas paralelas a Supabase (counts + finanzas + inventario) y devuelve un solo JSON con todos los stats del usuario autenticado
+2. Backend: nuevos endpoints `GET/PUT /api/parametros` con tabla ParametroOverride (userId, especieId, params JSONB)
+3. Frontend: Dashboard.tsx simplificado de 7 fetch() a 1, con fallback a localStorage si la API falla
+4. Frontend: Parametros.tsx migrado a API con localStorage fallback
+5. Frontend: pdf.ts separado en pdf.ts (jsPDF, 405 kB) y excel.ts (ExcelJS, 934 kB) — Dashboard y Finanzas ya no cargan jspdf en absoluto
+
+---
+
 ## 2026-06-10 — Auditoría de documentación y actualización masiva
 
 ### Objetivo
@@ -23,7 +87,7 @@ Sincronizar toda la documentación del proyecto con el estado real del código d
 ### Cambios realizados
 1. Creado CONTEXT.md con estructura completa: qué es, estado, arquitectura, funcionalidades, API endpoints, DB schema, flujo auth, pendientes, convenciones, comandos
 2. Documentación alineada con el código real: 10 tablas DB, 8 routers, 26 endpoints, 15 páginas frontend, 8 con API, 4 solo localStorage
-3. Documentadas decisiones recientes: Supabase, Express+Prisma, Netlify+Railway, Lemon Squeezy vs Stripe
+3. Documentadas decisiones recientes: Supabase, Express+Prisma, Railway, Lemon Squeezy vs Stripe
 
 ---
 

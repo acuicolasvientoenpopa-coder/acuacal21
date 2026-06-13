@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/core";
 import { toast } from "@/components/Toast";
 import { exportBitacoraPDF } from "@/utils/pdf";
 import { useLookups } from "@/store/lookups";
+import { createApi } from "@/services/api";
+import { getQueueLength, scheduleProcess } from "@/services/sync";
+import { API_URL } from "@/utils/config";
 
-const RECORDS_KEY = "aquacalc_bitacora";
+const RECORDS_KEY = "acuical_bitacora";
 
 type RecordData = {
   id: string; fecha: string; estanque: string; especie: string; alimento: string;
@@ -50,33 +53,38 @@ function dbToRecord(r: any): RecordData {
 
 export default function Bitacora() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const { species: allSpecies, estanques } = useLookups();
   const [records, setRecords] = useState<RecordData[]>(loadLocal);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<RecordData>(emptyRecord);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(records.length / pageSize));
+  const pageRecords = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return records.slice(start, start + pageSize);
+  }, [records, page, pageSize]);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    api("/bitacora").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/bitacora").then((data: any[]) => {
       const mapped = data.map(dbToRecord);
       setRecords(mapped);
       localStorage.setItem(RECORDS_KEY, JSON.stringify(mapped));
     }).catch(() => setRecords(loadLocal()));
-  }, [api]);
+    if (token) getQueueLength().then(len => { if (len > 0) scheduleProcess(API_URL, token); });
+  }, [client, token]);
 
   useEffect(() => {
     localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
   }, [records]);
+
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [records.length]);
 
   useEffect(() => {
     const h = (e: StorageEvent) => {
@@ -141,16 +149,17 @@ export default function Bitacora() {
     if (rec.pesoMuestreo) payload.peso = parseFloat(rec.pesoMuestreo);
     if (rec.estanque) payload.estanqueId = rec.estanque;
     if (rec.especie) payload.especieId = rec.especie;
+    setSaving(true);
     try {
-      const created = await api("/bitacora", { method: "POST", body: JSON.stringify(payload) });
+      const created = await client?.post<any>("/bitacora", payload);
       rec.id = created.id;
-    } catch {}
+    } catch {} finally { setSaving(false); }
     setRecords([rec, ...records]);
     setShowForm(false);
   };
 
   const remove = async (id: string) => {
-    try { await api(`/bitacora/${id}`, { method: "DELETE" }); } catch { }
+    try { await client?.del(`/bitacora/${id}`); } catch { }
     setRecords(records.filter((r) => r.id !== id));
   };
 
@@ -231,7 +240,7 @@ export default function Bitacora() {
 
           <div className="card-actions">
             <button className="btn-secondary" onClick={() => setShowForm(false)}>{t("cancelar")}</button>
-            <button className="btn-primary" onClick={save} disabled={!canSave}>💾 {t("guardarRegistro")}</button>
+            <button className="btn-primary" onClick={save} disabled={!canSave || saving}>{saving ? t("saving") : `💾 ${t("guardarRegistro")}`}</button>
           </div>
         </div>
       )}
@@ -248,7 +257,7 @@ export default function Bitacora() {
           <div className="empty-state"><div className="empty-icon">📋</div><p>{t("sinRegistros")}</p></div>
         ) : (
           <div>
-            {records.map((r) => {
+            {pageRecords.map((r) => {
               const wqOk = (v: string, min: number, max: number) => {
                 const n = Number(v); return isNaN(n) || n === 0 ? "" : n >= min && n <= max ? "wq-ok" : "wq-alert";
               };
@@ -300,6 +309,13 @@ export default function Bitacora() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16, alignItems: "center" }}>
+            <button className="btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>◀</button>
+            <span style={{ fontSize: 12, color: "var(--text2)" }}>{page} / {totalPages}</span>
+            <button className="btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>▶</button>
           </div>
         )}
       </div>

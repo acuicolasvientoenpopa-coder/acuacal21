@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { MONEDAS } from "@/core";
 import type { Currency } from "@/core";
 
-const STORAGE_KEY = "aquacalc_currency";
+const STORAGE_KEY = "acuical_currency";
 
 interface CurrencyCtx {
   code: string;

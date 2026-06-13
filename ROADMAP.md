@@ -39,7 +39,7 @@
 - [x] CRUD inventario vía API
 - [x] CRUD microbiología vía API
 - [x] CRUD veterinaria vía API
-- [x] Frontend deployado en Netlify
+- [x] Frontend deployado en Cloudflare Pages
 - [x] Backend deployado en Railway
 - [x] Página Términos y Condiciones
 - [x] Checkbox "Acepto Términos" en registro
@@ -61,7 +61,7 @@
 **Objetivo**: Conseguir 1 productor real dispuesto a pagar.
 
 ### Requerido
-- [ ] Plan Professional ($29/mes): fincas ilimitadas, multi-estanque, exportaciones
+- [ ] Plan Professional ($20/mes): fincas ilimitadas, multi-estanque, exportaciones
 - [ ] Lemon Squeezy Checkout + Webhooks
 - [ ] Portal de cliente (datos de facturación, historial de pagos)
 - [ ] Onboarding guiado para nuevo usuario

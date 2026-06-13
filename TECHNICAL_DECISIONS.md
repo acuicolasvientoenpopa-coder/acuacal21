@@ -9,7 +9,7 @@
 
 **Decisión**: Actualizar los 9 documentos de proyecto para reflejar el estado actual con backend, auth, migración de páginas y deploys.
 
-**Motivo**: La documentación decía "no tiene backend ni autenticación" cuando ya tiene Express + Prisma + Supabase Auth + Railway + Netlify.
+**Motivo**: La documentación decía "no tiene backend ni autenticación" cuando ya tiene Express + Prisma + Supabase Auth + Railway + Cloudflare Pages.
 
 **Consecuencias futuras**: La documentación queda como fuente de verdad para IA y humanos.
 
@@ -51,11 +51,11 @@
 
 ---
 
-## 2026-06-09 — Frontend en Netlify con _redirects para SPA
+## 2026-06-09 — Frontend en Cloudflare Pages con _redirects para SPA
 
-**Decisión**: Desplegar frontend en Netlify con `_redirects` para SPA fallback.
+**Decisión**: Desplegar frontend en Cloudflare Pages con `_redirects` para SPA fallback.
 
-**Motivo**: Netlify es hosting gratuito, soporta deploy automático, y el _redirects resuelve React Router en producción.
+**Motivo**: Cloudflare Pages es hosting gratuito con builds ilimitados, soporta deploy automático, y el _redirects resuelve React Router en producción.
 
 **Alternativas**: Vercel, Cloudflare Pages, GitHub Pages.
 

@@ -40,7 +40,7 @@ export function generateBitacora(count = 20) {
       observaciones: "",
     });
   }
-  localStorage.setItem("aquacalc_bitacora", JSON.stringify(records));
+  localStorage.setItem("acuical_bitacora", JSON.stringify(records));
   toast(`Bitácora: ${count} registros generados`, "info");
 }
 
@@ -54,7 +54,7 @@ export function generateFincas(count = 6) {
       descripcion: "Generado automáticamente para pruebas",
     });
   }
-  localStorage.setItem("aquacalc_fincas", JSON.stringify(fincas));
+  localStorage.setItem("acuical_fincas", JSON.stringify(fincas));
   toast(`Fincas: ${count} generadas`, "info");
 }
 
@@ -72,7 +72,7 @@ export function generateParams() {
       tasaAlim: rand(1.5, 6, 2),
     };
   });
-  localStorage.setItem("aquacalc_params_overrides", JSON.stringify(overrides));
+  localStorage.setItem("acuical_params_overrides", JSON.stringify(overrides));
   toast("Parámetros generados para todas las especies", "info");
 }
 
@@ -81,12 +81,15 @@ export function generateAll() {
   generateFincas(6);
   generateParams();
   generateFinanzas();
+  generateEspecies();
+  generateInventario();
+  generateMicrobiologia();
+  generateVeterinaria();
   toast("Todos los datos de prueba generados", "success");
 }
 
 export function generateFinanzas() {
-  // Create fincas if none exist
-  const existing = JSON.parse(localStorage.getItem("aquacalc_fincas") || "[]");
+  const existing = JSON.parse(localStorage.getItem("acuical_fincas") || "[]");
   let fincas = existing;
   if (fincas.length === 0) {
     fincas = [];
@@ -118,16 +121,132 @@ export function generateFinanzas() {
     diasCiclo: [120, 150, 180, 210, 240][rand(0, 4)],
   }));
 
-  localStorage.setItem("aquacalc_finanzas", JSON.stringify(records));
+  localStorage.setItem("acuical_finanzas", JSON.stringify(records));
   toast(`Finanzas: ${records.length} registros generados`, "info");
 }
 
+export function generateEspecies(count = 6) {
+  const custom = ESPECIES.slice(0, count).map((nombre, i) => ({
+    id: "sp_custom_" + Date.now() + "_" + i,
+    nombre,
+    params: {
+      densidad: rand(10, 100),
+      pesoInicial: rand(10, 100),
+      pesoCosecha: rand(300, 2000),
+      fcr: rand(1.2, 2.8, 2),
+      tasaAlim: rand(1.5, 6, 2),
+      comidasDia: rand(2, 4),
+      precioAlimento: rand(300, 800),
+      precioVenta: rand(2, 8, 2),
+      supervivencia: rand(60, 95),
+      gpd: rand(1, 5, 2),
+    },
+    createdAt: new Date().toISOString(),
+  }));
+  localStorage.setItem("acuical_custom_species", JSON.stringify(custom));
+  toast(`Especies: ${count} generadas`, "info");
+}
+
+export function generateInventario() {
+  const productos = [
+    { nombre: "Alimento Tilapia 40%", categoria: "alimento", precioUnitario: 450, stockMinimo: 5 },
+    { nombre: "Alimento Trucha 42%", categoria: "alimento", precioUnitario: 520, stockMinimo: 5 },
+    { nombre: "Oxígeno medicinal", categoria: "medicamento", precioUnitario: 1200, stockMinimo: 2 },
+    { nombre: "Red de pesca 2m", categoria: "equipo", precioUnitario: 8500, stockMinimo: 1 },
+    { nombre: "Probiotico líquido", categoria: "insumo", precioUnitario: 3200, stockMinimo: 3 },
+    { nombre: "Cal hidratada", categoria: "insumo", precioUnitario: 1800, stockMinimo: 10 },
+  ];
+  const prods = productos.map((p, i) => ({
+    id: "prod_" + Date.now() + "_" + i,
+    ...p,
+    stockActual: rand(1, 50),
+    createdAt: new Date().toISOString(),
+  }));
+  localStorage.setItem("acuical_inventario_productos", JSON.stringify(prods));
+
+  const movs = prods.map((p, i) => ({
+    id: "mov_" + Date.now() + "_" + i,
+    productoId: p.id,
+    tipo: i % 2 === 0 ? "entrada" : "salida",
+    cantidad: rand(1, 20),
+    fecha: randDate(30),
+    descripcion: "Movimiento generado",
+  }));
+  localStorage.setItem("acuical_inventario_movimientos", JSON.stringify(movs));
+  toast(`Inventario: ${prods.length} productos + ${movs.length} movimientos`, "info");
+}
+
+export function generateMicrobiologia() {
+  const cultivos = [];
+  for (let i = 0; i < 6; i++) {
+    cultivos.push({
+      id: "cult_" + Date.now() + "_" + i,
+      fecha: randDate(30),
+      estanqueNombre: FINCAS[rand(0, FINCAS.length - 1)],
+      especie: ESPECIES[rand(0, ESPECIES.length - 1)],
+      tipoMuestra: ["agua", "sedimento", "branquias", "hígado"][rand(0, 3)],
+      organo: ["agua", "fondo", "branquias", "hígado"][rand(0, 3)],
+      resultado: ["positivo", "negativo", "sospechoso"][rand(0, 2)],
+      agente: ["Aeromonas", "Pseudomonas", "Streptococcus", "Ninguno"][rand(0, 3)],
+      carga: ["baja", "media", "alta"][rand(0, 2)],
+    });
+  }
+  localStorage.setItem("acuical_cultivos", JSON.stringify(cultivos));
+
+  const meds = [];
+  for (let i = 0; i < 4; i++) {
+    const inicio = new Date(Date.now() - rand(5, 60) * 86400000);
+    const fin = new Date(inicio.getTime() + rand(5, 15) * 86400000);
+    meds.push({
+      id: "med_" + Date.now() + "_" + i,
+      fechaInicio: inicio.toLocaleDateString(),
+      fechaFin: fin.toLocaleDateString(),
+      estanqueNombre: FINCAS[rand(0, FINCAS.length - 1)],
+      producto: ["Oxitetraciclina", "Formol", "Sal", "Permanganato"][rand(0, 3)],
+      dosis: rand(1, 20, 1) + " mg/L",
+      via: ["oral", "baño", "inyección"][rand(0, 2)],
+      duracion: rand(5, 15) + " días",
+      retiroDias: rand(10, 30),
+      estado: "completado",
+    });
+  }
+  localStorage.setItem("acuical_medicacion", JSON.stringify(meds));
+  toast(`Microbiología: ${cultivos.length} cultivos + ${meds.length} medicaciones`, "info");
+}
+
+export function generateVeterinaria(count = 4) {
+  const reports = [];
+  for (let i = 0; i < count; i++) {
+    reports.push({
+      id: "vet_" + Date.now() + "_" + i,
+      fecha: randDate(60),
+      estanqueNombre: FINCAS[rand(0, FINCAS.length - 1)],
+      diagnosticos: [
+        { diagnosis: "Hipoxia", weight: rand(1, 5) },
+        { diagnosis: "Branquitis", weight: rand(1, 4) },
+      ],
+      puntaje: rand(2, 8),
+      riesgo: ["bajo", "moderado", "alto"][rand(0, 2)],
+      resumen: "Reporte generado automáticamente para pruebas",
+      acciones: ["Aumentar oxigenación", "Reducir alimentación", "Monitorear diario"],
+      lang: "es",
+    });
+  }
+  localStorage.setItem("acuical_vet_reports", JSON.stringify(reports));
+  toast(`Veterinaria: ${count} reportes generados`, "info");
+}
+
 export function clearAll() {
-  localStorage.removeItem("aquacalc_bitacora");
-  localStorage.removeItem("aquacalc_fincas");
-  localStorage.removeItem("aquacalc_params_overrides");
-  localStorage.removeItem("aquacalc_custom_species");
-  localStorage.removeItem("aquacalc_profile");
-  localStorage.removeItem("aquacalc_finanzas");
+  localStorage.removeItem("acuical_bitacora");
+  localStorage.removeItem("acuical_fincas");
+  localStorage.removeItem("acuical_params_overrides");
+  localStorage.removeItem("acuical_custom_species");
+  localStorage.removeItem("acuical_profile");
+  localStorage.removeItem("acuical_finanzas");
+  localStorage.removeItem("acuical_inventario_productos");
+  localStorage.removeItem("acuical_inventario_movimientos");
+  localStorage.removeItem("acuical_cultivos");
+  localStorage.removeItem("acuical_medicacion");
+  localStorage.removeItem("acuical_vet_reports");
   toast("Todos los datos de prueba eliminados", "success");
 }

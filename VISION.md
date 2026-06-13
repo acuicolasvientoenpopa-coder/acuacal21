@@ -1,6 +1,6 @@
 # VISIÓN — AcuiCal y el Ecosistema Acuícolas Viento en Popa
 
-> Documento estratégico. Actualizado: 2026-06-09.
+> Documento estratégico. Actualizado: 2026-06-10. Post Fase 1-3 (seguridad, calidad, pagos ONVO Pay, CI/CD).
 
 ---
 
@@ -13,7 +13,7 @@ No queremos ser el ERP más complejo del mercado. Queremos ser la herramienta qu
 ### Principios
 1. **Offline-first** — el 80% de las granjas no tiene internet estable
 2. **Idioma local** — el productor merece la herramienta en su idioma
-3. **Precio justo** — $29/mes, no $200/mes
+3. **Precio justo** — $20/mes, no $200/mes
 4. **Científico pero simple** — fórmulas validadas por FAO, Boyd, Timmons; interfaz para cualquier usuario
 5. **Ecosistema** — AcuiCal es el primero de muchos módulos
 

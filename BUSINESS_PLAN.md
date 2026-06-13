@@ -1,7 +1,7 @@
 # BUSINESS PLAN — AcuiCal
 
 > Plan de negocio para AcuiCal, SaaS acuícola.
-> Actualizado: 2026-06-10.
+> Actualizado: 2026-06-10. Última revisión post-Fase 3 (seguridad, calidad, pagos ONVO Pay, CI/CD).
 
 ---
 
@@ -47,7 +47,7 @@ Ninguna herramienta accesible y económica integra:
 1. **Offline-first**: funciona sin internet. Ideal para granjas en zonas rurales.
 2. **Multilingüe**: ES/EN/PT. El productor lo usa en su idioma.
 3. **Completo**: cálculos, bitácora, finanzas, inventario, sanidad.
-4. **Económico**: desde $29/mes. Sin contratos anuales.
+4. **Económico**: desde $20/mes. Sin contratos anuales.
 5. **Científico**: fórmulas con referencias FAO, Boyd, Timmons, Noga.
 
 ---
@@ -60,7 +60,7 @@ Ninguna herramienta accesible y económica integra:
 | AquaManager | SaaS | $100+/mes | No | EN | Global |
 | FishFarmFeeder | Hardware+App | $500+/mes | No | EN | Europa |
 | Excel/Papel | DIY | $0 | Sí | Cualquiera | Universal |
-| **AcuiCal** | **SaaS** | **$29-$99/mes** | **Sí** | **ES/EN/PT** | **LATAM** |
+| **AcuiCal** | **SaaS** | **$20-$50/mes** | **Sí** | **ES/EN/PT** | **LATAM** |
 
 ### Diferenciadores
 - Único con soporte offline real en LATAM
@@ -75,7 +75,7 @@ Ninguna herramienta accesible y económica integra:
 
 ### Planes
 
-| Característica | Free | Professional ($29/mes) | Enterprise ($99/mes) |
+| Característica | Free | Professional ($20/mes) | Enterprise ($50/mes) |
 |----------------|------|----------------------|---------------------|
 | Fincas | 1 | Ilimitadas | Ilimitadas |
 | Usuarios | 1 | 1 | 5+ |
@@ -129,20 +129,22 @@ Ninguna herramienta accesible y económica integra:
 | Mercado LATAM no paga SaaS | Muy alto | Media | Ofrecer factura local + transferencia bancaria |
 | Clientes no técnicos abandonan | Alto | Alta | Onboarding guiado + soporte WhatsApp |
 | Estacionalidad del sector | Medio | Alta | Planes anuales con descuento |
-| Stripe no disponible en Costa Rica | Alto | Alta | Usar Lemon Squeezy como procesador |
+| Stripe no disponible en Costa Rica | Alto | Alta | Usar ONVO Pay como procesador |
 
 ---
 
 ## Estrategia de Precios
 
 - **Free**: perpetuo, funcional, para generar confianza y captar leads
-- **Professional**: $29/mes o $290/año (2 meses gratis)
-- **Enterprise**: $99/mes o $990/año
+- **Professional**: $20/mes o $200/año (2 meses gratis)
+- **Enterprise**: $50/mes o $500/año
 - **Descuento educativo**: 50% para universidades
-- **Descuento early adopter**: $19/mes vitalicio para primeros 50 clientes
+- **Descuento early adopter**: $15/mes vitalicio para primeros 50 clientes
 
-Procesador de pagos: **Lemon Squeezy** (Stripe no disponible en Costa Rica).
-Comisión estimada: ~5% por transacción.
+Procesador de pagos: **ONVO Pay** (procesador en Costa Rica, disponible para LATAM).
+Integración vía API REST: backend genera sesión de pago, webhook recibe confirmación, actualiza plan en Supabase Auth via Admin API.
+Plan gratis funcional sin tarjeta. Planes pagos requieren webhook + secret key configurados en `server/.env`.
+Comisión estimada: ~3-5% por transacción.
 
 ---
 
@@ -156,6 +158,6 @@ Comisión estimada: ~5% por transacción.
 | 9 | 800 | 40 | 5 | $1,655 |
 | 12 | 1000 | 60 | 8 | $2,532 |
 
-**Costo operativo estimado**: $100-200/mes (servidor + dominio + Lemon Squeezy fees).
+**Costo operativo estimado**: $100-200/mes (servidor + dominio + ONVO Pay fees).
 
 **Break-even**: Mes 3-4 con ~15 clientes pagadores.

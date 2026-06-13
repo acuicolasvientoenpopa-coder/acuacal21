@@ -202,7 +202,7 @@ export default function MedirEstanque() {
         baseDims.profundidad = p;
       }
     }
-    localStorage.setItem("aquacalc_geo_dimensions", JSON.stringify({ forma, ...baseDims, volumenM3: vol.volumenM3, litros: vol.litros }));
+    localStorage.setItem("acuical_geo_dimensions", JSON.stringify({ forma, ...baseDims, volumenM3: vol.volumenM3, litros: vol.litros }));
     navigate("/calc");
   };
 

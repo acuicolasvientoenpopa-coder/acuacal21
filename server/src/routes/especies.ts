@@ -1,10 +1,16 @@
 import { Router, Response } from "express";
+import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 
 export const especiesRouter = Router();
-const asStr = (v: unknown): string => v as string;
 
 especiesRouter.use(requireAuth);
+
+const especieSchema = z.object({
+  nombre: z.string().min(1, "nombre requerido").max(100),
+  nombreCientifico: z.string().max(200).optional(),
+  parametros: z.any().optional(),
+});
 
 especiesRouter.get("/", async (req: AuthRequest, res: Response) => {
   const { data, error } = await req.supabase!
@@ -17,12 +23,15 @@ especiesRouter.get("/", async (req: AuthRequest, res: Response) => {
 });
 
 especiesRouter.post("/", async (req: AuthRequest, res: Response) => {
-  const { nombre, nombreCientifico, parametros } = req.body;
-  if (!nombre) { res.status(400).json({ error: "nombre es requerido" }); return; }
+  const parsed = especieSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
 
   const { data, error } = await req.supabase!
     .from("Especie")
-    .insert({ nombre, nombreCientifico, parametros, userId: req.userId })
+    .insert({ ...parsed.data, userId: req.userId })
     .select()
     .single();
 
@@ -31,12 +40,16 @@ especiesRouter.post("/", async (req: AuthRequest, res: Response) => {
 });
 
 especiesRouter.put("/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
-  const { nombre, nombreCientifico, parametros } = req.body;
+  const id = req.params.id;
+  const parsed = especieSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
 
   const { data, error } = await req.supabase!
     .from("Especie")
-    .update({ ...(nombre && { nombre }), ...(nombreCientifico !== undefined && { nombreCientifico }), ...(parametros && { parametros }) })
+    .update(parsed.data)
     .eq("id", id)
     .eq("userId", req.userId)
     .select()
@@ -47,7 +60,7 @@ especiesRouter.put("/:id", async (req: AuthRequest, res: Response) => {
 });
 
 especiesRouter.delete("/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
+  const id = req.params.id;
 
   const { error } = await req.supabase!
     .from("Especie")

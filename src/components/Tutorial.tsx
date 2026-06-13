@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "@/store/language";
 import { NAV_LINKS } from "@/data/navLinks";
 
-const STORAGE_KEY = "aquacalc_tutorial_done";
+const STORAGE_KEY = "acuical_tutorial_done";
 
 export function isTutorialDone(): boolean {
   return localStorage.getItem(STORAGE_KEY) === "true";

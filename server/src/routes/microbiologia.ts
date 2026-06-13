@@ -1,10 +1,17 @@
 import { Router, Response } from "express";
+import { z } from "zod";
 import { requireAuth, AuthRequest } from "../middleware/auth.js";
 
 export const microbiologiaRouter = Router();
-const asStr = (v: unknown): string => v as string;
 
 microbiologiaRouter.use(requireAuth);
+
+const microbiologiaSchema = z.object({
+  fecha: z.string().optional(),
+  resultado: z.string().min(1, "resultado requerido").max(5000),
+  notas: z.any().optional(),
+  fincaId: z.string().optional(),
+});
 
 microbiologiaRouter.get("/", async (req: AuthRequest, res: Response) => {
   const { data, error } = await req.supabase!
@@ -18,13 +25,16 @@ microbiologiaRouter.get("/", async (req: AuthRequest, res: Response) => {
 });
 
 microbiologiaRouter.post("/", async (req: AuthRequest, res: Response) => {
-  const { fecha, resultado, notas, fincaId } = req.body;
-  if (!resultado) { res.status(400).json({ error: "resultado es requerido" }); return; }
+  const parsed = microbiologiaSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
 
-  const body: any = { resultado, userId: req.userId };
-  if (fecha) body.fecha = fecha;
-  if (notas) body.notas = typeof notas === "object" ? JSON.stringify(notas) : notas;
-  if (fincaId) body.fincaId = fincaId;
+  const body: any = { resultado: parsed.data.resultado, userId: req.userId };
+  if (parsed.data.fecha) body.fecha = parsed.data.fecha;
+  if (parsed.data.notas) body.notas = typeof parsed.data.notas === "object" ? JSON.stringify(parsed.data.notas) : parsed.data.notas;
+  if (parsed.data.fincaId) body.fincaId = parsed.data.fincaId;
 
   const { data, error } = await req.supabase!
     .from("Microbiologia")
@@ -37,14 +47,18 @@ microbiologiaRouter.post("/", async (req: AuthRequest, res: Response) => {
 });
 
 microbiologiaRouter.put("/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
-  const { fecha, resultado, notas, fincaId } = req.body;
+  const id = req.params.id;
+  const parsed = microbiologiaSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
+    return;
+  }
 
   const update: any = {};
-  if (fecha !== undefined) update.fecha = fecha;
-  if (resultado !== undefined) update.resultado = resultado;
-  if (notas !== undefined) update.notas = typeof notas === "object" ? JSON.stringify(notas) : notas;
-  if (fincaId !== undefined) update.fincaId = fincaId;
+  if (parsed.data.fecha !== undefined) update.fecha = parsed.data.fecha;
+  if (parsed.data.resultado !== undefined) update.resultado = parsed.data.resultado;
+  if (parsed.data.notas !== undefined) update.notas = typeof parsed.data.notas === "object" ? JSON.stringify(parsed.data.notas) : parsed.data.notas;
+  if (parsed.data.fincaId !== undefined) update.fincaId = parsed.data.fincaId;
 
   const { data, error } = await req.supabase!
     .from("Microbiologia")
@@ -59,7 +73,7 @@ microbiologiaRouter.put("/:id", async (req: AuthRequest, res: Response) => {
 });
 
 microbiologiaRouter.delete("/:id", async (req: AuthRequest, res: Response) => {
-  const id = asStr(req.params.id);
+  const id = req.params.id;
 
   const { error } = await req.supabase!
     .from("Microbiologia")

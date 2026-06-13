@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
-const STORAGE_KEY = "aquacalc_theme";
+const STORAGE_KEY = "acuical_theme";
 
 interface ThemeCtx {
   theme: "dark" | "light";

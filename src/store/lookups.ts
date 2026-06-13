@@ -22,24 +22,24 @@ function extraerEstanques(fincas: FincaRaw[]): LookupItem[] {
 export function useLookups() {
   const [species, setSpecies] = useState<LookupItem[]>(() => {
     try {
-      const custom = JSON.parse(localStorage.getItem("aquacalc_custom_species") || "[]");
+      const custom = JSON.parse(localStorage.getItem("acuical_custom_species") || "[]");
       return getAllSpecies(custom).map((s) => ({ id: s.id, label: s.nombre, raw: s }));
     } catch { return ESPECIES_DEFAULT.map((s) => ({ id: s.id, label: s.nombre, raw: s })); }
   });
   const [fincas, setFincas] = useState<LookupItem[]>(() => {
-    try { return (JSON.parse(localStorage.getItem("aquacalc_fincas") || "[]")).map((f: any) => { const fm = migrarFinca(f); return { id: fm.id, label: fm.nombre, raw: fm }; }); } catch { return []; }
+    try { return (JSON.parse(localStorage.getItem("acuical_fincas") || "[]")).map((f: any) => { const fm = migrarFinca(f); return { id: fm.id, label: fm.nombre, raw: fm }; }); } catch { return []; }
   });
   const [estanques, setEstanques] = useState<LookupItem[]>(() => {
-    try { const fs = (JSON.parse(localStorage.getItem("aquacalc_fincas") || "[]")).map(migrarFinca); return extraerEstanques(fs); } catch { return []; }
+    try { const fs = (JSON.parse(localStorage.getItem("acuical_fincas") || "[]")).map(migrarFinca); return extraerEstanques(fs); } catch { return []; }
   });
 
   const reload = useCallback(() => {
     try {
-      const custom = JSON.parse(localStorage.getItem("aquacalc_custom_species") || "[]");
+      const custom = JSON.parse(localStorage.getItem("acuical_custom_species") || "[]");
       setSpecies(getAllSpecies(custom).map((s) => ({ id: s.id, label: s.nombre, raw: s })));
     } catch { setSpecies(ESPECIES_DEFAULT.map((s) => ({ id: s.id, label: s.nombre, raw: s }))); }
     try {
-      const fs = (JSON.parse(localStorage.getItem("aquacalc_fincas") || "[]")).map(migrarFinca);
+      const fs = (JSON.parse(localStorage.getItem("acuical_fincas") || "[]")).map(migrarFinca);
       setFincas(fs.map((f: any) => ({ id: f.id, label: f.nombre, raw: f })));
       setEstanques(extraerEstanques(fs));
     } catch { setFincas([]); setEstanques([]); }
