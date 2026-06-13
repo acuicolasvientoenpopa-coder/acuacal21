@@ -47,7 +47,7 @@ async function onvoPost(path: string, body: unknown) {
   return res.json();
 }
 
-async function onvoGet(path: string) {
+async function onvoGet(path: string): Promise<any> {
   const res = await fetch(`${ONVO_API}${path}`, {
     headers: { Authorization: `Bearer ${ONVO_SECRET_KEY}` },
   });
