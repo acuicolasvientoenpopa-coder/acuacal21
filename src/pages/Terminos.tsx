@@ -32,7 +32,7 @@ export default function Terminos() {
         <p><strong>4.1. Plan Free</strong> — Acceso gratuito a funcionalidades básicas. Limitado a 1 finca, 1 usuario y 3 estanques. Sin exportaciones avanzadas.</p>
         <p><strong>4.2. Plan Professional</strong> — $29 USD/mes o $290 USD/año. Fincas ilimitadas, estanques ilimitados. Exportaciones PDF y Excel. Soporte por correo.</p>
         <p><strong>4.3. Plan Enterprise</strong> — $99 USD/mes o $990 USD/año. Hasta 5 usuarios. Soporte prioritario. API pública.</p>
-        <p><strong>4.4. Facturación</strong> — Pagos via Lemon Squeezy. Renovación automática. Cancelación desde el panel.</p>
+        <p><strong>4.4. Facturación</strong> — Pagos via ONVO Pay. Renovación automática. Cancelación desde el panel.</p>
         <p><strong>4.5. Reembolsos</strong> — Reembolso completo dentro de los primeros 14 días. Sin reembolsos prorrateados después.</p>
       </Section>
 
@@ -44,7 +44,7 @@ export default function Terminos() {
 
       <Section title="6. Privacidad y Protección de Datos">
         6.1. La Plataforma almacena datos localmente y en servidores designados.<br />
-         6.2. Los datos de pago son procesados exclusivamente por Lemon Squeezy.<br />
+         6.2. Los datos de pago son procesados exclusivamente por ONVO Pay.<br />
         6.3. No vendemos, alquilamos ni compartimos datos con terceros sin consentimiento.<br />
         6.4. Utilizamos cookies funcionales necesarias para el servicio.
       </Section>

@@ -49,7 +49,7 @@ const PENDING_MODS: ModInfo[] = [
   { id: "database", emoji: "🐘", label: "Base de datos", status: "pending", desc: "PostgreSQL + Prisma" },
   { id: "auth", emoji: "🔐", label: "Autenticación", status: "pending", desc: "JWT + registro + login" },
   { id: "multiuser", emoji: "👥", label: "Multi-usuario", status: "pending", desc: "Roles + permisos" },
-  { id: "subscription", emoji: "💳", label: "Suscripciones", status: "pending", desc: "Stripe + planes" },
+  { id: "subscription", emoji: "💳", label: "Suscripciones", status: "pending", desc: "ONVO Pay + planes" },
   { id: "sync", emoji: "🔄", label: "Sync offline", status: "pending", desc: "localStorage → nube" },
   { id: "tests", emoji: "🧪", label: "Tests", status: "pending", desc: "Unitarios + e2e" },
   { id: "ci", emoji: "📦", label: "CI/CD", status: "pending", desc: "GitHub Actions" },
