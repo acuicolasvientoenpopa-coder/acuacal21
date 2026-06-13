@@ -17,8 +17,8 @@ export default function Formulas() {
             {sec.emoji} {sec.title}
           </h3>
           <div className="species-list" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            {sec.items.map((item, i) => (
-              <div key={i} className="card">
+            {sec.items.map((item) => (
+              <div key={item.titulo} className="card">
                 <div className="card-title">{item.titulo}</div>
                 <p style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.6, marginBottom: 10 }}>
                   {item.cuerpo}

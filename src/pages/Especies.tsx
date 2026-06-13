@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ESPECIES_DEFAULT } from "@/core";
 import type { Species, SpeciesParams } from "@/core";
 import { useTranslation } from "@/store/language";
 import { useAuth } from "@/store/auth";
+import { createApi } from "@/services/api";
 
-const CUSTOM_KEY = "aquacalc_custom_species";
+const CUSTOM_KEY = "acuical_custom_species";
 
 const defaultParams: SpeciesParams = {
   densidad: 20, densidadUnit: "peces/m³", supervivencia: 85, fcr: 1.5,
@@ -27,35 +28,29 @@ function dbToSpecies(e: any): Species {
   };
 }
 
+function loadLocal(): Species[] {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"); } catch { return []; }
+}
 
 export default function Especies() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const [custom, setCustom] = useState<Species[]>([]);
   const [show, setShow] = useState(false);
   const [edit, setEdit] = useState<Species | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }, [apiUrl, token]);
-
-  const loadLocal = useCallback(() => {
-    try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"); } catch { return []; }
-  }, []);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    api("/especies").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/especies").then((data: any[]) => {
       const mapped = data.filter((e: any) => e.esPersonal !== false).map(dbToSpecies);
       setCustom(mapped);
       localStorage.setItem(CUSTOM_KEY, JSON.stringify(mapped));
     }).catch(() => setCustom(loadLocal()));
-  }, [api, loadLocal]);
+  }, [client]);
 
   useEffect(() => {
     localStorage.setItem(CUSTOM_KEY, JSON.stringify(custom));
@@ -79,29 +74,39 @@ export default function Especies() {
     if (!edit && custom.length >= 3) { alert(t("maxEspecies")); return; }
     const { nombre, sci, emoji, ...params } = form;
     const payload = { nombre: nombre.trim(), nombreCientifico: sci.trim(), parametros: { ...params, emoji } };
-    if (edit) {
-      try {
-        const updated = await api(`/especies/${edit.id}`, { method: "PUT", body: JSON.stringify(payload) });
-        setCustom(custom.map((c) => c.id === edit.id ? dbToSpecies(updated) : c));
-      } catch {
+    setSaving(true);
+    try {
+      if (edit) {
+        const result = await client?.mutate("PUT", `/especies/${edit.id}`, payload);
+        if (result?.ok) {
+          setCustom(custom.map((c) => c.id === edit.id ? { ...edit, nombre: nombre.trim(), sci: sci.trim(), emoji, params } : c));
+        } else {
+          setCustom(custom.map((c) => c.id === edit.id ? { ...edit, nombre: nombre.trim(), sci: sci.trim(), emoji, params } : c));
+        }
+      } else {
+        const result = await client?.mutate("POST", "/especies", payload);
+        if (result?.ok && result.data?.id) {
+          const s: Species = { id: result.data.id, nombre: nombre.trim(), sci: sci.trim(), emoji, custom: true, params };
+          setCustom([...custom, s]);
+        } else {
+          const s: Species = { id: `custom_${Date.now()}`, nombre: nombre.trim(), sci: sci.trim(), emoji, custom: true, params };
+          setCustom([...custom, s]);
+        }
+      }
+    } catch {
+      if (edit) {
         const s: Species = { ...edit, nombre: nombre.trim(), sci: sci.trim(), emoji, params };
         setCustom(custom.map((c) => c.id === edit.id ? s : c));
-      }
-    } else {
-      try {
-        const created = await api("/especies", { method: "POST", body: JSON.stringify(payload) });
-        const s = dbToSpecies(created);
-        if (s.id) setCustom([...custom, s]);
-      } catch {
+      } else {
         const s: Species = { id: `custom_${Date.now()}`, nombre: nombre.trim(), sci: sci.trim(), emoji, custom: true, params };
         setCustom([...custom, s]);
       }
-    }
+    } finally { setSaving(false); }
     setShow(false);
   };
 
   const remove = async (id: string) => {
-    try { await api(`/especies/${id}`, { method: "DELETE" }); } catch { }
+    try { await client?.del(`/especies/${id}`); } catch { }
     setCustom(custom.filter((c) => c.id !== id));
   };
 
@@ -211,7 +216,7 @@ export default function Especies() {
             </div>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShow(false)}>{t("cancelar")}</button>
-              <button className="btn-primary" onClick={save}>{t("guardar")}</button>
+              <button className="btn-primary" onClick={save} disabled={saving}>{saving ? t("saving") : t("guardar")}</button>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
+import html2canvas from "html2canvas";
 
 type RecordRow = {
   fecha: string;
@@ -45,7 +45,7 @@ export function exportBitacoraPDF(records: RecordRow[], _t: (k: string) => strin
   const drawPageHeader = () => {
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text("AquaCalc - " + tr("bitacoraTitle"), margin, y);
+    doc.text("AcuiCal - " + tr("bitacoraTitle"), margin, y);
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text(tr("exportDate") + ": " + new Date().toLocaleDateString() + "  |  " + tr("entradas") + ": " + records.length, margin, y + 4);
@@ -139,7 +139,7 @@ export function exportBitacoraPDF(records: RecordRow[], _t: (k: string) => strin
     y += 5;
   });
 
-  doc.save("aquacalc_bitacora.pdf");
+  doc.save("acuical_bitacora.pdf");
 }
 
 export interface ZooRow {
@@ -165,7 +165,7 @@ export function exportZootecnicoPDF(records: ZooRow[], filtro: string, paramLabe
   const drawPageHeader = () => {
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text("AquaCalc - " + "Zootécnico", margin, y);
+    doc.text("AcuiCal - " + "Zootécnico", margin, y);
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     let extra = " | " + "Parámetro: " + paramLabel;
@@ -253,178 +253,7 @@ export function exportZootecnicoPDF(records: ZooRow[], filtro: string, paramLabe
     y += 5;
   });
 
-  doc.save("aquacalc_zootecnico.pdf");
-}
-
-export function exportZootecnicoExcel(records: ZooRow[]): void {
-  const wsData: (string | number)[][] = [
-    ["Fecha", "Estanque", "O₂ (mg/L)", "Temperatura (°C)", "pH", "NH₃ (mg/L)", "NO₂ (mg/L)", "Salinidad"],
-  ];
-  records.forEach((r) => {
-    wsData.push([
-      r.fecha || "",
-      r.estanque || "",
-      r.oxigeno ? Number(r.oxigeno) : "",
-      r.temperatura ? Number(r.temperatura) : "",
-      r.ph ? Number(r.ph) : "",
-      r.amonio ? Number(r.amonio) : "",
-      r.nitrito ? Number(r.nitrito) : "",
-      r.salinidad ? Number(r.salinidad) : "",
-    ]);
-  });
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws["!cols"] = [
-    { wch: 12 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
-  ];
-  XLSX.utils.book_append_sheet(wb, ws, "Zootécnico");
-  XLSX.writeFile(wb, "aquacalc_zootecnico.xlsx");
-}
-
-export interface FinExcelRow {
-  fincaNombre: string;
-  semilla: number;
-  alimento: number;
-  medicacion: number;
-  electricidad: number;
-  combustible: number;
-  manoObra: number;
-  mantenimiento: number;
-  transporte: number;
-  otros: number;
-  biomasaCosechada: number;
-  precioVenta: number;
-  diasCiclo: number;
-}
-
-export function exportFinanzasExcel(records: FinExcelRow[], monedaSimbolo: string, monedaCodigo: string): void {
-  const headers = [
-    "Finca / Estanque",
-    `Semilla (${monedaSimbolo} ${monedaCodigo})`,
-    `Alimento (${monedaSimbolo} ${monedaCodigo})`,
-    `Medicación (${monedaSimbolo} ${monedaCodigo})`,
-    `Electricidad (${monedaSimbolo} ${monedaCodigo})`,
-    `Combustible (${monedaSimbolo} ${monedaCodigo})`,
-    `Mano de obra (${monedaSimbolo} ${monedaCodigo})`,
-    `Mantenimiento (${monedaSimbolo} ${monedaCodigo})`,
-    `Transporte (${monedaSimbolo} ${monedaCodigo})`,
-    `Otros (${monedaSimbolo} ${monedaCodigo})`,
-    `Total Gastos (${monedaSimbolo} ${monedaCodigo})`,
-    `Biomasa (kg)`,
-    `Costo/kg (${monedaSimbolo} ${monedaCodigo})`,
-    `Precio venta/kg (${monedaSimbolo} ${monedaCodigo})`,
-    `Ingreso Total (${monedaSimbolo} ${monedaCodigo})`,
-    "Margen (%)",
-    "Días ciclo",
-  ];
-
-  const wsData: (string | number)[][] = [headers];
-
-  for (const r of records) {
-    const totalCostos =
-      r.semilla + r.alimento + r.medicacion + r.electricidad + r.combustible +
-      r.manoObra + r.mantenimiento + r.transporte + r.otros;
-    const costoKg = r.biomasaCosechada > 0 ? totalCostos / r.biomasaCosechada : 0;
-    const ingresoTotal = r.biomasaCosechada * r.precioVenta;
-    const margen = ingresoTotal > 0 ? ((ingresoTotal - totalCostos) / ingresoTotal * 100) : 0;
-
-    wsData.push([
-      r.fincaNombre,
-      r.semilla ?? 0,
-      r.alimento ?? 0,
-      r.medicacion ?? 0,
-      r.electricidad ?? 0,
-      r.combustible ?? 0,
-      r.manoObra ?? 0,
-      r.mantenimiento ?? 0,
-      r.transporte ?? 0,
-      r.otros ?? 0,
-      totalCostos,
-      r.biomasaCosechada ?? 0,
-      costoKg,
-      r.precioVenta ?? 0,
-      ingresoTotal,
-      Math.round(margen * 100) / 100,
-      r.diasCiclo ?? 0,
-    ]);
-  }
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws["!cols"] = [
-    { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
-    { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
-    { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 16 },
-    { wch: 12 }, { wch: 10 },
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, "Finanzas");
-  XLSX.writeFile(wb, "aquacalc_finanzas.xlsx");
-}
-
-export function exportAllExcel(): void {
-  const wb = XLSX.utils.book_new();
-
-  // Bitácora sheet
-  try {
-    const bitacora = JSON.parse(localStorage.getItem("aquacalc_bitacora") || "[]");
-    if (Array.isArray(bitacora) && bitacora.length > 0) {
-      const headers = ["Fecha", "Estanque", "Especie", "Alimento", "Mortalidades", "Peso", "O₂", "Temp", "pH", "NH₃", "NO₂", "Salinidad", "Biomasa", "SGR", "FCR"];
-      const rows: (string | number)[][] = [headers];
-      for (const r of bitacora) {
-        rows.push([r.fecha, r.estanque, r.especie, r.alimento, r.mortalidades, r.pesoMuestreo, r.oxigeno, r.temperatura, r.ph, r.amonio, r.nitrito, r.salinidad, r.biomasa, r.sgr, r.fcrAcum]);
-      }
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws["!cols"] = [{ wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 6 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 8 }];
-      XLSX.utils.book_append_sheet(wb, ws, "Bitácora");
-    }
-  } catch { /* skip */ }
-
-  // Cultivos sheet
-  try {
-    const cultivos = JSON.parse(localStorage.getItem("aquacalc_cultivos") || "[]");
-    if (Array.isArray(cultivos) && cultivos.length > 0) {
-      const headers = ["Fecha", "Estanque", "Especie", "Tipo Muestra", "Órgano", "Resultado", "Agente", "Carga"];
-      const rows: (string | number)[][] = [headers];
-      for (const r of cultivos) {
-        rows.push([r.fecha, r.estanqueNombre, r.especie, r.tipoMuestra, r.organo, r.resultado, r.agente, r.carga]);
-      }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Cultivos");
-    }
-  } catch { /* skip */ }
-
-  // Medicación sheet
-  try {
-    const meds = JSON.parse(localStorage.getItem("aquacalc_medicacion") || "[]");
-    if (Array.isArray(meds) && meds.length > 0) {
-      const headers = ["Inicio", "Fin", "Estanque", "Producto", "Dosis", "Vía", "Duración", "Retiro", "Estado"];
-      const rows: (string | number)[][] = [headers];
-      for (const r of meds) {
-        rows.push([r.fechaInicio, r.fechaFin, r.estanqueNombre, r.producto, r.dosis, r.via, r.duracion, r.retiroDias, r.estado]);
-      }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Medicación");
-    }
-  } catch { /* skip */ }
-
-  // Finanzas sheet
-  try {
-    const fin = JSON.parse(localStorage.getItem("aquacalc_finanzas") || "[]");
-    if (Array.isArray(fin) && fin.length > 0) {
-      const headers = ["Finca", "Semilla", "Alimento", "Medicación", "Electricidad", "Combustible", "MO", "Manten.", "Transp.", "Otros", "Total", "Biomasa", "Costo/kg", "Precio/kg", "Ingreso", "Margen%"];
-      const rows: (string | number)[][] = [headers];
-      for (const r of fin) {
-        const total = (r.semilla || 0) + (r.alimento || 0) + (r.medicacion || 0) + (r.electricidad || 0) + (r.combustible || 0) + (r.manoObra || 0) + (r.mantenimiento || 0) + (r.transporte || 0) + (r.otros || 0);
-        const ingreso = (r.biomasaCosechada || 0) * (r.precioVenta || 0);
-        const costoKg = r.biomasaCosechada > 0 ? total / r.biomasaCosechada : 0;
-        const margen = ingreso > 0 ? ((ingreso - total) / ingreso * 100) : 0;
-        rows.push([r.fincaNombre, r.semilla || 0, r.alimento || 0, r.medicacion || 0, r.electricidad || 0, r.combustible || 0, r.manoObra || 0, r.mantenimiento || 0, r.transporte || 0, r.otros || 0, total, r.biomasaCosechada || 0, costoKg, r.precioVenta || 0, ingreso, Math.round(margen * 100) / 100]);
-      }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Finanzas");
-    }
-  } catch { /* skip */ }
-
-  XLSX.writeFile(wb, "aquacalc_exportacion_completa.xlsx");
+  doc.save("acuical_zootecnico.pdf");
 }
 
 export interface VetPDFData {
@@ -560,4 +389,129 @@ export function exportVetPDF(data: VetPDFData, _t: (k: string) => string): void 
   }
 
   doc.save("reporte_veterinario.pdf");
+}
+
+export interface GeoPondPDFData {
+  nombre: string;
+  coordenadas: { lat: number; lng: number }[];
+  areaM2: number;
+  profundidad?: number;
+  volumenM3?: number;
+  fechaCaptura: string;
+  mapElement?: HTMLElement | null;
+}
+
+export async function exportGeoPDF(data: GeoPondPDFData, _t: (k: string) => string): Promise<void> {
+  const tr = (k: string) => _t(k) || k;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" }) as any;
+  const margin = 16;
+  const pageW = doc.internal.pageSize.getWidth();
+  const usableW = pageW - margin * 2;
+  let y = margin;
+
+  doc.setFillColor(10, 22, 40);
+  doc.rect(0, 0, pageW, 45, "F");
+  doc.setTextColor(0, 200, 150);
+  doc.setFontSize(20);
+  doc.text("AcuiCal", margin, 18);
+  doc.setTextColor(200, 200, 200);
+  doc.setFontSize(10);
+  doc.text(tr("geoTitle"), margin, 28);
+  doc.text(new Date(data.fechaCaptura).toLocaleString(), margin, 38);
+
+  y = 56;
+  doc.setTextColor(0, 200, 150);
+  doc.setFontSize(12);
+  doc.text(tr("gpsNombre"), margin, y);
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(11);
+  doc.text(data.nombre, margin + 80, y);
+
+  y += 10;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y, pageW - margin, y);
+  y += 8;
+
+  doc.setTextColor(0, 200, 150);
+  doc.setFontSize(12);
+  doc.text(tr("geoCoordenadas"), margin, y);
+  y += 8;
+
+  doc.setFillColor(10, 22, 40);
+  doc.rect(margin, y, usableW, 7, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.text("#", margin + 2, y + 5);
+  doc.text(tr("gpsLatitud"), margin + 14, y + 5);
+  doc.text(tr("gpsLongitud"), margin + 80, y + 5);
+  y += 9;
+
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(8);
+  data.coordenadas.forEach((p, i) => {
+    if (y > 270) { doc.addPage(); y = margin; }
+    doc.text(String(i + 1), margin + 2, y + 4);
+    doc.text(p.lat.toFixed(6), margin + 14, y + 4);
+    doc.text(p.lng.toFixed(6), margin + 80, y + 4);
+    doc.setDrawColor(230, 230, 230);
+    doc.line(margin, y + 5, pageW - margin, y + 5);
+    y += 7;
+  });
+
+  y += 4;
+  const areaHa = data.areaM2 / 10000;
+  doc.setFillColor(240, 250, 245);
+  doc.roundedRect(margin, y, usableW, 50, 4, 4, "F");
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(10);
+  let x = margin + 8;
+  doc.text(tr("gpsArea2") + ": " + data.areaM2.toFixed(1) + " m²", x, y + 10);
+  doc.text("(" + areaHa.toFixed(4) + " ha)", x + 55, y + 10);
+  if (data.profundidad) doc.text(tr("profundidad") + ": " + data.profundidad.toFixed(2) + " m", x, y + 22);
+  if (data.volumenM3) {
+    doc.text(tr("gpsVolumen") + ": " + data.volumenM3.toFixed(1) + " m³", x, y + 34);
+    doc.text("(" + (data.volumenM3 * 1000).toLocaleString() + " L)", x + 55, y + 34);
+  }
+
+  y += 60;
+
+  if (data.mapElement) {
+    try {
+      const canvas = await html2canvas(data.mapElement, {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: "#ffffff",
+        width: data.mapElement.clientWidth,
+        height: data.mapElement.clientHeight,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const imgW = usableW;
+      const imgH = (canvas.height / canvas.width) * imgW;
+      if (imgH > 140) {
+        const scale = 140 / imgH;
+        doc.addImage(imgData, "PNG", margin, y, imgW * scale, 140);
+        y += 148;
+      } else {
+        doc.addImage(imgData, "PNG", margin, y, imgW, imgH);
+        y += imgH + 8;
+      }
+    } catch {
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(9);
+      doc.text(tr("geoMapaNoDisponible"), margin, y + 10);
+      y += 16;
+    }
+  }
+
+  if (y > 250) { doc.addPage(); y = margin; }
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y, pageW - margin, y);
+  y += 6;
+
+  doc.setTextColor(100, 100, 100);
+  doc.setFontSize(7);
+  const firma = `${tr("exportDate")}: ${new Date().toISOString()} | ${tr("geoCoordenadas")}: ${data.coordenadas.length} puntos | Hash: ${btoa(data.coordenadas.map(p => p.lat.toFixed(6) + p.lng.toFixed(6)).join("")).slice(0, 16)}`;
+  doc.text(firma, margin, y + 3);
+
+  doc.save("reporte_geo_acuical.pdf");
 }

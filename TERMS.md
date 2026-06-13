@@ -38,13 +38,13 @@ Al acceder, registrarse o utilizar la plataforma AcuiCal (en adelante, "la Plata
 - Sin exportaciones ni reportes avanzados.
 
 ### 4.2. Plan Professional
-- Costo: $29 USD/mes o $290 USD/año.
+- Costo: $20 USD/mes o $200 USD/año.
 - Fincas ilimitadas, estanques ilimitados.
 - Exportaciones PDF y Excel.
 - Soporte por correo electrónico.
 
 ### 4.3. Plan Enterprise
-- Costo: $99 USD/mes o $990 USD/año.
+- Costo: $50 USD/mes o $500 USD/año.
 - Incluye todas las funcionalidades del plan Professional.
 - Hasta 5 usuarios por cuenta.
 - Soporte prioritario por chat y correo.

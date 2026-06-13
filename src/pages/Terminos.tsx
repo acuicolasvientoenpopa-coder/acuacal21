@@ -30,8 +30,8 @@ export default function Terminos() {
 
       <Section title="4. Planes y Suscripciones">
         <p><strong>4.1. Plan Free</strong> — Acceso gratuito a funcionalidades básicas. Limitado a 1 finca, 1 usuario y 3 estanques. Sin exportaciones avanzadas.</p>
-        <p><strong>4.2. Plan Professional</strong> — $29 USD/mes o $290 USD/año. Fincas ilimitadas, estanques ilimitados. Exportaciones PDF y Excel. Soporte por correo.</p>
-        <p><strong>4.3. Plan Enterprise</strong> — $99 USD/mes o $990 USD/año. Hasta 5 usuarios. Soporte prioritario. API pública.</p>
+        <p><strong>4.2. Plan Professional</strong> — $20 USD/mes o $200 USD/año. Fincas ilimitadas, estanques ilimitados. Exportaciones PDF y Excel. Soporte por correo.</p>
+        <p><strong>4.3. Plan Enterprise</strong> — $50 USD/mes o $500 USD/año. Hasta 5 usuarios. Soporte prioritario. API pública.</p>
         <p><strong>4.4. Facturación</strong> — Pagos via Lemon Squeezy. Renovación automática. Cancelación desde el panel.</p>
         <p><strong>4.5. Reembolsos</strong> — Reembolso completo dentro de los primeros 14 días. Sin reembolsos prorrateados después.</p>
       </Section>

@@ -17,5 +17,7 @@ export const NAV_LINKS: NavLinkDef[] = [
   { to: "/finanzas", key: "finanzas", emoji: "💰", tutorialDesc: "tutorialFinanzasDesc" },
   { to: "/vet", key: "vet", emoji: "🏥", tutorialDesc: "tutorialVetDesc" },
   { to: "/inventario", key: "inventario", emoji: "📦", tutorialDesc: "tutorialInventarioDesc" },
-  { to: "/medir-estanque", key: "medirEstanque", emoji: "🗺️", tutorialDesc: "tutorialGeoDesc" },
+  { to: "/geo", key: "geo", emoji: "🗺️", tutorialDesc: "tutorialGeoDesc" },
+  { to: "/medir-estanque", key: "medirEstanque", emoji: "🗺️", tutorialDesc: "tutorialMedirEstanqueDesc" },
+  { to: "/planes", key: "plan", emoji: "💳", tutorialDesc: "tutorialPlanDesc" },
 ];

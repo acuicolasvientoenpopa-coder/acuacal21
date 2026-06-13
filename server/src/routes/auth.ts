@@ -1,35 +1,35 @@
 import { Router, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
-import { AuthRequest } from "../middleware/auth.js";
+import { z } from "zod";
+import { AuthRequest, requireAuth } from "../middleware/auth.js";
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 
 export const authRouter = Router();
 
-authRouter.post("/register", async (req: AuthRequest, res: Response) => {
-  const { email, password, nombre } = req.body;
-  if (!email || !password || !nombre) {
-    res.status(400).json({ error: "email, password y nombre requeridos" });
+const registerSchema = z.object({
+  userId: z.string().min(1, "userId requerido"),
+  email: z.string().email("email inválido"),
+  nombre: z.string().min(1, "nombre requerido").max(100),
+});
+
+authRouter.post("/register", requireAuth, async (req: AuthRequest, res: Response) => {
+  const parsed = registerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues.map((i) => i.message).join(", ") });
     return;
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { userId, email, nombre } = parsed.data;
 
-  if (error) {
-    res.status(400).json({ error: error.message });
-    return;
-  }
-
-  // Crear cliente con sesión del usuario registrado
-  const authed = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${data.session!.access_token}` } },
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${req.headers.authorization?.replace("Bearer ", "")}` } },
     auth: { persistSession: false },
   });
 
-  const { error: dbError } = await authed.from("User").insert({
-    id: data.user!.id,
+  const { error: dbError } = await supabase.from("User").insert({
+    id: userId,
     email,
     nombre,
   });
@@ -39,11 +39,7 @@ authRouter.post("/register", async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  res.status(201).json({
-    message: "Usuario registrado",
-    token: data.session!.access_token,
-    user: data.user,
-  });
+  res.status(201).json({ message: "Usuario registrado" });
 });
 
 authRouter.post("/login", async (req: AuthRequest, res: Response) => {

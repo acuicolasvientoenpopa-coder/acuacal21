@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import {
@@ -7,6 +7,7 @@ import {
 import { calcularRiesgo } from "./riskCalculator";
 import type { RiskResult } from "./riskCalculator";
 import { exportVetPDF } from "@/utils/pdf";
+import { createApi } from "@/services/api";
 
 type FormData = { estanque: string; alimentacion: string[]; comportamiento: string[]; sintomas: string[]; agua: string[]; imagenes: string[]; };
 type ArrKeys = "alimentacion" | "comportamiento" | "sintomas" | "agua" | "imagenes";
@@ -31,7 +32,7 @@ const STEPS = [
 
 const STEP_EMOJIS: Record<string, string> = { estanque: "🏞️", alimentacion: "🍽️", comportamiento: "🐟", sintomas: "🔍", agua: "💧", resumen: "📋" };
 
-const STORAGE_KEY = "aquacalc_vet_reports";
+const STORAGE_KEY = "acuical_vet_reports";
 
 function loadLocal(): SavedReport[] {
   try { const d = localStorage.getItem(STORAGE_KEY); return d ? JSON.parse(d) : []; } catch { return []; }
@@ -39,7 +40,7 @@ function loadLocal(): SavedReport[] {
 
 function getPondos(): { id: string; label: string }[] {
   try {
-    const saved = localStorage.getItem("aquacalc_fincas");
+    const saved = localStorage.getItem("acuical_fincas");
     if (saved) {
       const fincas = JSON.parse(saved);
       if (Array.isArray(fincas) && fincas.length > 0) {
@@ -52,7 +53,7 @@ function getPondos(): { id: string; label: string }[] {
 
 export default function VeterinaryReportWizard() {
   const { t, lang } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [result, setResult] = useState<{ diagnosticos: { diagnosis: string; weight: number }[]; riesgo: RiskResult } | null>(null);
@@ -63,17 +64,11 @@ export default function VeterinaryReportWizard() {
   const [reports, setReports] = useState<SavedReport[]>(loadLocal);
   const [viewingReport, setViewingReport] = useState<SavedReport | null>(null);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    api("/veterinaria").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/veterinaria").then((data: any[]) => {
       const mapped = data.map((r: any) => {
         let base: any = { id: r.id, fecha: r.fecha?.slice(0, 10) || "", riesgo: r.riesgo || "verde" };
         try { const p = JSON.parse(r.notas || "{}"); return { ...base, ...p }; } catch { return base; }
@@ -83,17 +78,17 @@ export default function VeterinaryReportWizard() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
       }
     }).catch(() => setReports(loadLocal()));
-  }, [api]);
+  }, [client]);
 
   const createPond = () => {
     const name = newPondName.trim();
     if (!name) return;
     const newFinca = { id: "f_" + Date.now(), nombre: name, ubicacion: "", descripcion: "" };
     try {
-      const saved = localStorage.getItem("aquacalc_fincas");
+      const saved = localStorage.getItem("acuical_fincas");
       const fincas = saved ? JSON.parse(saved) : [];
       fincas.push(newFinca);
-      localStorage.setItem("aquacalc_fincas", JSON.stringify(fincas));
+      localStorage.setItem("acuical_fincas", JSON.stringify(fincas));
     } catch {}
     setPondos(getPondos());
     setForm((prev) => ({ ...prev, estanque: newFinca.id }));
@@ -148,19 +143,16 @@ export default function VeterinaryReportWizard() {
       setReports(updated);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       try {
-        await api("/veterinaria", {
-          method: "POST",
-          body: JSON.stringify({
-            diagnostico: report.resumen.slice(0, 200),
-            riesgo: report.riesgo,
-            notas: JSON.stringify(report),
-            fecha: new Date().toISOString(),
-          }),
+        await client?.post("/veterinaria", {
+          diagnostico: report.resumen.slice(0, 200),
+          riesgo: report.riesgo,
+          notas: JSON.stringify(report),
+          fecha: new Date().toISOString(),
         });
       } catch {}
     }
     setForm(EMPTY_FORM); setStep(0); setResult(null);
-  }, [result, form, pondos, t, lang, reports, api]);
+  }, [result, form, pondos, t, lang, reports, client]);
 
   const isSummaryStep = step === 5;
   const pct = ((step + 1) / STEPS.length) * 100;
@@ -194,7 +186,7 @@ export default function VeterinaryReportWizard() {
   const removeImage = (index: number) => { setForm((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, i) => i !== index) })); };
 
   const deleteReport = async (id: string) => {
-    try { await api(`/veterinaria/${id}`, { method: "DELETE" }); } catch {}
+    try { await client?.del(`/veterinaria/${id}`); } catch {}
     const updated = reports.filter((r) => r.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setReports(updated);
@@ -247,8 +239,8 @@ export default function VeterinaryReportWizard() {
             <div className="vet-summary-section">
               <div className="vet-summary-label">{t("vetDiagnosticos")}</div>
               <div className="vet-diagnosticos-grid">
-                {r.diagnosticos.map((d, i) => (
-                  <div key={i} className={`vet-diagnostico-card severity-${d.weight >= 4 ? "alta" : d.weight >= 2 ? "media" : "baja"}`}>
+                {r.diagnosticos.map((d) => (
+                  <div key={d.diagnosis} className={`vet-diagnostico-card severity-${d.weight >= 4 ? "alta" : d.weight >= 2 ? "media" : "baja"}`}>
                     <span className="vet-diagnostico-name">{d.diagnosis}</span><span className="vet-diagnostico-weight">+{d.weight}</span>
                   </div>
                 ))}
@@ -257,10 +249,10 @@ export default function VeterinaryReportWizard() {
           )}
           <div className="vet-summary-section"><div className="vet-summary-label">{t("vetResumen")}</div><p className="vet-summary-text">{r.resumen}</p></div>
           {r.acciones.length > 0 && (
-            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetAcciones")}</div><ul className="vet-actions-list">{r.acciones.map((a, i) => <li key={i}>{a}</li>)}</ul></div>
+            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetAcciones")}</div><ul className="vet-actions-list">{r.acciones.map((a) => <li key={a}>{a}</li>)}</ul></div>
           )}
           {r.imagenes.length > 0 && (
-            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetFotos")}</div><div className="vet-fotos-grid">{r.imagenes.map((img, i) => (<div key={i} className="vet-foto-item"><img src={img} alt="" className="vet-foto-thumb" /></div>))}</div></div>
+            <div className="vet-summary-section"><div className="vet-summary-label">{t("vetFotos")}</div><div className="vet-fotos-grid">{r.imagenes.map((img) => (<div key={img} className="vet-foto-item"><img src={img} alt="" className="vet-foto-thumb" /></div>))}</div></div>
           )}
           <div className="vet-pdf-section"><button className="btn btn-primary" onClick={() => handleExportPDF(r)}>📄 {t("vetExportPDF")}</button></div>
         </div>
@@ -366,7 +358,7 @@ export default function VeterinaryReportWizard() {
             {diagnosticos.length > 0 && (
               <div className="vet-summary-section">
                 <div className="vet-summary-label">{t("vetDiagnosticos")}</div>
-                <div className="vet-diagnosticos-grid">{diagnosticos.map((d, i) => (<div key={i} className={`vet-diagnostico-card severity-${d.weight >= 4 ? "alta" : d.weight >= 2 ? "media" : "baja"}`}><span className="vet-diagnostico-name">{d.diagnosis}</span><span className="vet-diagnostico-weight">+{d.weight}</span></div>))}</div>
+                <div className="vet-diagnosticos-grid">{diagnosticos.map((d) => (<div key={d.diagnosis} className={`vet-diagnostico-card severity-${d.weight >= 4 ? "alta" : d.weight >= 2 ? "media" : "baja"}`}><span className="vet-diagnostico-name">{d.diagnosis}</span><span className="vet-diagnostico-weight">+{d.weight}</span></div>))}</div>
               </div>
             )}
             <div className="vet-summary-section"><div className="vet-summary-label">{t("vetResumen")}</div><p className="vet-summary-text">{generateResumen(diagnosticos.map((d) => d.diagnosis), riesgo?.riesgo || "verde", lang)}</p></div>
@@ -381,7 +373,7 @@ export default function VeterinaryReportWizard() {
             <div className="vet-summary-section">
               <div className="vet-summary-label">{t("vetFotos")}</div>
               <div className="vet-fotos-grid">
-                {imagenes.map((img, i) => (<div key={i} className="vet-foto-item"><img src={img} alt={`Foto ${i + 1}`} className="vet-foto-thumb" /><button className="vet-foto-remove" onClick={() => removeImage(i)}>✕</button></div>))}
+                {imagenes.map((img, i) => (<div key={img} className="vet-foto-item"><img src={img} alt={`Foto ${i + 1}`} className="vet-foto-thumb" /><button className="vet-foto-remove" onClick={() => removeImage(i)}>✕</button></div>))}
                 <label className="vet-foto-add"><input type="file" accept="image/*" capture="environment" onChange={handleAddImages} hidden /><span className="vet-foto-add-icon">+</span><span className="vet-foto-add-text">{t("vetAgregarFoto")}</span></label>
               </div>
             </div>

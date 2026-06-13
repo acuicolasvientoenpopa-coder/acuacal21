@@ -41,7 +41,7 @@ const PAGE_MODS: ModInfo[] = [
   { id: "finanzas", emoji: "💰", label: "Finanzas", status: "ok", route: "/finanzas" },
   { id: "vet", emoji: "🏥", label: "Veterinaria", status: "ok", route: "/vet" },
   { id: "inventario", emoji: "📦", label: "Inventario", status: "ok", route: "/inventario" },
-  { id: "master", emoji: "⚡", label: "Master Panel", status: "ok", route: "/master" },
+  { id: "master", emoji: "⚡", label: "Admin Panel", status: "ok", route: "/admin" },
 ];
 
 const PENDING_MODS: ModInfo[] = [

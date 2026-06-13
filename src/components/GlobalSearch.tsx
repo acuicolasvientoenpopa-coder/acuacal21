@@ -16,7 +16,7 @@ function searchAll(q: string): Result[] {
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (!key || !key.startsWith("aquacalc_")) continue;
+    if (!key || !key.startsWith("acuical_")) continue;
     const data = localStorage.getItem(key);
     if (!data) continue;
     let arr: any[];
@@ -29,7 +29,7 @@ function searchAll(q: string): Result[] {
 
         if (!fields.some((f: string) => f.includes(lq))) continue;
 
-        let emoji = "📄", badge = key.replace("aquacalc_", "");
+        let emoji = "📄", badge = key.replace("acuical_", "");
         if (key.includes("bitacora")) emoji = "📋";
         else if (key.includes("fincas")) emoji = "🏠";
         else if (key.includes("cultivos")) emoji = "🧫";
@@ -72,10 +72,18 @@ export default function GlobalSearch() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  useEffect(() => {
+    if (query.length < 2) { setResults([]); setOpen(false); return; }
+    const timer = setTimeout(() => {
+      setResults(searchAll(query));
+      setOpen(true);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const handleChange = (v: string) => {
     setQuery(v);
-    setResults(searchAll(v));
-    setOpen(v.length >= 2);
+    if (v.length < 2) { setResults([]); setOpen(false); }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -100,8 +108,8 @@ export default function GlobalSearch() {
       />
       {open && results.length > 0 && (
         <div className="global-search-results">
-          {results.map((r, i) => (
-            <Link key={i} to={r.to} className="gsr-item" onClick={() => { setOpen(false); setQuery(""); }}>
+          {results.map((r) => (
+            <Link key={r.to + r.label} to={r.to} className="gsr-item" onClick={() => { setOpen(false); setQuery(""); }}>
               <span className="gsr-item-emoji">{r.emoji}</span>
               <span className="gsr-item-text">
                 <div className="gsr-item-label">{r.label}</div>

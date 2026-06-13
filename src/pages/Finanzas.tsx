@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useLookups } from "@/store/lookups";
 import { useCurrency } from "@/store/currency";
 import { toast } from "@/components/Toast";
-import { exportFinanzasExcel } from "@/utils/pdf";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useSaveIndicator } from "@/store/saveIndicator";
+import { createApi } from "@/services/api";
 
-const STORAGE_KEY = "aquacalc_finanzas";
+const STORAGE_KEY = "acuical_finanzas";
 
 interface FinRecord {
   id: string; fincaId: string; fincaNombre: string;
@@ -50,7 +50,7 @@ const CATS = [
 
 export default function Finanzas() {
   const { t } = useTranslation();
-  const { token, apiUrl } = useAuth();
+  const { token } = useAuth();
   const { estanques, reload: reloadLookups } = useLookups();
   const { fmt, currency, code } = useCurrency();
   const [records, setRecords] = useState<FinRecord[]>(loadLocal);
@@ -58,18 +58,13 @@ export default function Finanzas() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [finFilter, setFinFilter] = useState("");
   const saveState = useSaveIndicator([records]);
+  const [saving, setSaving] = useState(false);
 
-  const api = useCallback(async (path: string, opts?: RequestInit) => {
-    const res = await fetch(apiUrl + path, {
-      ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers },
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  }, [apiUrl, token]);
+  const client = useMemo(() => token ? createApi(token) : null, [token]);
 
   useEffect(() => {
-    api("/finanzas").then((data: any[]) => {
+    if (!client) return;
+    client.get<any[]>("/finanzas").then((data: any[]) => {
       const parsed = data
         .filter((r: any) => r.tipo === "fin_record")
         .map((r: any) => {
@@ -79,7 +74,7 @@ export default function Finanzas() {
       setRecords(parsed.length > 0 ? parsed : loadLocal());
       if (parsed.length > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
     }).catch(() => setRecords(loadLocal()));
-  }, [api]);
+  }, [client]);
 
   useEffect(() => {
     const h = (e: StorageEvent) => {
@@ -93,35 +88,38 @@ export default function Finanzas() {
   }, [reloadLookups]);
 
   const bulkSave = async (data: FinRecord[]) => {
+    setSaving(true);
     setRecords(data);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (!client) { setSaving(false); return; }
     for (const rec of data) {
       try {
-        await api("/finanzas", {
-          method: "POST",
-          body: JSON.stringify({
-            tipo: "fin_record",
-            descripcion: JSON.stringify(rec),
-            monto: 0,
-            fecha: new Date().toISOString(),
-            fincaId: rec.fincaId || "unknown",
-          }),
+        await client.post("/finanzas", {
+          tipo: "fin_record",
+          descripcion: JSON.stringify(rec),
+          monto: 0,
+          fecha: new Date().toISOString(),
+          fincaId: rec.fincaId || "unknown",
         });
       } catch { break; }
     }
+    setSaving(false);
   };
 
-  const agg: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0 };
-  for (const r of records) {
-    for (const c of CATS) (agg[c.key] as number) += (r[c.key] as number) || 0;
-    agg.biomasaCosechada += r.biomasaCosechada || 0;
-    agg.precioVenta = r.precioVenta || 0;
-  }
-  const totalGastos = CATS.reduce((s, c) => s + ((agg[c.key] as number) || 0), 0);
-  const ingresoTotal = agg.biomasaCosechada * agg.precioVenta;
-  const costoKg = agg.biomasaCosechada > 0 ? totalGastos / agg.biomasaCosechada : 0;
-  const margen = ingresoTotal > 0 ? ((ingresoTotal - totalGastos) / ingresoTotal * 100) : 0;
-  const maxCat = Math.max(...CATS.map((c) => (agg[c.key] as number) || 0), 1);
+  const { agg, totalGastos, ingresoTotal, costoKg, margen, maxCat } = useMemo(() => {
+    const a: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0 };
+    for (const r of records) {
+      for (const c of CATS) (a[c.key] as number) += (r[c.key] as number) || 0;
+      a.biomasaCosechada += r.biomasaCosechada || 0;
+      a.precioVenta = r.precioVenta || 0;
+    }
+    const gastos = CATS.reduce((s, c) => s + ((a[c.key] as number) || 0), 0);
+    const ingreso = a.biomasaCosechada * a.precioVenta;
+    const ckg = a.biomasaCosechada > 0 ? gastos / a.biomasaCosechada : 0;
+    const mg = ingreso > 0 ? ((ingreso - gastos) / ingreso * 100) : 0;
+    const mx = Math.max(...CATS.map((c) => (a[c.key] as number) || 0), 1);
+    return { agg: a, totalGastos: gastos, ingresoTotal: ingreso, costoKg: ckg, margen: mg, maxCat: mx };
+  }, [records]);
 
   const current = editId ? records.find((r) => r.id === editId) : null;
   const [form, setForm] = useState<FinRecord>(current ?? emptyRec());
@@ -155,7 +153,7 @@ export default function Finanzas() {
           <p className="page-subtitle">{t("finanzasSub")}</p>
         </div>
         {records.length > 0 && (
-          <button className="btn-primary btn-sm" onClick={() => exportFinanzasExcel(records, currency.simbolo, code)}>⬇️ {t("exportExcel")}</button>
+          <button className="btn-primary btn-sm" onClick={() => import("@/utils/excel").then(m => m.exportFinanzasExcel(records, currency.simbolo, code)).catch(() => {})}>⬇️ {t("exportExcel")}</button>
         )}
       </div>
 
@@ -249,8 +247,8 @@ export default function Finanzas() {
           <label>📅 {t("finanzasCiclo")}<input type="number" value={form.diasCiclo || ""} onChange={(e) => setForm({ ...form, diasCiclo: Number(e.target.value) })} placeholder="150" /></label>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="calc-btn" style={{ marginTop: 12, flex: 1 }} onClick={saveRecord}>
-            💾 {editId ? t("finanzasCargado") : t("finanzasGuardar")}
+          <button className="calc-btn" style={{ marginTop: 12, flex: 1 }} onClick={saveRecord} disabled={saving}>
+            {saving ? t("saving") : `💾 ${editId ? t("finanzasCargado") : t("finanzasGuardar")}`}
           </button>
           {saveState && <span className={`save-indicator ${saveState}`}>{saveState === "saving" ? "⏳" : "✅"}</span>}
         </div>
