@@ -23,6 +23,7 @@ const movimientoSchema = z.object({
   cantidad: z.number().positive("cantidad debe ser positiva"),
   motivo: z.string().max(1000).optional(),
   fecha: z.string().optional(),
+  loteId: z.string().optional(),
 });
 
 inventarioRouter.get("/productos", async (req: AuthRequest, res: Response) => {

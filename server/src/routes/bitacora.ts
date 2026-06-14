@@ -21,6 +21,7 @@ const bitacoraSchema = z.object({
   estanqueId: z.string().optional(),
   especieId: z.string().optional(),
   observaciones: z.string().max(5000).optional(),
+  loteId: z.string().optional(),
 });
 
 bitacoraRouter.get("/", async (req: AuthRequest, res: Response) => {

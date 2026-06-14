@@ -7,6 +7,7 @@ import { toast } from "@/components/Toast";
 import { PRODUCTO_DEFAULT, CATEGORIAS } from "@/core/inventario-types";
 import type { Producto, MovimientoInventario } from "@/core/inventario-types";
 import { createApi } from "@/services/api";
+import { useLotes } from "@/store/lotes";
 import { useLookups } from "@/store/lookups";
 
 function apiToProducto(r: any): Producto {
@@ -28,6 +29,7 @@ export default function Inventario() {
   const { token } = useAuth();
   const { fmt } = useCurrency();
   const { fincas } = useLookups();
+  const { lotesActivos } = useLotes();
   const { productos, movimientos, alertas, valorTotalInventario, saveProducto, deleteProducto, saveMovimiento, reload } = useInventario();
 
   const client = useMemo(() => token ? createApi(token) : null, [token]);
@@ -106,7 +108,7 @@ export default function Inventario() {
     const mov = { ...mf, id: `inv_mov_${Date.now()}`, costoTotal: mf.cantidad * prod.precioUnitario, createdAt: new Date().toISOString() };
     saveMovimiento(mov);
     try {
-      await client?.post("/inventario/movimientos", { tipo: mov.tipo, cantidad: mov.cantidad, productoId: mov.productoId, fecha: mov.fecha });
+      await client?.post("/inventario/movimientos", { tipo: mov.tipo, cantidad: mov.cantidad, productoId: mov.productoId, fecha: mov.fecha, loteId: mov.loteId || undefined });
     } catch (e: any) { console.error("[Inventario] Error:", e?.message || e); }
     setShowMovForm(false);
     toast("Movimiento registrado", "success");
@@ -260,6 +262,12 @@ export default function Inventario() {
               <label>Fecha<input type="date" value={mf.fecha} onChange={(e) => setMf({ ...mf, fecha: e.target.value })} /></label>
               <label>{t("invResponsable")}<input value={mf.responsable} onChange={(e) => setMf({ ...mf, responsable: e.target.value })} /></label>
               <label>{t("invReferencia")}<input value={mf.referencia} onChange={(e) => setMf({ ...mf, referencia: e.target.value })} placeholder="Factura #" /></label>
+              <label>{t("lote")}
+                <select value={mf.loteId || ""} onChange={(e) => setMf({ ...mf, loteId: e.target.value })}>
+                  <option value="">{t("seleccionar")}</option>
+                  {lotesActivos.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                </select>
+              </label>
               <label>Finca <input value={mf.fincaId} onChange={(e) => setMf({ ...mf, fincaId: e.target.value })} /></label>
               <label style={{ gridColumn: "1 / -1" }}>{t("invNotas")}<textarea value={mf.notas} onChange={(e) => setMf({ ...mf, notas: e.target.value })} /></label>
             </div>

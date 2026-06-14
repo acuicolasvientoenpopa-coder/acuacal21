@@ -25,6 +25,8 @@ const Inventario = lazy(() => import("@/pages/Inventario"));
 const VeterinaryReportWizard = lazy(() => import("@/pages/veterinary/VeterinaryReportWizard"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const Planes = lazy(() => import("@/pages/Planes"));
+const MedirEstanque = lazy(() => import("@/pages/MedirEstanque"));
+const Lotes = lazy(() => import("@/pages/Lotes"));
 
 const PUBLIC_PATHS = ["/calc", "/formulas", "/admin"];
 
@@ -69,6 +71,8 @@ export default function App() {
                     <Route path="inventario" element={<ProtectedRoute><SuspenseWrapper><Inventario /></SuspenseWrapper></ProtectedRoute>} />
                     <Route path="admin" element={<ProtectedRoute><SuspenseWrapper><Admin /></SuspenseWrapper></ProtectedRoute>} />
                     <Route path="planes" element={<ProtectedRoute><SuspenseWrapper><Planes /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="medir-estanque" element={<ProtectedRoute><SuspenseWrapper><MedirEstanque /></SuspenseWrapper></ProtectedRoute>} />
+                    <Route path="lotes" element={<ProtectedRoute><SuspenseWrapper><Lotes /></SuspenseWrapper></ProtectedRoute>} />
                   </Route>
                 </Routes>
                 <ToastContainer />

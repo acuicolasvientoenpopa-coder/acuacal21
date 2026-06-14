@@ -5,6 +5,7 @@ import { OBSERVACIONES, validateWaterQuality, validateBitacoraForm } from "@/cor
 import { toast } from "@/components/Toast";
 import { exportBitacoraPDF } from "@/utils/pdf";
 import { useLookups } from "@/store/lookups";
+import { useLotes } from "@/store/lotes";
 import { createApi } from "@/services/api";
 import { getQueueLength, scheduleProcess } from "@/services/sync";
 import { API_URL } from "@/utils/config";
@@ -16,12 +17,14 @@ type RecordData = {
   mortalidades: string; pesoMuestreo: string; oxigeno: string; temperatura: string;
   ph: string; amonio: string; nitrito: string; salinidad: string; biomasa: string;
   sgr: string; fcrAcum: string; observaciones: string; createdAt: string;
+  loteId: string;
 };
 
 const emptyRecord = (): RecordData => ({
   id: "", fecha: "", estanque: "", especie: "", alimento: "", mortalidades: "",
   pesoMuestreo: "", oxigeno: "", temperatura: "", ph: "", amonio: "",
   nitrito: "", salinidad: "", biomasa: "", sgr: "", fcrAcum: "", observaciones: "", createdAt: "",
+  loteId: "",
 });
 
 function loadLocal(): RecordData[] {
@@ -48,6 +51,7 @@ function dbToRecord(r: any): RecordData {
     fcrAcum: extra.fcrAcum || "",
     observaciones: extra.observaciones || "",
     createdAt: r.createdAt || "",
+    loteId: r.loteId || "",
   };
 }
 
@@ -55,6 +59,7 @@ export default function Bitacora() {
   const { t } = useTranslation();
   const { token } = useAuth();
   const { species: allSpecies, estanques } = useLookups();
+  const { lotesActivos } = useLotes();
   const [records, setRecords] = useState<RecordData[]>(loadLocal);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<RecordData>(emptyRecord);
@@ -149,6 +154,7 @@ export default function Bitacora() {
     if (rec.pesoMuestreo) payload.peso = parseFloat(rec.pesoMuestreo);
     if (rec.estanque) payload.fincaId = rec.estanque.split("||")[0];
     if (rec.especie) payload.especieId = rec.especie;
+    if (rec.loteId) payload.loteId = rec.loteId;
     setSaving(true);
     try {
       const created = await client?.post<any>("/bitacora", payload);
@@ -190,6 +196,14 @@ export default function Bitacora() {
               <select value={form.especie} onChange={(e) => setF("especie", e.target.value)}>
                 <option value="">{t("seleccionar")}</option>
                 {allSpecies.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </label>
+            <label>{t("lote")}
+              <select value={form.loteId} onChange={(e) => setF("loteId", e.target.value)}>
+                <option value="">{t("seleccionar")}</option>
+                {lotesActivos.filter((l) => !form.estanque || l.estanqueId === form.estanque.split("||")[1] || l.estanqueId === form.estanque).map((l) =>
+                  <option key={l.id} value={l.id}>{l.nombre}</option>
+                )}
               </select>
             </label>
             <label>{t("alimento")}<input type="number" step="0.1" value={form.alimento} onChange={(e) => setF("alimento", e.target.value)} placeholder="0.0" /></label>
@@ -269,6 +283,7 @@ export default function Bitacora() {
                       <span className="bio-date">{r.fecha}</span>
                       <span className="bio-pond">{t("estanque")}: <strong>{r.estanque}</strong></span>
                       <span className="bio-species">{t(`sp_${r.especie}` as any)}</span>
+                      {r.loteId && <span className="badge badge-green" style={{ fontSize: 10 }}>#{r.loteId.slice(0, 8)}</span>}
                     </div>
                     <button className="btn btn-danger btn-sm" onClick={() => remove(r.id)}>{t("eliminar")}</button>
                   </div>

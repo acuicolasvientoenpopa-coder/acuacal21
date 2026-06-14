@@ -9,8 +9,9 @@ import type { RiskResult } from "./riskCalculator";
 import { exportVetPDF } from "@/utils/pdf";
 import { toast } from "@/components/Toast";
 import { createApi } from "@/services/api";
+import { useLotes } from "@/store/lotes";
 
-type FormData = { estanque: string; alimentacion: string[]; comportamiento: string[]; sintomas: string[]; agua: string[]; imagenes: string[]; };
+type FormData = { estanque: string; alimentacion: string[]; comportamiento: string[]; sintomas: string[]; agua: string[]; imagenes: string[]; loteId: string; };
 type ArrKeys = "alimentacion" | "comportamiento" | "sintomas" | "agua" | "imagenes";
 type RiesgoLevel = "rojo" | "amarillo" | "verde";
 
@@ -18,9 +19,10 @@ interface SavedReport {
   id: string; fecha: string; pondName: string; riesgo: RiesgoLevel;
   puntaje: number; diagnosticos: { diagnosis: string; weight: number }[];
   resumen: string; acciones: string[]; imagenes: string[]; lang: string;
+  loteId: string;
 }
 
-const EMPTY_FORM: FormData = { estanque: "", alimentacion: [], comportamiento: [], sintomas: [], agua: [], imagenes: [] };
+const EMPTY_FORM: FormData = { estanque: "", alimentacion: [], comportamiento: [], sintomas: [], agua: [], imagenes: [], loteId: "" };
 
 const STEPS = [
   { key: "estanque" as const, titleKey: "vetEstanque" as const, icon: "🏞️" },
@@ -58,6 +60,7 @@ export default function VeterinaryReportWizard() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [result, setResult] = useState<{ diagnosticos: { diagnosis: string; weight: number }[]; riesgo: RiskResult } | null>(null);
+  const { lotesActivos } = useLotes();
   const [pondos, setPondos] = useState(getPondos);
   const [addingPond, setAddingPond] = useState(false);
   const [newPondName, setNewPondName] = useState("");
@@ -138,7 +141,7 @@ export default function VeterinaryReportWizard() {
         id: "vr_" + Date.now(), fecha: new Date().toLocaleDateString(), pondName,
         riesgo: r, puntaje: result.riesgo.puntaje, diagnosticos: result.diagnosticos,
         resumen: generateResumen(result.diagnosticos.map((d) => d.diagnosis), r, lang),
-        acciones, imagenes: form.imagenes, lang,
+        acciones, imagenes: form.imagenes, lang, loteId: form.loteId,
       };
       const updated = [report, ...reports];
       setReports(updated);
@@ -149,6 +152,7 @@ export default function VeterinaryReportWizard() {
           riesgo: report.riesgo,
           notas: JSON.stringify(report),
           fecha: new Date().toISOString(),
+          loteId: form.loteId || undefined,
         });
       } catch (e: any) { console.error("[VeterinaryReportWizard] Error:", e?.message || e); toast("Error de sincronización", "error"); }
     }
@@ -308,9 +312,14 @@ export default function VeterinaryReportWizard() {
                 </div>
               )}
             </div>
+            <label style={{ marginTop: 12, display: "block" }}>{t("lote")}
+              <select value={form.loteId} onChange={(e) => setForm({ ...form, loteId: e.target.value })}>
+                <option value="">{t("seleccionar")}</option>
+                {lotesActivos.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+              </select>
+            </label>
           </div>
         )}
-
         {step === 1 && (
           <div className="wizard-card-inner">
             <div className="wizard-card-icon">🍽️</div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/store/auth";
 import { useTranslation } from "@/store/language";
 import { useLookups } from "@/store/lookups";
+import { useLotes } from "@/store/lotes";
 import { useCurrency } from "@/store/currency";
 import { toast } from "@/components/Toast";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -15,6 +16,7 @@ interface FinRecord {
   semilla: number; alimento: number; medicacion: number; electricidad: number;
   combustible: number; manoObra: number; mantenimiento: number; transporte: number;
   otros: number; biomasaCosechada: number; precioVenta: number; diasCiclo: number;
+  loteId: string;
 }
 
 const emptyRec = (fincaId = "", fincaNombre = ""): FinRecord => ({
@@ -22,6 +24,7 @@ const emptyRec = (fincaId = "", fincaNombre = ""): FinRecord => ({
   semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0,
   manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0,
   biomasaCosechada: 0, precioVenta: 0, diasCiclo: 150,
+  loteId: "",
 });
 
 function loadLocal(): FinRecord[] {
@@ -52,6 +55,7 @@ export default function Finanzas() {
   const { t } = useTranslation();
   const { token } = useAuth();
   const { estanques, reload: reloadLookups } = useLookups();
+  const { lotesActivos } = useLotes();
   const { fmt, currency, code } = useCurrency();
   const [records, setRecords] = useState<FinRecord[]>(loadLocal);
   const [editId, setEditId] = useState<string | null>(null);
@@ -107,7 +111,7 @@ export default function Finanzas() {
   };
 
   const { agg, totalGastos, ingresoTotal, costoKg, margen, maxCat } = useMemo(() => {
-    const a: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0 };
+    const a: FinRecord = { id: "", fincaId: "", fincaNombre: "", semilla: 0, alimento: 0, medicacion: 0, electricidad: 0, combustible: 0, manoObra: 0, mantenimiento: 0, transporte: 0, otros: 0, biomasaCosechada: 0, precioVenta: 0, diasCiclo: 0, loteId: "" };
     for (const r of records) {
       for (const c of CATS) (a[c.key] as number) += (r[c.key] as number) || 0;
       a.biomasaCosechada += r.biomasaCosechada || 0;
@@ -237,6 +241,12 @@ export default function Finanzas() {
             }}>
               <option value="">{t("seleccionar")}</option>
               {estanques.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+            </select>
+          </label>
+          <label>{t("lote")}
+            <select value={form.loteId} onChange={(e) => setForm({ ...form, loteId: e.target.value })}>
+              <option value="">{t("seleccionar")}</option>
+              {lotesActivos.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
             </select>
           </label>
           {CATS.map((c) => (

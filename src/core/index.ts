@@ -48,3 +48,4 @@ export type { Producto, MovimientoInventario, CategoriaProducto } from "./invent
 
 export { PLAN_LIMITS, PLANES, canExport, canUseGeo, limiteFincas, limiteEstanques, excedeLimiteFincas, excedeLimiteEstanques, rolValido } from "./plan";
 export type { Plan, Rol } from "./plan";
+export type { Lote } from "./lote-types";

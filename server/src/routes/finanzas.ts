@@ -14,6 +14,7 @@ const finanzaSchema = z.object({
   descripcion: z.any().optional(),
   fecha: z.string().optional(),
   fincaId: z.string().uuid(),
+  loteId: z.string().optional(),
 });
 
 finanzasRouter.get("/", async (req: AuthRequest, res: Response) => {

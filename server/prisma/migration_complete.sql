@@ -155,6 +155,75 @@ END
 $$;
 
 -- ============================================================
+-- MIGRACIÓN 6: Lote (Trazabilidad de lotes productivos)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS "Lote" (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  nombre TEXT NOT NULL,
+  "fechaSiembra" DATE NOT NULL,
+  "fechaCosecha" DATE,
+  "cantidadInicial" INTEGER NOT NULL DEFAULT 0,
+  "pesoInicial" REAL,
+  "especieId" TEXT NOT NULL REFERENCES "Especie"(id) ON DELETE CASCADE,
+  "estanqueId" TEXT NOT NULL REFERENCES "Estanque"(id) ON DELETE CASCADE,
+  "fincaId" TEXT NOT NULL REFERENCES "Finca"(id) ON DELETE CASCADE,
+  "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  activo BOOLEAN NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_lote_userId ON "Lote" ("userId");
+CREATE INDEX IF NOT EXISTS idx_lote_fincaId ON "Lote" ("fincaId");
+CREATE INDEX IF NOT EXISTS idx_lote_estanqueId ON "Lote" ("estanqueId");
+CREATE INDEX IF NOT EXISTS idx_lote_activo ON "Lote" (activo);
+CREATE INDEX IF NOT EXISTS idx_lote_fechaSiembra ON "Lote" ("fechaSiembra" DESC);
+
+ALTER TABLE "Lote" ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'lote_select_own' AND tablename = 'Lote') THEN
+    CREATE POLICY "lote_select_own" ON "Lote" FOR SELECT USING ("userId" = auth.uid()::text);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'lote_insert_own' AND tablename = 'Lote') THEN
+    CREATE POLICY "lote_insert_own" ON "Lote" FOR INSERT WITH CHECK ("userId" = auth.uid()::text);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'lote_update_own' AND tablename = 'Lote') THEN
+    CREATE POLICY "lote_update_own" ON "Lote" FOR UPDATE USING ("userId" = auth.uid()::text);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'lote_delete_own' AND tablename = 'Lote') THEN
+    CREATE POLICY "lote_delete_own" ON "Lote" FOR DELETE USING ("userId" = auth.uid()::text);
+  END IF;
+END
+$$;
+
+-- ============================================================
+-- MIGRACIÓN 7: loteId en tablas existentes (Trazabilidad)
+-- ============================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Bitacora' AND column_name = 'loteId') THEN
+    ALTER TABLE "Bitacora" ADD COLUMN "loteId" TEXT REFERENCES "Lote"(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Finanza' AND column_name = 'loteId') THEN
+    ALTER TABLE "Finanza" ADD COLUMN "loteId" TEXT REFERENCES "Lote"(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Veterinaria' AND column_name = 'loteId') THEN
+    ALTER TABLE "Veterinaria" ADD COLUMN "loteId" TEXT REFERENCES "Lote"(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'MovimientoInventario' AND column_name = 'loteId') THEN
+    ALTER TABLE "MovimientoInventario" ADD COLUMN "loteId" TEXT REFERENCES "Lote"(id) ON DELETE SET NULL;
+  END IF;
+END
+$$;
+
+CREATE INDEX IF NOT EXISTS idx_bitacora_loteId ON "Bitacora" ("loteId");
+CREATE INDEX IF NOT EXISTS idx_finanza_loteId ON "Finanza" ("loteId");
+CREATE INDEX IF NOT EXISTS idx_veterinaria_loteId ON "Veterinaria" ("loteId");
+CREATE INDEX IF NOT EXISTS idx_movimiento_loteId ON "MovimientoInventario" ("loteId");
+
+-- ============================================================
 -- VERIFICACIÓN
 -- ============================================================
 SELECT 'EventLog' as tabla, COUNT(*) as registros FROM "EventLog"
@@ -163,4 +232,6 @@ SELECT 'ProcessedEvent', COUNT(*) FROM "ProcessedEvent"
 UNION ALL
 SELECT 'Subscription', COUNT(*) FROM "Subscription"
 UNION ALL
-SELECT 'ParametroOverride', COUNT(*) FROM "ParametroOverride";
+SELECT 'ParametroOverride', COUNT(*) FROM "ParametroOverride"
+UNION ALL
+SELECT 'Lote', COUNT(*) FROM "Lote";

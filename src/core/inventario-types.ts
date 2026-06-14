@@ -28,6 +28,7 @@ export interface MovimientoInventario {
   responsable: string;
   notas: string;
   createdAt: string;
+  loteId?: string;
 }
 
 export const PRODUCTO_DEFAULT = (): Producto => ({

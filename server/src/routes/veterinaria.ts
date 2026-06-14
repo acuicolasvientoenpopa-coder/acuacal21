@@ -12,6 +12,7 @@ const veterinariaSchema = z.object({
   riesgo: z.enum(["verde", "amarillo", "rojo"]).optional(),
   notas: z.any().optional(),
   fincaId: z.string().optional(),
+  loteId: z.string().optional(),
 });
 
 veterinariaRouter.get("/", async (req: AuthRequest, res: Response) => {
@@ -36,6 +37,7 @@ veterinariaRouter.post("/", async (req: AuthRequest, res: Response) => {
   if (parsed.data.fecha) body.fecha = parsed.data.fecha;
   if (parsed.data.notas) body.notas = typeof parsed.data.notas === "object" ? JSON.stringify(parsed.data.notas) : parsed.data.notas;
   if (parsed.data.fincaId) body.fincaId = parsed.data.fincaId;
+  if (parsed.data.loteId) body.loteId = parsed.data.loteId;
 
   const { data, error } = await req.supabase!
     .from("Veterinaria")
